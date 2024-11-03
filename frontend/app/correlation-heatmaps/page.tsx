@@ -1,9 +1,13 @@
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
 import Image from "next/image";
 import Link from 'next/link';
 import Sidebar from '../components/Sidebar';
 
 const CorrelationHeatmapsPage = () => {
+  const [selectedDataset, setSelectedDataset] = useState('dataset1');
+
   return (
     <div className="flex min-h-screen">
       <Sidebar />
@@ -24,6 +28,16 @@ const CorrelationHeatmapsPage = () => {
             />
             Home
           </Link>
+
+          <select
+            value={selectedDataset}
+            onChange={(e) => setSelectedDataset(e.target.value)}
+            className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          >
+            <option value="Input-Input Correlations">Input-Input Correlations</option>
+            <option value="Input-Output Correlations">Input-Output Correlations</option>
+            <option value="Output-Output Correlations">Output-Output Correlations</option>
+          </select>
         </div>
         <div>
           <h1>Under construction...</h1>
