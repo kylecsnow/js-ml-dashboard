@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 export default function Sidebar() {
   return (
-    // TODO: add all the other pages
+    // TODO: add all the other pages from dash-ml-dashboard
     <aside className="w-64 bg-gray-100 dark:bg-gray-800 p-6 hidden sm:block">
       <nav className="flex flex-col gap-[6px]">
         <Link 
