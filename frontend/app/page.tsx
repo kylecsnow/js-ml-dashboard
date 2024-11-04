@@ -9,14 +9,21 @@ export default function Home() {
   const [selectedModel, setSelectedModel] = useState<string>('');
 
   useEffect(() => {
-    const availableModels = [
-      'model1.pkl',
-      'model2.pkl',
-    ];
-    setModels(availableModels);
-    if (availableModels.length > 0) {
-      setSelectedModel(availableModels[0]);
+    async function fetchModels() {
+      try {
+        // Adjust this URL to match your FastAPI endpoint
+        const response = await fetch('http://localhost:8000/api/models');
+        const data = await response.json();
+        setModels(data.models);
+        if (data.models.length > 0) {
+          setSelectedModel(data.models[0]);
+        }
+      } catch (error) {
+        console.error('Error fetching models:', error);
+      }
     }
+
+    fetchModels();
   }, []);
 
   return (
