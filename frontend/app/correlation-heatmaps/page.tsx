@@ -4,15 +4,16 @@ import React, { useState } from 'react';
 import Image from "next/image";
 import Link from 'next/link';
 import Sidebar from '../components/Sidebar';
+import { useModel } from '../contexts/ModelContext';
 
 const CorrelationHeatmapsPage = () => {
+  const { selectedModel } = useModel();
   const [selectedHeatmapType, setSelectedHeatmapType] = useState('Input-Input Correlations');
 
   return (
     <div className="flex min-h-screen">
       <Sidebar />
       
-      {/* Main content */}
       <div className="flex-1 flex flex-col items-center p-8 gap-8">
         <div className="flex gap-4 items-center flex-col sm:flex-row">
           <Link
@@ -41,6 +42,12 @@ const CorrelationHeatmapsPage = () => {
         </div>
         <div>
           <h1>Under construction...</h1>
+          <h2>
+            {selectedModel 
+              ? `Selected model: ${selectedModel}`
+              : 'No model selected'
+            }
+          </h2>
         </div>
       </div>
     </div>

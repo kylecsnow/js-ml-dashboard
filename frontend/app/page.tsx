@@ -3,19 +3,19 @@
 import Image from "next/image";
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import { useModel } from './contexts/ModelContext';
 
 export default function Home() {
   const [models, setModels] = useState<string[]>([]);
-  const [selectedModel, setSelectedModel] = useState<string>('');
+  const { selectedModel, setSelectedModel } = useModel();
 
   useEffect(() => {
     async function fetchModels() {
       try {
-        // Adjust this URL to match your FastAPI endpoint
         const response = await fetch('http://localhost:8000/api/models');
         const data = await response.json();
         setModels(data.models);
-        if (data.models.length > 0) {
+        if (data.models.length > 0 && !selectedModel && !localStorage.getItem('selectedModel')) {
           setSelectedModel(data.models[0]);
         }
       } catch (error) {
@@ -25,6 +25,7 @@ export default function Home() {
 
     fetchModels();
   }, []);
+  // }, [selectedModel, setSelectedModel]); // this is like the inputs of a callback from Plotly Dash; the effect only activates if one of these dependencies changes
 
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
