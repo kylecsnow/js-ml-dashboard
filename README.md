@@ -14,11 +14,11 @@ pnpm install
 ```
 Then run the development server:
 ```bash
-pnpm dev
+pnpm run dev -p 3700
 ```
 
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3700](http://localhost:3700) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

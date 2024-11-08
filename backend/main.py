@@ -1,14 +1,19 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+import json
 from pathlib import Path
+import plotly.express as px
 import uvicorn
+
+from utils import get_dataset_name_from_model, get_dataset, get_model_and_metadata
+
 
 app = FastAPI()
 
 # Add CORS middleware to allow requests from your Next.js frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Your Next.js dev server
+    allow_origins=["http://localhost:3700"],  # Your Next.js dev server
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -24,6 +29,83 @@ async def list_models():
     models_dir = Path(__file__).parent / "models"  # Use relative path from main.py
     model_files = [f.name.split(".pkl")[0] for f in models_dir.glob("*.pkl")]
     return {"models": model_files}
+
+
+@app.get("/api/correlation-heatmap/{model_name}/{correlation_type}")
+async def get_correlation_heatmap(model_name: str, correlation_type: str):
+
+
+    print(model_name)
+    print(correlation_type)
+    
+
+    try:
+        model_and_metadata = get_model_and_metadata(model_name)
+
+        # TODO: may want to do some validation here...?
+        # if model_path not in model_paths_list:
+        #     my_df = pd.DataFrame([])
+        #     return px.imshow(my_df)
+
+        dataset_name = get_dataset_name_from_model(model_name)
+        dataset = get_dataset(dataset_name)
+
+        train_df = dataset.copy()
+
+        # logger.debug(
+        #     f"Retrieved training dataset for model. [model_name={model_name}, dataset_name={dataset_name}]"
+        # )
+
+
+        # TODO: eventually this needs to distinguish between real-valued outputs and categorical outputs
+        outputs = list(model_and_metadata["estimators_by_output"].keys())
+        outputs_reals = outputs
+
+        # TODO: eventually this needs to distinguish between real-valued inputs and categorical inputs
+        all_estimator_inputs = set()
+        for output in outputs:
+            all_estimator_inputs = all_estimator_inputs.union(
+                set(model_and_metadata["estimators_by_output"][output]["inputs_reals"])
+            )
+        inputs = list(all_estimator_inputs)
+        # inputs_reals = inputs
+
+        img = None
+
+        if correlation_type == "input-input":
+            input_to_input_correlations = train_df[inputs].corr(
+                "pearson"
+            )  # TODO: does this work when including categorical inputs?
+            img = input_to_input_correlations
+
+        elif correlation_type == "input-output":
+            input_to_output_correlations = (
+                train_df[inputs + outputs_reals]
+                .corr("pearson")[outputs_reals]
+                .drop(labels=outputs_reals)
+            )
+            img = input_to_output_correlations
+
+        elif correlation_type == "output-output":
+            output_to_output_correlations = train_df[outputs_reals].corr("pearson")[
+                outputs_reals
+            ]
+            img = output_to_output_correlations
+
+        fig = px.imshow(
+            img=img,
+            color_continuous_scale="RdBu_r",
+            range_color=(-1, 1),
+            aspect="auto",
+            text_auto=True,
+        )
+
+        plot_json = json.loads(fig.to_json())
+
+        return {"plot_data": plot_json}
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":

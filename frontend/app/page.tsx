@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useModel } from './contexts/ModelContext';
 
+
 export default function Home() {
   const [models, setModels] = useState<string[]>([]);
   const { selectedModel, setSelectedModel } = useModel();
@@ -26,6 +27,7 @@ export default function Home() {
     fetchModels();
   }, []);
   // }, [selectedModel, setSelectedModel]); // this is like the inputs of a callback from Plotly Dash; the effect only activates if one of these dependencies changes
+
 
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
