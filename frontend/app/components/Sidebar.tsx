@@ -13,21 +13,21 @@ export default function Sidebar() {
         <Link 
           href="/"
           className={`flex items-center gap-2 p-1 pl-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-[14.5px]
-            ${pathName === '/' ? 'bg-black text-white' : ''}`}
+            ${pathName === '/' ? 'bg-black hover:bg-black text-white' : ''}`}
         >
           Home
         </Link>
         <Link 
           href="/overview"
           className={`flex items-center gap-2 p-1 pl-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-[14.5px]
-            ${pathName === '/overview' ? 'bg-black text-white' : ''}`}
+            ${pathName === '/overview' ? 'bg-black hover:bg-black text-white' : ''}`}
         >
           Overview
         </Link>
         <Link 
           href="/correlation-heatmaps"
           className={`flex items-center gap-2 p-1 pl-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-[14.5px]
-            ${pathName === '/correlation-heatmaps' ? 'bg-black text-white' : ''}`}
+            ${pathName === '/correlation-heatmaps' ? 'bg-black hover:bg-black text-white' : ''}`}
         >
           Correlation Heatmaps
         </Link>
