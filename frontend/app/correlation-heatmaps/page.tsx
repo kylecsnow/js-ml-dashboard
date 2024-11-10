@@ -19,6 +19,7 @@ const CorrelationHeatmapsPage = () => {
   const { selectedModel } = useModel();
   const [selectedHeatmapType, setSelectedHeatmapType] = useState('input-input');
   const [plotData, setPlotData] = useState<PlotDataType | null>(null);
+  // const [loading, setLoading] = useState(false);
 
   useEffect(() => {
 
@@ -79,6 +80,9 @@ const CorrelationHeatmapsPage = () => {
           </h2>
         </div>
         <div className="w-full max-w-4xl">
+          {/* {loading ? (
+            <div>Loading...</div>
+          ) : plotData && ( */}
           {plotData && (
             <Plot
               data={plotData.data}

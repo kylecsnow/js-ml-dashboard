@@ -25,8 +25,8 @@ export default function Home() {
     }
 
     fetchModels();
-  }, []);
-  // }, [selectedModel, setSelectedModel]); // this is like the inputs of a callback from Plotly Dash; the effect only activates if one of these dependencies changes
+  // }, []);
+  }, [selectedModel, setSelectedModel]); // this is like the inputs of a callback from Plotly Dash; the effect only activates if one of these dependencies changes
 
 
   return (
