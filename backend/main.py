@@ -32,12 +32,7 @@ async def list_models():
 
 
 @app.get("/api/correlation-heatmap/{model_name}/{correlation_type}")
-async def get_correlation_heatmap(model_name: str, correlation_type: str):
-
-
-    print(model_name)
-    print(correlation_type)
-    
+async def get_correlation_heatmap(model_name: str, correlation_type: str):  
 
     try:
         model_and_metadata = get_model_and_metadata(model_name)
@@ -55,7 +50,6 @@ async def get_correlation_heatmap(model_name: str, correlation_type: str):
         # logger.debug(
         #     f"Retrieved training dataset for model. [model_name={model_name}, dataset_name={dataset_name}]"
         # )
-
 
         # TODO: eventually this needs to distinguish between real-valued outputs and categorical outputs
         outputs = list(model_and_metadata["estimators_by_output"].keys())
@@ -104,6 +98,15 @@ async def get_correlation_heatmap(model_name: str, correlation_type: str):
 
         return {"plot_data": plot_json}
     
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/correlation-heatmap/{model_name}/{selected_variables}")
+async def get_correlation_heatmap(model_name: str, selected_variables: str):  
+    try:
+        return {"plot_data": "nothing yet..."}
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
