@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import Image from "next/image";
 import Link from 'next/link';
 import React, { useState, useEffect } from 'react';
+import Select from 'react-select';
 import Sidebar from '../components/Sidebar';
 import { useModel } from '../contexts/ModelContext';
 
@@ -24,8 +25,10 @@ const ScatterPlotsPage = () => {
 
 
   const variableOptions = [
-    { value: 'input-input', label: 'Option 1' },
-    { value: 'input-output', label: 'Option 2' },
+    { value: 'option1', label: 'Option 1' },
+    { value: 'option2', label: 'Option 2' },
+    { value: 'option3', label: 'Option 3' },
+    { value: 'option4', label: 'Option 4' },
   ];
 
   const toggleDropdown = () => {
@@ -74,7 +77,7 @@ const ScatterPlotsPage = () => {
           </select> */}
 
           <div className="relative">
-            <button onClick={toggleDropdown} className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+            {/* <button onClick={toggleDropdown} className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
               Select Variables
             </button>
             {isDropdownOpen && (
@@ -91,7 +94,15 @@ const ScatterPlotsPage = () => {
                   </label>
                 ))}
               </div>
-            )}
+            )} */}
+            <Select
+              defaultValue={[variableOptions[0], variableOptions[1]]}
+              isMulti
+              name="selected-variables"
+              options={variableOptions}
+              className="basic-multi-select"
+              classNamePrefix="select"
+            />
           </div>
         </div>
         <div>

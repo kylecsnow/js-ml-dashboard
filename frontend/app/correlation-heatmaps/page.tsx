@@ -83,6 +83,8 @@ const CorrelationHeatmapsPage = () => {
           {/* {loading ? (
             <div>Loading...</div>
           ) : plotData && ( */}
+
+          {/* TODO: make the correlation heatmaps bigger */}
           {plotData && (
             <Plot
               data={plotData.data}

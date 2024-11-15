@@ -102,9 +102,11 @@ async def get_correlation_heatmap(model_name: str, correlation_type: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/correlation-heatmap/{model_name}/{selected_variables}")
+### TODO: eventually, consider breaking these page-specific functions out into some other .py files?
+@app.get("/api/scatter-plots/{model_name}/{selected_variables}")
 async def get_correlation_heatmap(model_name: str, selected_variables: str):  
     try:
+        ### TODO: finish the actual code for this , and replace "nothing yet..." with the resulting `plot_json`.
         return {"plot_data": "nothing yet..."}
 
     except Exception as e:
