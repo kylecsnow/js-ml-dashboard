@@ -19,30 +19,46 @@ interface PlotDataType {
 
 const ScatterPlotsPage = () => {
   const { selectedModel } = useModel();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false); // State to manage dropdown visibility
   const [selectedVariables, setSelectedVariables] = useState<string[]>([]);
   const [plotData, setPlotData] = useState<PlotDataType | null>(null);
+  // const [isDropdownOpen, setIsDropdownOpen] = useState(false); // State to manage dropdown visibility
 
-
+  // TODO: 
   const variableOptions = [
-    { value: 'option1', label: 'Option 1' },
-    { value: 'option2', label: 'Option 2' },
-    { value: 'option3', label: 'Option 3' },
-    { value: 'option4', label: 'Option 4' },
+    { value: 's1', label: 's1' },
+    { value: 's2', label: 's2' },
+    { value: 's3', label: 's3' },
+    { value: 's4', label: 's4' },
   ];
 
-  const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen);
-  };
+  // const toggleDropdown = () => {
+  //   setIsDropdownOpen(!isDropdownOpen);
+  // };
 
-  const handleCheckboxChange = (value: string) => {
-      setSelectedVariables(prev =>
-          prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]
-      );
-  };
+  // const handleCheckboxChange = (value: string) => {
+  //     setSelectedVariables(prev =>
+  //         prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]
+  //     );
+  // };
     
 
-    // TODO: finish this block of code, which should call the backend API...
+  // TODO: finish this block of code, which should call the backend API...
+  useEffect(() => {
+
+    async function fetchScatterPlotData() {
+      try {
+        const response = await fetch(
+          `http://localhost:8000/api/scatter-plots/${selectedModel}/${selectedVariables}`
+        );
+        const data = await response.json();
+        setPlotData(data.plot_data);
+      } catch (error) {
+        console.error('Error fetching scatter plot data:', error);
+      }
+    };
+
+    fetchScatterPlotData();
+  }, [selectedModel, selectedVariables]);
 
 
   return (
@@ -95,11 +111,14 @@ const ScatterPlotsPage = () => {
                 ))}
               </div>
             )} */}
+
+            {/* TODO: does this need to have some onChange function associated with it, like the old version of this?? */}
             <Select
-              defaultValue={[variableOptions[0], variableOptions[1]]}
               isMulti
-              name="selected-variables"
               options={variableOptions}
+              onChange={(selected) => setSelectedVariables(selected.map(option => option.value))}
+              defaultValue={[variableOptions[0], variableOptions[1]]}
+              name="selected-variables"
               className="basic-multi-select"
               classNamePrefix="select"
             />

@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import json
 from pathlib import Path
+import pandas as pd
 import plotly.express as px
 import uvicorn
 
@@ -104,10 +105,65 @@ async def get_correlation_heatmap(model_name: str, correlation_type: str):
 
 ### TODO: eventually, consider breaking these page-specific functions out into some other .py files?
 @app.get("/api/scatter-plots/{model_name}/{selected_variables}")
-async def get_correlation_heatmap(model_name: str, selected_variables: str):  
+async def get_scatter_plot(model_name: str, selected_variables: str):
+
+
+    print(len(selected_variables))
+    print(selected_variables)
+
+
     try:
         ### TODO: finish the actual code for this , and replace "nothing yet..." with the resulting `plot_json`.
-        return {"plot_data": "nothing yet..."}
+        dataset_name = get_dataset_name_from_model(model_name)
+        dataset = get_dataset(dataset_name)
+
+        # logger.debug(
+        #     f"Retrieved training dataset for model. [model_name={model_name}, dataset_name={dataset_name}]"
+        # )
+
+        style = {
+            "height": "40rem",
+        }
+
+        if len(selected_variables) == 2:
+            fig = px.scatter(
+                dataset,
+                x=selected_variables[0],
+                y=selected_variables[1],
+            )
+
+        elif len(selected_variables) == 3:
+            fig = px.scatter_3d(
+                dataset,
+                x=selected_variables[0],
+                y=selected_variables[1],
+                z=selected_variables[2],
+            )
+            fig.update_layout(
+                margin=dict(r=0, l=0, b=0, t=0),
+            )
+            style = {
+                "height": "40rem",
+                "border": "1px solid black",  # only add a border if making a 3D scatterplot
+            }
+
+        else:
+            fig = pd.DataFrame([])
+            fig = px.imshow(fig)
+
+        # graph_container = dcc.Graph(
+        #     figure=fig,
+        #     style=style,
+        # )
+        plot_json = json.loads(fig.to_json())
+        
+        
+        
+        # print(plot_json)
+
+
+
+        return {"plot_data": plot_json}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
