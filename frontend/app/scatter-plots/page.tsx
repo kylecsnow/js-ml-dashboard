@@ -21,7 +21,6 @@ const ScatterPlotsPage = () => {
   const { selectedModel } = useModel();
   const [selectedVariables, setSelectedVariables] = useState<string[]>([]);
   const [plotData, setPlotData] = useState<PlotDataType | null>(null);
-  // const [isDropdownOpen, setIsDropdownOpen] = useState(false); // State to manage dropdown visibility
 
   // TODO: 
   const variableOptions = [
@@ -31,15 +30,6 @@ const ScatterPlotsPage = () => {
     { value: 's4', label: 's4' },
   ];
 
-  // const toggleDropdown = () => {
-  //   setIsDropdownOpen(!isDropdownOpen);
-  // };
-
-  // const handleCheckboxChange = (value: string) => {
-  //     setSelectedVariables(prev =>
-  //         prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]
-  //     );
-  // };
     
 
   // TODO: finish this block of code, which should call the backend API...
@@ -82,35 +72,7 @@ const ScatterPlotsPage = () => {
           </Link>
 
           {/* TODO: add a multi-select drop down here for multiple inputs...*/}
-
-          {/* <select
-          value={selectedVariables}
-            onChange={(e) => setSelectedVariables(e.target.value)}
-            className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-          >
-            <option value="input-input">Option 1</option>
-            <option value="input-output">Option 2</option>
-          </select> */}
-
           <div className="relative">
-            {/* <button onClick={toggleDropdown} className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-              Select Variables
-            </button>
-            {isDropdownOpen && (
-              <div className="absolute z-10 bg-white border border-gray-300 rounded-lg shadow-lg mt-1">
-                {variableOptions.map(option => (
-                  <label key={option.value} className="flex items-center p-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedVariables.includes(option.value)}
-                      onChange={() => handleCheckboxChange(option.value)}
-                      className="mr-2"
-                    />
-                    {option.label}
-                  </label>
-                ))}
-              </div>
-            )} */}
 
             {/* TODO: does this need to have some onChange function associated with it, like the old version of this?? */}
             <Select
