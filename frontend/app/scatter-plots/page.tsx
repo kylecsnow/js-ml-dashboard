@@ -19,10 +19,10 @@ interface PlotDataType {
 
 const ScatterPlotsPage = () => {
   const { selectedModel } = useModel();
-  const [selectedVariables, setSelectedVariables] = useState<string[]>([]);
+  // const [selectedVariables, setSelectedVariables] = useState<string[]>([]);
   const [plotData, setPlotData] = useState<PlotDataType | null>(null);
 
-  // TODO: 
+  // TODO: make `variableOptions update to correspond to the options that *should* be available for a given model/dataset
   const variableOptions = [
     { value: 's1', label: 's1' },
     { value: 's2', label: 's2' },
@@ -30,15 +30,22 @@ const ScatterPlotsPage = () => {
     { value: 's4', label: 's4' },
   ];
 
-    
+  // TODO: after making `variableOptions` dynamically update along with the selected model, move this up in the code next to `[plotData, setPlotData]`
+  const [selectedVariables, setSelectedVariables] = useState<string[]>([variableOptions[0].value, variableOptions[1].value]);
 
-  // TODO: finish this block of code, which should call the backend API...
+    
   useEffect(() => {
 
     async function fetchScatterPlotData() {
       try {
         const response = await fetch(
-          `http://localhost:8000/api/scatter-plots/${selectedModel}/${selectedVariables}`
+          `http://localhost:8000/api/scatter-plots/${selectedModel}`, {
+            method: 'POST', // Change to POST
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ selected_variables: selectedVariables }), // Send as JSON
+          }
         );
         const data = await response.json();
         setPlotData(data.plot_data);
@@ -71,10 +78,9 @@ const ScatterPlotsPage = () => {
             Home
           </Link>
 
-          {/* TODO: add a multi-select drop down here for multiple inputs...*/}
+          {/* TODO: figure out how to put a border around the plot area if a 3D scatter plot is chosen...*/}
           <div className="relative">
 
-            {/* TODO: does this need to have some onChange function associated with it, like the old version of this?? */}
             <Select
               isMulti
               options={variableOptions}
@@ -96,6 +102,7 @@ const ScatterPlotsPage = () => {
         </div>
         <div>
           <h1>Under construction...</h1>
+          <p>(TODOs: needs `variableOptions`` to update dynamically; also needs a border when 3D scatterplot is shown; also needs to show errors if `selectedVariables.length` is not 2 or 3.)</p>
         </div>
         <div className="w-full max-w-4xl">
           {plotData && (

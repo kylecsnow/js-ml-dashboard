@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import Body, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import json
 from pathlib import Path
@@ -104,16 +104,12 @@ async def get_correlation_heatmap(model_name: str, correlation_type: str):
 
 
 ### TODO: eventually, consider breaking these page-specific functions out into some other .py files?
-@app.get("/api/scatter-plots/{model_name}/{selected_variables}")
-async def get_scatter_plot(model_name: str, selected_variables: str):
-
-
-    print(len(selected_variables))
-    print(selected_variables)
+@app.post("/api/scatter-plots/{model_name}")
+async def get_scatter_plot(model_name: str, body: dict = Body(...)):
+    selected_variables = body.get("selected_variables", [])
 
 
     try:
-        ### TODO: finish the actual code for this , and replace "nothing yet..." with the resulting `plot_json`.
         dataset_name = get_dataset_name_from_model(model_name)
         dataset = get_dataset(dataset_name)
 
@@ -157,12 +153,6 @@ async def get_scatter_plot(model_name: str, selected_variables: str):
         # )
         plot_json = json.loads(fig.to_json())
         
-        
-        
-        # print(plot_json)
-
-
-
         return {"plot_data": plot_json}
 
     except Exception as e:
