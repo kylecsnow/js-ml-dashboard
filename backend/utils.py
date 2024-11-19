@@ -7,7 +7,7 @@ from typing import Any
 PROJECT_ROOT_DIR = os.path.abspath(__file__)
 
 
-# TODO: somday, may want to implement MLflow for model tracking & retreival, rather than pickling locally
+# TODO: someday, may want to implement MLflow for model tracking & retreival, rather than pickling locally
 def get_dataset_name_from_model(model_name: str) -> str:
     dataset_name = f"{model_name.split('_')[0]}_dataset"
     return dataset_name

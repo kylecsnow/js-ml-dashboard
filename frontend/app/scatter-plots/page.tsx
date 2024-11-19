@@ -36,6 +36,7 @@ const ScatterPlotsPage = () => {
     
   useEffect(() => {
 
+    // const fetchScatterPlotData = async () => {
     async function fetchScatterPlotData() {
       try {
         const response = await fetch(
