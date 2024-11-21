@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import Image from "next/image";
 import Link from 'next/link';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import Select from 'react-select';
 import Sidebar from '../components/Sidebar';
 import { useModel } from '../contexts/ModelContext';
@@ -19,21 +19,33 @@ interface PlotDataType {
 
 const ScatterPlotsPage = () => {
   const { selectedModel } = useModel();
-  // const [selectedVariables, setSelectedVariables] = useState<string[]>([]);
   const [plotData, setPlotData] = useState<PlotDataType | null>(null);
+  const [variableOptions, setVariableOptions] = useState<{ value: string; label: string }[]>([]);
+  const [selectedVariables, setSelectedVariables] = useState<string[]>([]);
 
-  // TODO: make `variableOptions update to correspond to the options that *should* be available for a given model/dataset
-  const variableOptions = [
-    { value: 's1', label: 's1' },
-    { value: 's2', label: 's2' },
-    { value: 's3', label: 's3' },
-    { value: 's4', label: 's4' },
-  ];
+  useEffect(() => {
+    const fetchVariableOptions = async () => {
+      if (selectedModel) {
+        try {
+          const response = await fetch(`http://localhost:8000/api/variable-options/${selectedModel}`);
+          const data = await response.json();
+          const options = data.variable_options.map((option: string) => ({ value: option, label: option }));
+          setVariableOptions(options);
 
-  // TODO: after making `variableOptions` dynamically update along with the selected model, move this up in the code next to `[plotData, setPlotData]`
-  const [selectedVariables, setSelectedVariables] = useState<string[]>([variableOptions[0].value, variableOptions[1].value]);
+          // Set the first two options as selected by default
+          if (options.length >= 2) {
+            setSelectedVariables([options[0].value, options[1].value]);
+          }
+        } catch (error) {
+          console.error('Error fetching variable options:', error);
+        }
+      }
+    };
 
-    
+    fetchVariableOptions();
+  }, [selectedModel]);
+ 
+  
   useEffect(() => {
 
     // const fetchScatterPlotData = async () => {
@@ -41,9 +53,9 @@ const ScatterPlotsPage = () => {
       try {
         const response = await fetch(
           `http://localhost:8000/api/scatter-plots/${selectedModel}`, {
-            method: 'POST', // Change to POST
+            method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+              'Content-Type': 'application/json',
             },
             body: JSON.stringify({ selected_variables: selectedVariables }), // Send as JSON
           }
@@ -81,12 +93,11 @@ const ScatterPlotsPage = () => {
 
           {/* TODO: figure out how to put a border around the plot area if a 3D scatter plot is chosen...*/}
           <div className="relative">
-
             <Select
               isMulti
               options={variableOptions}
               onChange={(selected) => setSelectedVariables(selected.map(option => option.value))}
-              defaultValue={[variableOptions[0], variableOptions[1]]}
+              value={variableOptions.filter(option => selectedVariables.includes(option.value))} // Set selected values
               name="selected-variables"
               className="basic-multi-select"
               classNamePrefix="select"
@@ -103,7 +114,7 @@ const ScatterPlotsPage = () => {
         </div>
         <div>
           <h1>Under construction...</h1>
-          <p>(TODOs: needs `variableOptions`` to update dynamically; also needs a border when 3D scatterplot is shown; also needs to show errors if `selectedVariables.length` is not 2 or 3.)</p>
+          <p>(TODOs: make the dropdown bar a constant width; needs a border when 3D scatterplot is shown; also needs to show errors if `selectedVariables.length` is not 2 or 3.)</p>
         </div>
         <div className="w-full max-w-4xl">
           {plotData && (
@@ -117,7 +128,7 @@ const ScatterPlotsPage = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default ScatterPlotsPage
+export default ScatterPlotsPage;
