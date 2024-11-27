@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import Image from "next/image";
 import Link from 'next/link';
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
 import Sidebar from '../components/Sidebar';
 import { useModel } from '../contexts/ModelContext';

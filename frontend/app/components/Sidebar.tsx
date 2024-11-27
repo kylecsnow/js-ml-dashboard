@@ -25,6 +25,13 @@ export default function Sidebar() {
           Overview
         </Link>
         <Link 
+          href="/violin-plots"
+          className={`flex items-center gap-2 p-1 pl-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-[14.5px]
+            ${pathName === '/violin-plots' ? 'bg-black hover:bg-black text-white' : ''}`}
+        >
+          Violin Plots
+        </Link>
+        <Link 
           href="/scatter-plots"
           className={`flex items-center gap-2 p-1 pl-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-[14.5px]
             ${pathName === '/scatter-plots' ? 'bg-black hover:bg-black text-white' : ''}`}
