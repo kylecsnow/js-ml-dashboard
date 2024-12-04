@@ -1,11 +1,13 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Image from "next/image";
 import Link from 'next/link';
 import Sidebar from '../components/Sidebar';
 import { useState, useEffect } from 'react';
 import { useModel } from '../contexts/ModelContext';
 
+const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
 // TODO: don't re-make this interface in every page; pull it out into some other place and then import it in each of your pages.
 interface PlotDataType {
@@ -41,7 +43,7 @@ const ViolinPlotsPage = () => {
         </div>
         <div>
           <h2>
-            {selectedModel 
+            {selectedModel
               ? `Selected model: ${selectedModel}`
               : 'No model selected'
             }
@@ -50,7 +52,7 @@ const ViolinPlotsPage = () => {
         <div>
           <h1>Under construction...</h1>
         </div>
-        {/* <div className="w-full max-w-4xl">
+        <div className="w-full max-w-4xl">
           {plotData && (
             <Plot
               data={plotData.data}
@@ -59,7 +61,7 @@ const ViolinPlotsPage = () => {
               style={{ width: '100%', height: '600px' }}
             />
           )}
-        </div> */}
+        </div>
       </div>
     </div>
   );

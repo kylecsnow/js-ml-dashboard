@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import uvicorn
 
 from utils import get_dataset_name_from_model, get_dataset, get_model_and_metadata
@@ -30,6 +32,67 @@ async def list_models():
     models_dir = Path(__file__).parent / "models"  # Use relative path from main.py
     model_files = [f.name.split(".pkl")[0] for f in models_dir.glob("*.pkl")]
     return {"models": model_files}
+
+
+@app.get("/api/violin-plots/{model_name}")
+async def get_violin_plots(
+    model_name: str,
+    box_plot_toggle: bool,
+    data_points_toggle: bool,
+):
+    try:
+
+
+
+        # TODO: get this part working... and how should I handle the `box_plot_toggle` and `data_points_toggle` inputs...?
+        model_and_metadata = get_model_and_metadata(model_name)
+
+        dataset_name = get_dataset_name_from_model(model_name)
+        dataset = get_dataset(dataset_name)
+
+        # logger.debug(
+        #     f"Retrieved training dataset for model. [model_name={model_name}, dataset_name={dataset_name}]"
+        # )
+
+        # TODO: eventually this needs to distinguish between real-valued outputs and categorical outputs
+        outputs = list(model_and_metadata["estimators_by_output"].keys())
+        # outputs_reals = outputs
+
+        # TODO: eventually this needs to distinguish between real-valued inputs and categorical inputs
+        all_estimator_inputs = set()
+        for output in outputs:
+            all_estimator_inputs = all_estimator_inputs.union(
+                set(model_and_metadata["estimators_by_output"][output]["inputs_reals"])
+            )
+        inputs = list(all_estimator_inputs)
+        # inputs_reals = inputs
+
+        fig = go.Figure()
+        fig = make_subplots(rows=len(inputs + outputs))
+
+        for i, item in enumerate(inputs + outputs):
+            fig.add_trace(
+                go.Violin(
+                    x=dataset[item],
+                    box_visible=box_plot_toggle,
+                    meanline_visible=True,
+                    opacity=0.9,
+                    y0=item,
+                    name=item,
+                    points="all" if data_points_toggle else None,
+                    pointpos=0,
+                ),
+                row=i + 1,
+                col=1,
+            )
+
+        fig.update_layout(height=200 * len(inputs + outputs))
+
+        plot_json = json.loads(fig.to_json())
+        return {"plot_data": plot_json}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/correlation-heatmap/{model_name}/{correlation_type}")
