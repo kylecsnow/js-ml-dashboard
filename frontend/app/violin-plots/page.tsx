@@ -20,6 +20,23 @@ const ViolinPlotsPage = () => {
   const [plotData, setPlotData] = useState<PlotDataType | null>(null);
 
 
+  useEffect(() => {
+    async function fetchViolinPlotData() {
+      try {
+        const response = await fetch(
+          `http://localhost:8000/api/violin-plots/${selectedModel}`
+        );
+        const data = await response.json();
+        setPlotData(data.plot_data);
+      } catch (error) {
+        console.error('Error fetching scatter plot data:', error);
+      }
+    };
+
+    fetchViolinPlotData();
+  }, [selectedModel]);
+
+
   return (
     <div className="flex min-h-screen">
       <Sidebar />
@@ -51,6 +68,7 @@ const ViolinPlotsPage = () => {
         </div>
         <div>
           <h1>Under construction...</h1>
+          <p>TODOs: re-size the violin plots to fit the page better; add toggles for user control over plots</p>
         </div>
         <div className="w-full max-w-4xl">
           {plotData && (

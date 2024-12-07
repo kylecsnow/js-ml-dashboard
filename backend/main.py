@@ -37,10 +37,15 @@ async def list_models():
 @app.get("/api/violin-plots/{model_name}")
 async def get_violin_plots(
     model_name: str,
-    box_plot_toggle: bool,
-    data_points_toggle: bool,
+    # box_plot_toggle: bool,
+    # data_points_toggle: bool,
 ):
     try:
+
+
+        # TODO: handle these with toggles in the UI
+        box_plot_toggle = True
+        data_points_toggle = True
 
 
 
