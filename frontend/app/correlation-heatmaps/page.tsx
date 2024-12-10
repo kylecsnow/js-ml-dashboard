@@ -79,11 +79,7 @@ const CorrelationHeatmapsPage = () => {
             }
           </h2>
         </div>
-        <div>
-          <h1>Under construction...</h1>
-          <p>TODOs: re-size the heatmaps to fit the page better</p>
-        </div>
-        <div className="w-full max-w-4xl">
+        <div className="w-full max-w-8xl mx-auto">
           {/* {loading ? (
             <div>Loading...</div>
           ) : plotData && ( */}
