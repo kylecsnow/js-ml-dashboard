@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Sidebar from '../components/Sidebar';
 import { useState, useEffect } from 'react';
 import { useModel } from '../contexts/ModelContext';
+import { Switch } from '@headlessui/react';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
@@ -18,13 +19,24 @@ interface PlotDataType {
 const ViolinPlotsPage = () => {
   const { selectedModel } = useModel();
   const [plotData, setPlotData] = useState<PlotDataType | null>(null);
+  const [boxPlotToggle, setBoxPlotToggle] = useState<boolean>(true);
+  const [dataPointsToggle, setDataPointsToggle] = useState<boolean>(true);
 
-
+  
   useEffect(() => {
     async function fetchViolinPlotData() {
       try {
         const response = await fetch(
-          `http://localhost:8000/api/violin-plots/${selectedModel}`
+          `http://localhost:8000/api/violin-plots/${selectedModel}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              box_plot_toggle: boxPlotToggle,
+              data_points_toggle: dataPointsToggle,
+            }),
+          }
         );
         const data = await response.json();
         setPlotData(data.plot_data);
@@ -34,7 +46,7 @@ const ViolinPlotsPage = () => {
     };
 
     fetchViolinPlotData();
-  }, [selectedModel]);
+  }, [selectedModel, boxPlotToggle, dataPointsToggle]);
 
 
   return (
@@ -69,6 +81,42 @@ const ViolinPlotsPage = () => {
         <div>
           <h1>Under construction...</h1>
           <p>TODOs: re-size the violin plots to fit the page better; add toggles for user control over plots</p>
+        </div>
+        <div className="flex gap-4">
+          <div>
+            <label>Show Box Plot</label>
+            <Switch
+              checked={boxPlotToggle}
+              onChange={setBoxPlotToggle}
+              className={`${
+                boxPlotToggle ? 'bg-blue-600' : 'bg-gray-200'
+              } relative inline-flex items-center h-6 rounded-full w-11`}
+            >
+              <span className="sr-only">Toggle Box Plot</span>
+              <span
+                className={`${
+                  boxPlotToggle ? 'translate-x-6' : 'translate-x-1'
+                } inline-block w-4 h-4 transform bg-white rounded-full transition`}
+              />
+            </Switch>
+          </div>
+          <div>
+            <label>Show Data Points</label>
+            <Switch
+              checked={dataPointsToggle}
+              onChange={setDataPointsToggle}
+              className={`${
+                dataPointsToggle ? 'bg-blue-600' : 'bg-gray-200'
+              } relative inline-flex items-center h-6 rounded-full w-11`}
+            >
+              <span className="sr-only">Toggle Data Points</span>
+              <span
+                className={`${
+                  dataPointsToggle ? 'translate-x-6' : 'translate-x-1'
+                } inline-block w-4 h-4 transform bg-white rounded-full transition`}
+              />
+            </Switch>
+          </div>
         </div>
         <div className="w-full max-w-4xl">
           {plotData && (

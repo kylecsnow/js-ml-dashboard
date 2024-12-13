@@ -34,7 +34,7 @@ async def list_models():
     return {"models": model_files}
 
 
-@app.get("/api/violin-plots/{model_name}")
+@app.post("/api/violin-plots/{model_name}")
 async def get_violin_plots(
     model_name: str,
     # box_plot_toggle: bool,
