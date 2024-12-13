@@ -12,36 +12,36 @@ export default function Sidebar() {
       <nav className="flex flex-col gap-[6px]">
         <Link 
           href="/"
-          className={`flex items-center gap-2 p-1 pl-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-[14.5px]
-            ${pathName === '/' ? 'bg-black hover:bg-black text-white' : ''}`}
+          className={`flex items-center gap-2 p-1 pl-2 rounded-lg 
+            ${pathName === '/' ? 'bg-black text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'} text-[14.5px}`}
         >
           Home
         </Link>
         <Link 
           href="/overview"
-          className={`flex items-center gap-2 p-1 pl-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-[14.5px]
-            ${pathName === '/overview' ? 'bg-black hover:bg-black text-white' : ''}`}
+          className={`flex items-center gap-2 p-1 pl-2 rounded-lg 
+            ${pathName === '/overview' ? 'bg-black text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'} text-[14.5px}`}
         >
           Overview
         </Link>
         <Link 
           href="/violin-plots"
-          className={`flex items-center gap-2 p-1 pl-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-[14.5px]
-            ${pathName === '/violin-plots' ? 'bg-black hover:bg-black text-white' : ''}`}
+          className={`flex items-center gap-2 p-1 pl-2 rounded-lg 
+            ${pathName === '/violin-plots' ? 'bg-black text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'} text-[14.5px}`}
         >
           Violin Plots
         </Link>
         <Link 
           href="/scatter-plots"
-          className={`flex items-center gap-2 p-1 pl-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-[14.5px]
-            ${pathName === '/scatter-plots' ? 'bg-black hover:bg-black text-white' : ''}`}
+          className={`flex items-center gap-2 p-1 pl-2 rounded-lg 
+            ${pathName === '/scatter-plots' ? 'bg-black text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'} text-[14.5px}`}
         >
           Scatter Plots
         </Link>
         <Link 
           href="/correlation-heatmaps"
-          className={`flex items-center gap-2 p-1 pl-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-[14.5px]
-            ${pathName === '/correlation-heatmaps' ? 'bg-black hover:bg-black text-white' : ''}`}
+          className={`flex items-center gap-2 p-1 pl-2 rounded-lg 
+            ${pathName === '/correlation-heatmaps' ? 'bg-black text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'} text-[14.5px}`}
         >
           Correlation Heatmaps
         </Link>
