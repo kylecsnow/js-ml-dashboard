@@ -35,21 +35,11 @@ async def list_models():
 
 
 @app.post("/api/violin-plots/{model_name}")
-async def get_violin_plots(
-    model_name: str,
-    # box_plot_toggle: bool,
-    # data_points_toggle: bool,
-):
+async def get_violin_plots(model_name: str, body: dict = Body(...)):
+    box_plot_toggle = body.get("box_plot_toggle", [])
+    data_points_toggle = body.get("data_points_toggle", [])
+
     try:
-
-
-        # TODO: handle these with toggles in the UI
-        box_plot_toggle = True
-        data_points_toggle = True
-
-
-
-        # TODO: get this part working... and how should I handle the `box_plot_toggle` and `data_points_toggle` inputs...?
         model_and_metadata = get_model_and_metadata(model_name)
 
         dataset_name = get_dataset_name_from_model(model_name)

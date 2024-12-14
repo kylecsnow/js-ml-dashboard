@@ -20,7 +20,7 @@ const ViolinPlotsPage = () => {
   const { selectedModel } = useModel();
   const [plotData, setPlotData] = useState<PlotDataType | null>(null);
   const [boxPlotToggle, setBoxPlotToggle] = useState<boolean>(true);
-  const [dataPointsToggle, setDataPointsToggle] = useState<boolean>(true);
+  const [dataPointsToggle, setDataPointsToggle] = useState<boolean>(false);
 
   
   useEffect(() => {
@@ -80,11 +80,11 @@ const ViolinPlotsPage = () => {
         </div>
         <div>
           <h1>Under construction...</h1>
-          <p>TODOs: re-size the violin plots to fit the page better; add toggles for user control over plots</p>
+          <p>TODOs: re-size the violin plots to fit the page better</p>
         </div>
         <div className="flex gap-4">
           <div>
-            <label>Show Box Plot</label>
+            <label className="mr-2">Show Box Plot</label>
             <Switch
               checked={boxPlotToggle}
               onChange={setBoxPlotToggle}
@@ -101,7 +101,7 @@ const ViolinPlotsPage = () => {
             </Switch>
           </div>
           <div>
-            <label>Show Data Points</label>
+            <label className="mr-2">Show Data Points</label>
             <Switch
               checked={dataPointsToggle}
               onChange={setDataPointsToggle}
