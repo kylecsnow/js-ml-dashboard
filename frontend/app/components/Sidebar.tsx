@@ -38,12 +38,19 @@ export default function Sidebar() {
         >
           Scatter Plots
         </Link>
-        <Link 
+        <Link
           href="/correlation-heatmaps"
           className={`flex items-center gap-2 p-1 pl-2 rounded-lg 
             ${pathName === '/correlation-heatmaps' ? 'bg-black text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'} text-[14.5px}`}
         >
           Correlation Heatmaps
+        </Link>
+        <Link
+          href="/shap-summary-plots"
+          className={`flex items-center gap-2 p-1 pl-2 rounded-lg 
+            ${pathName === '/shap-summary-plots' ? 'bg-black text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'} text-[14.5px}`}
+        >
+          SHAP Summary Plots
         </Link>
       </nav>
     </aside>
