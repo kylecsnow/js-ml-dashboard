@@ -1,14 +1,17 @@
 from fastapi import Body, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import json
+import matplotlib
+import matplotlib.pyplot as plt
 from pathlib import Path
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import shap
 import uvicorn
 
-from utils import get_dataset_name_from_model, get_dataset, get_model_and_metadata
+from utils import fig2img, get_dataset_name_from_model, get_dataset, get_model_and_metadata
 
 
 app = FastAPI()
@@ -239,16 +242,54 @@ async def get_scatter_plot(model_name: str, body: dict = Body(...)):
 @app.get("/api/shap-summary-plots/{model_name}")
 async def get_shap_summary_plot(model_name: str):
     try:
-        # model_and_metadata = get_model_and_metadata(model_name=model_name)
-        # outputs = list(model_and_metadata["estimators_by_output"].keys())
-        # all_estimator_inputs = set()
-        # for output in outputs:
-        #     all_estimator_inputs = all_estimator_inputs.union(
-        #         set(model_and_metadata["estimators_by_output"][output]["inputs_reals"])
-        #     )
-        # all_estimator_inputs = list(all_estimator_inputs)
-        # variable_options = all_estimator_inputs + outputs
-        # return {"variable_options": variable_options}
+
+
+
+        model_and_metadata = get_model_and_metadata(model_name)
+
+        dataset_name = get_dataset_name_from_model(model_name)
+        dataset = get_dataset(dataset_name)
+
+        # logger.debug(
+        #     f"Retrieved training dataset for model. [model_name={model_name}, dataset_name={dataset_name}]"
+        # )
+
+        estimators_by_output = model_and_metadata["estimators_by_output"]
+        estimator = estimators_by_output[selected_output]["estimator"]
+
+        # TODO: eventually this needs to distinguish between real-valued outputs and categorical outputs
+        # outputs = model_and_metadata["outputs_reals"]
+        # outputs_reals = outputs
+
+        # TODO: eventually this needs to distinguish between real-valued inputs and categorical inputs
+        inputs = estimators_by_output[selected_output]["inputs_reals"]
+        # inputs_reals = inputs
+
+        matplotlib.use("agg")
+        plt.figure()
+        explainer = shap.Explainer(estimator)
+        shap_values = explainer(dataset[inputs])
+        fig = shap.summary_plot(
+            shap_values,
+            features=dataset[inputs],
+            feature_names=inputs,
+            plot_size=(12, 8),
+            show=False,
+        )
+        fig = plt.gcf()
+
+        print(type(fig2img(fig, dpi=150)))
+
+        fig = px.imshow(fig2img(fig, dpi=150))
+        fig.update_layout(
+            showlegend=False,
+            xaxis=dict(visible=False),
+            yaxis=dict(visible=False),
+            hovermode=False,
+        )
+
+
+
         return {""}
 
     except Exception as e:
