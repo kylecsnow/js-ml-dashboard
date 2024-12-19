@@ -1,6 +1,9 @@
+import io
+from matplotlib.figure import Figure
 import os
 import pandas as pd
 import pickle
+from PIL import Image
 from typing import Any
 
 
@@ -33,3 +36,14 @@ def get_model_and_metadata(model_name: str) -> dict[str, Any]:
         model_and_metadata = pickle.load(f)
 
     return model_and_metadata
+
+
+def fig2img(
+    fig: Figure, dpi: str | float = "figure", bbox_inches: str | None = None
+) -> Image.Image:
+    """Convert a Matplotlib figure to a PIL Image and return it"""
+    buf = io.BytesIO()
+    fig.savefig(buf, dpi=dpi, bbox_inches=bbox_inches)
+    buf.seek(0)
+    img = Image.open(buf)
+    return img
