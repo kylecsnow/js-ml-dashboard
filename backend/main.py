@@ -187,7 +187,6 @@ async def get_variable_options(model_name: str):
 async def get_scatter_plot(model_name: str, body: dict = Body(...)):
     selected_variables = body.get("selected_variables", [])
 
-
     try:
         dataset_name = get_dataset_name_from_model(model_name)
         dataset = get_dataset(dataset_name)
@@ -238,15 +237,32 @@ async def get_scatter_plot(model_name: str, body: dict = Body(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/output-variable-options/{model_name}")
+async def get_output_variable_options(model_name: str):
+    try:
+        model_and_metadata = get_model_and_metadata(model_name=model_name)
+        outputs = list(model_and_metadata["estimators_by_output"].keys())
+        all_estimator_inputs = set()
+        for output in outputs:
+            all_estimator_inputs = all_estimator_inputs.union(
+                set(model_and_metadata["estimators_by_output"][output]["inputs_reals"])
+            )
+        return {"output_variable_options": outputs}
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 ### TODO: finish this code!
-@app.get("/api/shap-summary-plots/{model_name}")
-async def get_shap_summary_plot(model_name: str):
+@app.post("/api/shap-summary-plots/{model_name}")
+async def get_shap_summary_plot(model_name: str, body: dict = Body(...)):
     try:
 
 
 
-        model_and_metadata = get_model_and_metadata(model_name)
+        selected_output = body.get("selected_output", [])
 
+        model_and_metadata = get_model_and_metadata(model_name)
         dataset_name = get_dataset_name_from_model(model_name)
         dataset = get_dataset(dataset_name)
 
@@ -289,8 +305,10 @@ async def get_shap_summary_plot(model_name: str):
         )
 
 
-
-        return {""}
+        # TODO: finish this part
+        plot_json = json.loads(fig.to_json())
+        
+        return {"plot_data": plot_json}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

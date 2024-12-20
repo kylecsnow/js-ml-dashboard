@@ -79,6 +79,10 @@ const CorrelationHeatmapsPage = () => {
             }
           </h2>
         </div>
+        <div>
+          <h1>Under construction...</h1>
+          <p>(TODOs: add toggle switches for 1. grouping/clustering variables, and 2. choosing whether to hide certain features (possibly showing a number entry field for the threshold) - #2 might be hard to do though, actually...)</p>
+        </div>
         <div className="w-full max-w-8xl mx-auto">
           {/* {loading ? (
             <div>Loading...</div>

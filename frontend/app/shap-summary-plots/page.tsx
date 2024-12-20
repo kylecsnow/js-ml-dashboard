@@ -18,6 +18,32 @@ interface PlotDataType {
 const ShapSummaryPlotsPage = () => {
   const { selectedModel } = useModel();
   const [plotData, setPlotData] = useState<PlotDataType | null>(null);
+  const [outputVariableOptions, setOutputVariableOptions] = useState<{ value: string; label: string }[]>([]);
+  const [selectedOutputVariable, setSelectedOutputVariable] = useState<string[]>([]);
+
+
+  useEffect(() => {
+    const fetchOutputVariableOptions = async () => {
+      if (selectedModel) {
+        try {
+          const response = await fetch(`http://localhost:8000/api/output-variable-options/${selectedModel}`);
+          const data = await response.json();
+          const options = data.output_variable_options.map((option: string) => ({ value: option, label: option }));
+          setOutputVariableOptions(options);
+
+          // Set the first option as selected by default
+          if (options.length >= 1) {
+            setSelectedOutputVariable(options[0].value);
+          }
+        } catch (error) {
+          console.error('Error fetching variable options:', error);
+        }
+      }
+    };
+
+    fetchOutputVariableOptions();
+  }, [selectedModel]);
+
 
   
   useEffect(() => {
@@ -25,14 +51,11 @@ const ShapSummaryPlotsPage = () => {
       try {
         const response = await fetch(
           `http://localhost:8000/api/shap-summary-plots/${selectedModel}`, {
-            method: 'GET',
+            method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            // body: JSON.stringify({
-            //   box_plot_toggle: boxPlotToggle,
-            //   data_points_toggle: dataPointsToggle,
-            // }),
+            body: JSON.stringify({ selected_variables: selectedOutputVariable }), // Send as JSON
           }
         );
         const data = await response.json();
@@ -43,7 +66,7 @@ const ShapSummaryPlotsPage = () => {
     };
 
     fetchShapSummaryPlotData();
-  }, [selectedModel]);
+  }, [selectedModel, selectedOutputVariable]);
 
 
   return (
