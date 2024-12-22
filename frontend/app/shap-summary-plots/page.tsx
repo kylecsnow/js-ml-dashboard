@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import Image from "next/image";
 import Link from 'next/link';
+import Select from 'react-select';
 import Sidebar from '../components/Sidebar';
 import { useState, useEffect } from 'react';
 import { useModel } from '../contexts/ModelContext';
@@ -55,7 +56,7 @@ const ShapSummaryPlotsPage = () => {
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ selected_variables: selectedOutputVariable }), // Send as JSON
+            body: JSON.stringify({ selected_output: selectedOutputVariable }), // Send as JSON
           }
         );
         const data = await response.json();
@@ -90,6 +91,16 @@ const ShapSummaryPlotsPage = () => {
           </Link>
 
         </div>
+        <div className="relative">
+          <Select
+            options={outputVariableOptions}
+            onChange={(selected) => setSelectedOutputVariable(selected.map(option => option.value))}
+            value={outputVariableOptions.filter(option => selectedOutputVariable.includes(option.value))} // Set selected values
+            name="selected-variables"
+            className="basic-multi-select"
+            classNamePrefix="select"
+          />
+        </div>
         <div>
           <h2>
             {selectedModel
@@ -100,7 +111,7 @@ const ShapSummaryPlotsPage = () => {
         </div>
         <div>
           <h1>Under construction...</h1>
-          <p>TODOs: Build the page!</p>
+          <p>TODOs: get plot sized more appropriately, get output dropdown working, fix the console errors </p>
         </div>
         {/* <div className="flex gap-4">
           <div>
