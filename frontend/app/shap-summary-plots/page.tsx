@@ -94,10 +94,9 @@ const ShapSummaryPlotsPage = () => {
         <div className="relative">
           <Select
             options={outputVariableOptions}
-            onChange={(selected) => setSelectedOutputVariable(selected.map(option => option.value))}
+            onChange={(selected) => setSelectedOutputVariable(selected.value)}
             value={outputVariableOptions.filter(option => selectedOutputVariable.includes(option.value))} // Set selected values
             name="selected-variables"
-            className="basic-multi-select"
             classNamePrefix="select"
           />
         </div>
@@ -111,7 +110,7 @@ const ShapSummaryPlotsPage = () => {
         </div>
         <div>
           <h1>Under construction...</h1>
-          <p>TODOs: get plot sized more appropriately, get output dropdown working, fix the console errors </p>
+          <p>TODOs: get loading animation working, get plot sized more appropriately</p>
         </div>
         {/* <div className="flex gap-4">
           <div>
