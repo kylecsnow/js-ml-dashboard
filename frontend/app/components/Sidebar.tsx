@@ -24,13 +24,6 @@ export default function Sidebar() {
         >
           Overview
         </Link>
-        <Link
-          href="/dataset-generator"
-          className={`flex items-center gap-2 p-1 pl-2 rounded-lg 
-            ${pathName === '/dataset-generator' ? 'bg-black text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'} text-[14.5px}`}
-        >
-          Dataset Generator
-        </Link>
         <Link 
           href="/violin-plots"
           className={`flex items-center gap-2 p-1 pl-2 rounded-lg 
@@ -65,6 +58,13 @@ export default function Sidebar() {
             ${pathName === '/molecular-design' ? 'bg-black text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'} text-[14.5px}`}
         >
           Molecular Design
+        </Link>
+        <Link
+          href="/dataset-generator"
+          className={`flex items-center gap-2 p-1 pl-2 rounded-lg 
+            ${pathName === '/dataset-generator' ? 'bg-black text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'} text-[14.5px}`}
+        >
+          Dataset Generator
         </Link>
       </nav>
     </aside>
