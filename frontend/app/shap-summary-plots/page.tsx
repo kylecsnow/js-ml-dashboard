@@ -20,7 +20,7 @@ const ShapSummaryPlotsPage = () => {
   const { selectedModel } = useModel();
   const [plotData, setPlotData] = useState<PlotDataType | null>(null);
   const [outputVariableOptions, setOutputVariableOptions] = useState<{ value: string; label: string }[]>([]);
-  const [selectedOutputVariable, setSelectedOutputVariable] = useState<string[]>([]);
+  const [selectedOutputVariable, setSelectedOutputVariable] = useState<string[]>();
 
 
   useEffect(() => {

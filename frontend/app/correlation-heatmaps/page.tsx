@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from 'next/link';
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
+import { Switch } from '@headlessui/react';
 import { useModel } from '../contexts/ModelContext';
 
 // Dynamically import Plot from plotly.js-dist-min
@@ -18,6 +19,7 @@ interface PlotDataType {
 const CorrelationHeatmapsPage = () => {
   const { selectedModel } = useModel();
   const [selectedHeatmapType, setSelectedHeatmapType] = useState('input-input');
+  const [clusterMapToggle, setClusterMapToggle] = useState<boolean>(false);
   const [plotData, setPlotData] = useState<PlotDataType | null>(null);
   // const [loading, setLoading] = useState(false);
 
@@ -70,6 +72,24 @@ const CorrelationHeatmapsPage = () => {
             <option value="input-output">Input-Output Correlations</option>
             <option value="output-output">Output-Output Correlations</option>
           </select>
+          <div>
+            <label className="mr-2">Cluster variables</label>
+            <Switch
+              checked={clusterMapToggle}
+              onChange={setClusterMapToggle}
+              className={`${
+                clusterMapToggle ? 'bg-blue-600' : 'bg-gray-200'
+              } relative inline-flex items-center h-6 rounded-full w-11`}
+            >
+              <span className="sr-only">Cluster variables</span>
+              <span
+                className={`${
+                  clusterMapToggle ? 'translate-x-6' : 'translate-x-1'
+                } inline-block w-4 h-4 transform bg-white rounded-full transition`}
+              />
+            </Switch>
+          </div>
+
         </div>
         <div>
           <h2>
@@ -81,7 +101,7 @@ const CorrelationHeatmapsPage = () => {
         </div>
         <div>
           <h1>Under construction...</h1>
-          <p>(TODOs: add toggle switches for 1. grouping/clustering variables, and 2. choosing whether to hide certain features (possibly showing a number entry field for the threshold) - #2 might be hard to do though, actually...)</p>
+          <p>(TODOs: 1. get toggle switches actually working for grouping/clustering variables, and 2. choosing whether to hide certain features (possibly showing a number entry field for the threshold) - #2 might be hard to do though, actually...)</p>
         </div>
         <div className="w-full max-w-8xl mx-auto">
           {/* {loading ? (

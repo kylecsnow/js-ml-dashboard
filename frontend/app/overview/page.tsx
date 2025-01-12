@@ -48,7 +48,7 @@ export default function Overview() {
         {/* Main content */}
         <div className="flex-1 grid grid-rows-[20px_1fr_20px] items-center justify-items-center p-8 pb-20 gap-16 sm:p-20">
           <h1>Under Construction...</h1>
-          <p>... existing main content and footer ...</p>
+          <p>TODO: Show model metrics...?</p>
         </div>
       </div>
     </div>
