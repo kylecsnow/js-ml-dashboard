@@ -15,11 +15,42 @@ interface PlotDataType {
     layout: any;
 }
 
+interface DescriptorGroup {
+  id: string;
+  name: string;
+  min: string;
+  max: string;
+  units: string;
+}
+
 const DatasetGeneratorPage = () => {
   const { selectedModel } = useModel();
   const [plotData, setPlotData] = useState<PlotDataType | null>(null);
+  const [descriptorGroups, setDescriptorGroups] = useState<DescriptorGroup[]>([]);
 
-  
+  const addDescriptorGroup = () => {
+    setDescriptorGroups([
+      ...descriptorGroups,
+      {
+        id: crypto.randomUUID(),
+        name: '',
+        min: '',
+        max: '',
+        units: ''
+      }
+    ]);
+  };
+
+  const removeDescriptorGroup = (id: string) => {
+    setDescriptorGroups(descriptorGroups.filter(group => group.id !== id));
+  };
+
+  const updateDescriptorGroup = (id: string, field: keyof DescriptorGroup, value: string) => {
+    setDescriptorGroups(descriptorGroups.map(group => 
+      group.id === id ? { ...group, [field]: value } : group
+    ));
+  };
+
   useEffect(() => {
     async function fetchDatasetGeneratorData() {
       try {
@@ -71,52 +102,84 @@ const DatasetGeneratorPage = () => {
           <h1>Under construction...</h1>
           <p>TODOs: Build the page!</p>
         </div>
-        {/* <div className="flex gap-4">
-          <div>
-            <label className="mr-2">Show Box Plot</label>
-            <Switch
-              checked={boxPlotToggle}
-              onChange={setBoxPlotToggle}
-              className={`${
-                boxPlotToggle ? 'bg-blue-600' : 'bg-gray-200'
-              } relative inline-flex items-center h-6 rounded-full w-11`}
-            >
-              <span className="sr-only">Toggle Box Plot</span>
-              <span
-                className={`${
-                  boxPlotToggle ? 'translate-x-6' : 'translate-x-1'
-                } inline-block w-4 h-4 transform bg-white rounded-full transition`}
-              />
-            </Switch>
-          </div>
-          <div>
-            <label className="mr-2">Show Data Points</label>
-            <Switch
-              checked={dataPointsToggle}
-              onChange={setDataPointsToggle}
-              className={`${
-                dataPointsToggle ? 'bg-blue-600' : 'bg-gray-200'
-              } relative inline-flex items-center h-6 rounded-full w-11`}
-            >
-              <span className="sr-only">Toggle Data Points</span>
-              <span
-                className={`${
-                  dataPointsToggle ? 'translate-x-6' : 'translate-x-1'
-                } inline-block w-4 h-4 transform bg-white rounded-full transition`}
-              />
-            </Switch>
-          </div>
-        </div> */}
         <div className="w-full max-w-4xl">
-          {plotData && (
-            <Plot
-              data={plotData.data}
-              layout={plotData.layout}
-              config={{ responsive: true }}
-              style={{ width: '100%', height: '600px' }}
-            />
-          )}
+          <button
+            onClick={addDescriptorGroup}
+            className="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Add Descriptor Group
+          </button>
+
+          {descriptorGroups.map(group => (
+            <div key={group.id} className="mb-6 p-4 border rounded-lg relative">
+              <button
+                onClick={() => removeDescriptorGroup(group.id)}
+                className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+              >
+                ✕
+              </button>
+              
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Descriptor name
+                  </label>
+                  <input
+                    type="text"
+                    value={group.name}
+                    onChange={(e) => updateDescriptorGroup(group.id, 'name', e.target.value)}
+                    className="w-full p-2 border rounded"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Minimum possible value
+                  </label>
+                  <input
+                    type="number"
+                    value={group.min}
+                    onChange={(e) => updateDescriptorGroup(group.id, 'min', e.target.value)}
+                    className="w-full p-2 border rounded"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Maximum possible value
+                  </label>
+                  <input
+                    type="number"
+                    value={group.max}
+                    onChange={(e) => updateDescriptorGroup(group.id, 'max', e.target.value)}
+                    className="w-full p-2 border rounded"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Units (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={group.units}
+                    onChange={(e) => updateDescriptorGroup(group.id, 'units', e.target.value)}
+                    className="w-full p-2 border rounded"
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
+
+        {plotData && (
+          <Plot
+            data={plotData.data}
+            layout={plotData.layout}
+            config={{ responsive: true }}
+            style={{ width: '100%', height: '600px' }}
+          />
+        )}
       </div>
     </div>
   );
