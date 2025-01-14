@@ -1,15 +1,15 @@
 black
 fastapi==0.115.4
-# jupyter==1.0.0
-# matplotlib<4.0.0
+jupyter
+matplotlib<4.0.0
 mypy
-# numpy<2.0.0
-# pandas
-# plotly==5.18.0
-# plotly-express==0.4.1
+numpy<2.0.0
+pandas
+plotly==5.18.0
+plotly-express==0.4.1
 # PyYAML<7.0.0
 ruff
-# scikit-learn<2.0.0
+scikit-learn<2.0.0
 # scipy<2.0.0
-# shap==0.43.0
+shap==0.43.0
 uvicorn[standard]==0.32.0
