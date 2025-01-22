@@ -27,6 +27,7 @@ const DatasetGeneratorPage = () => {
   const { selectedModel } = useModel();
   const [plotData, setPlotData] = useState<PlotDataType | null>(null);
   const [descriptorGroups, setDescriptorGroups] = useState<DescriptorGroup[]>([]);
+  const [numRows, setNumRows] = useState<number | ''>('');
 
   const addDescriptorGroup = () => {
     setDescriptorGroups([
@@ -103,6 +104,19 @@ const DatasetGeneratorPage = () => {
           <p>TODOs: Build the page!</p>
         </div>
         <div className="w-full max-w-4xl">
+          <div className="mb-6">
+            <label className="block text-sm font-medium mb-1">
+              Number of Rows
+            </label>
+            <input
+              type="number"
+              value={numRows}
+              onChange={(e) => setNumRows(Number(e.target.value) || '')}
+              min="1"
+              className="w-full p-2 border rounded"
+            />
+          </div>
+
           <button
             onClick={addDescriptorGroup}
             className="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
