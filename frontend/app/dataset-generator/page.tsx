@@ -52,6 +52,10 @@ const DatasetGeneratorPage = () => {
     ));
   };
 
+  const generateData = () => {
+    console.log(`Generating ${numRows} rows of data...`);
+  };
+
   useEffect(() => {
     async function fetchDatasetGeneratorData() {
       try {
@@ -104,8 +108,8 @@ const DatasetGeneratorPage = () => {
           <p>TODOs: Build the page!</p>
         </div>
         <div className="w-full max-w-4xl">
-          <div className="mb-6">
-            <label className="block text-sm font-medium mb-1">
+          <div className="mb-6 flex items-center">
+            <label className="block text-sm font-medium mb-1 mr-2">
               Number of Rows
             </label>
             <input
@@ -113,15 +117,21 @@ const DatasetGeneratorPage = () => {
               value={numRows}
               onChange={(e) => setNumRows(Number(e.target.value) || '')}
               min="1"
-              className="w-full p-2 border rounded"
+              className="w-full p-2 border rounded mr-2"
             />
+            <button
+              onClick={generateData}
+              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+            >
+              Generate Data
+            </button>
           </div>
 
           <button
             onClick={addDescriptorGroup}
             className="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
           >
-            Add Descriptor Group
+            Add Descriptor
           </button>
 
           {descriptorGroups.map(group => (
