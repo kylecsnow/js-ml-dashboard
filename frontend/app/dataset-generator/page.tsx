@@ -105,7 +105,7 @@ const DatasetGeneratorPage = () => {
         </div>
         <div>
           <h1>Under construction...</h1>
-          <p>TODOs: Build the page!</p>
+          <p>TODOs: 1. Separate sections for general inputs, formulation inputs, and outputs, 2. Make "name", "min", and "max" fields required, 3. hook this all up to the backend API code, 4. preview rows of generated data (include interactive table somehow?), 5. Add capability for CSV export via another button, 6. (someday) add an "advanced" menu that allows users to specify their coefficients</p>
         </div>
         <div className="w-full max-w-4xl">
           <div className="mb-6 flex items-center">
