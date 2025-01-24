@@ -1,19 +1,10 @@
 'use client';
 
-import dynamic from 'next/dynamic';
 import Image from "next/image";
 import Link from 'next/link';
 import Sidebar from '../components/Sidebar';
-import { useState, useEffect } from 'react';
-import { useModel } from '../contexts/ModelContext';
+import { useState } from 'react';
 
-const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
-
-// TODO: don't re-make this interface in every page; pull it out into some other place and then import it in each of your pages.
-interface PlotDataType {
-    data: any[];
-    layout: any;
-}
 
 interface DescriptorGroup {
   id: string;
@@ -24,8 +15,6 @@ interface DescriptorGroup {
 }
 
 const DatasetGeneratorPage = () => {
-  const { selectedModel } = useModel();
-  const [plotData, setPlotData] = useState<PlotDataType | null>(null);
   const [generalInputs, setGeneralInputs] = useState<DescriptorGroup[]>([]);
   const [formulationInputs, setFormulationInputs] = useState<DescriptorGroup[]>([]);
   const [outputs, setOutputs] = useState<DescriptorGroup[]>([]);
@@ -76,11 +65,9 @@ const DatasetGeneratorPage = () => {
   };
 
 
-
-
-  // const generateData = () => {
   async function generateData() {
-    // print a bunch of stuff just to check the user input is being captured correctly. Can probably delete remove this eventually... 
+    
+    // print a bunch of stuff just to check the user input is being captured correctly. TODO: Can probably remove this eventually... 
     console.log(`Generating ${numRows} rows of data...`);
     console.log(`General Inputs:`);
     generalInputs.forEach(group => {console.log(`- Name: ${group.name}, Min: ${group.min}, Max: ${group.max}, Units: ${group.units}`);});
@@ -89,8 +76,6 @@ const DatasetGeneratorPage = () => {
     console.log(`Outputs:`);
     outputs.forEach(group => {console.log(`- Name: ${group.name}, Min: ${group.min}, Max: ${group.max}, Units: ${group.units}`);});
     console.log(`Completed generating data.`);
-
-
 
     try {
       const response = await fetch(
@@ -107,62 +92,10 @@ const DatasetGeneratorPage = () => {
           }),
         }
       );
-      const data = await response.json();
-      setPlotData(data.plot_data);
     } catch (error) {
       console.error('Error fetching synthetic demo data:', error);
     }
-
-
-
-    
   };
-
-
-
-
-
-  // useEffect(() => {
-  //   async function fetchDatasetGeneratorData() {
-
-
-
-  //     // print a bunch of stuff just to check the user input is being captured correctly. Can probably delete remove this eventually... 
-  //     console.log(`Generating ${numRows} rows of data...`);
-  //     console.log(`General Inputs:`);
-  //     generalInputs.forEach(group => {console.log(`- Name: ${group.name}, Min: ${group.min}, Max: ${group.max}, Units: ${group.units}`);});
-  //     console.log(`Formulation Inputs:`);
-  //     formulationInputs.forEach(group => {console.log(`- Name: ${group.name}, Min: ${group.min}, Max: ${group.max}, Units: ${group.units}`);});
-  //     console.log(`Outputs:`);
-  //     outputs.forEach(group => {console.log(`- Name: ${group.name}, Min: ${group.min}, Max: ${group.max}, Units: ${group.units}`);});
-  //     console.log(`Completed generating data.`);
-    
-
-
-  //     try {
-  //       const response = await fetch(
-  //         `http://localhost:8000/api/dataset-generator/`, {
-  //           method: 'POST',
-  //           headers: {
-  //             'Content-Type': 'application/json',
-  //           },
-  //           body: JSON.stringify({
-  //             general_inputs: generalInputs,
-  //             formulation_inputs: formulationInputs,
-  //             outputs: outputs,
-  //             num_rows: numRows,
-  //           }),
-  //         }
-  //       );
-  //       const data = await response.json();
-  //       setPlotData(data.plot_data);
-  //     } catch (error) {
-  //       console.error('Error fetching scatter plot data:', error);
-  //     }
-  //   };
-
-  //   fetchDatasetGeneratorData();
-  // }, [selectedModel]);
 
 
   return (
@@ -188,7 +121,7 @@ const DatasetGeneratorPage = () => {
         </div>
         <div>
           <h1>Under construction...</h1>
-          <p>TODOs: 1. Make "name", "min", and "max" fields required, 2. preview rows of generated data (include interactive table somehow?), 3. Add capability for CSV export via another button, 4. (someday) add an "advanced" menu that allows users to specify their coefficients</p>
+          <p>TODOs: 1. Make "name", "min", and "max" fields required, 2. preview rows of generated data (include interactive table somehow?), 3. Add capability for CSV export via another button, 4. handle if a user enters nothing, 5. (someday) add an "advanced" menu that allows users to specify their coefficients</p>
         </div>
         <div className="w-full max-w-4xl">
           <div className="mb-6 flex items-center">
@@ -387,15 +320,6 @@ const DatasetGeneratorPage = () => {
             ))}
           </div>
         </div>
-
-        {plotData && (
-          <Plot
-            data={plotData.data}
-            layout={plotData.layout}
-            config={{ responsive: true }}
-            style={{ width: '100%', height: '600px' }}
-          />
-        )}
       </div>
     </div>
   );
