@@ -26,30 +26,53 @@ interface DescriptorGroup {
 const DatasetGeneratorPage = () => {
   const { selectedModel } = useModel();
   const [plotData, setPlotData] = useState<PlotDataType | null>(null);
-  const [descriptorGroups, setDescriptorGroups] = useState<DescriptorGroup[]>([]);
-  const [numRows, setNumRows] = useState<number | ''>('');
+  const [generalInputs, setGeneralInputs] = useState<DescriptorGroup[]>([]);
+  const [formulationInputs, setFormulationInputs] = useState<DescriptorGroup[]>([]);
+  const [outputs, setOutputs] = useState<DescriptorGroup[]>([]);
+  const [numRows, setNumRows] = useState<number | ''>(10);
 
-  const addDescriptorGroup = () => {
-    setDescriptorGroups([
-      ...descriptorGroups,
-      {
-        id: crypto.randomUUID(),
-        name: '',
-        min: '',
-        max: '',
-        units: ''
-      }
-    ]);
+  const addDescriptorGroup = (category: 'general input' | 'formulation input' | 'output') => {
+    const newGroup = {
+      id: crypto.randomUUID(),
+      name: '',
+      min: '',
+      max: '',
+      units: ''
+    };
+
+    if (category === 'general input') {
+      setGeneralInputs([...generalInputs, newGroup]);
+    } else if (category === 'formulation input') {
+      setFormulationInputs([...formulationInputs, newGroup]);
+    } else if (category === 'output') {
+      setOutputs([...outputs, newGroup]);
+    }
   };
 
-  const removeDescriptorGroup = (id: string) => {
-    setDescriptorGroups(descriptorGroups.filter(group => group.id !== id));
+  const removeDescriptorGroup = (category: 'general input' | 'formulation input' | 'output', id: string) => {
+    if (category === 'general input') {
+      setGeneralInputs(generalInputs.filter(group => group.id !== id));
+    } else if (category === 'formulation input') {
+      setFormulationInputs(formulationInputs.filter(group => group.id !== id));
+    } else if (category === 'output') {
+      setOutputs(outputs.filter(group => group.id !== id));
+    }
   };
 
-  const updateDescriptorGroup = (id: string, field: keyof DescriptorGroup, value: string) => {
-    setDescriptorGroups(descriptorGroups.map(group => 
-      group.id === id ? { ...group, [field]: value } : group
-    ));
+  const updateDescriptorGroup = (category: 'general input' | 'formulation input' | 'output', id: string, field: keyof DescriptorGroup, value: string) => {
+    if (category === 'general input') {
+      setGeneralInputs(generalInputs.map(group => 
+        group.id === id ? { ...group, [field]: value } : group
+      ));
+    } else if (category === 'formulation input') {
+      setFormulationInputs(formulationInputs.map(group => 
+        group.id === id ? { ...group, [field]: value } : group
+      ));
+    } else if (category === 'output') {
+      setOutputs(outputs.map(group => 
+        group.id === id ? { ...group, [field]: value } : group
+      ));
+    }
   };
 
   const generateData = () => {
@@ -105,7 +128,7 @@ const DatasetGeneratorPage = () => {
         </div>
         <div>
           <h1>Under construction...</h1>
-          <p>TODOs: 1. Separate sections for general inputs, formulation inputs, and outputs, 2. Make "name", "min", and "max" fields required, 3. hook this all up to the backend API code, 4. preview rows of generated data (include interactive table somehow?), 5. Add capability for CSV export via another button, 6. (someday) add an "advanced" menu that allows users to specify their coefficients</p>
+          <p>TODOs: 1. Make "name", "min", and "max" fields required, 2. hook this all up to the backend API code, 3. preview rows of generated data (include interactive table somehow?), 4. Add capability for CSV export via another button, 5. (someday) add an "advanced" menu that allows users to specify their coefficients</p>
         </div>
         <div className="w-full max-w-4xl">
           <div className="mb-6 flex items-center">
@@ -127,73 +150,182 @@ const DatasetGeneratorPage = () => {
             </button>
           </div>
 
-          <button
-            onClick={addDescriptorGroup}
-            className="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Add Descriptor
-          </button>
-
-          {descriptorGroups.map(group => (
-            <div key={group.id} className="mb-6 p-4 border rounded-lg relative">
-              <button
-                onClick={() => removeDescriptorGroup(group.id)}
-                className="absolute top-2 right-2 text-red-500 hover:text-red-700"
-              >
-                ✕
-              </button>
-              
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Descriptor name
-                  </label>
-                  <input
-                    type="text"
-                    value={group.name}
-                    onChange={(e) => updateDescriptorGroup(group.id, 'name', e.target.value)}
-                    className="w-full p-2 border rounded"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Minimum possible value
-                  </label>
-                  <input
-                    type="number"
-                    value={group.min}
-                    onChange={(e) => updateDescriptorGroup(group.id, 'min', e.target.value)}
-                    className="w-full p-2 border rounded"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Maximum possible value
-                  </label>
-                  <input
-                    type="number"
-                    value={group.max}
-                    onChange={(e) => updateDescriptorGroup(group.id, 'max', e.target.value)}
-                    className="w-full p-2 border rounded"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Units (optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={group.units}
-                    onChange={(e) => updateDescriptorGroup(group.id, 'units', e.target.value)}
-                    className="w-full p-2 border rounded"
-                  />
+          {/* General Inputs Section */}
+          <div className="mb-6 p-4 border-2 border-gray-400 rounded-lg">
+            <h2 className="text-lg font-bold mb-2">General Inputs</h2>
+            <button
+              onClick={() => addDescriptorGroup('general input')}
+              className="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Add General Input
+            </button>
+            {generalInputs.map(group => (
+              <div key={group.id} className="mb-6 p-4 border rounded-lg relative">
+                <button
+                  onClick={() => removeDescriptorGroup('general input', group.id)}
+                  className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+                >
+                  ✕
+                </button>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Descriptor name</label>
+                    <input
+                      type="text"
+                      value={group.name}
+                      onChange={(e) => updateDescriptorGroup('general input', group.id, 'name', e.target.value)}
+                      className="w-full p-2 border rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Minimum possible value</label>
+                    <input
+                      type="number"
+                      value={group.min}
+                      onChange={(e) => updateDescriptorGroup('general input', group.id, 'min', e.target.value)}
+                      className="w-full p-2 border rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Maximum possible value</label>
+                    <input
+                      type="number"
+                      value={group.max}
+                      onChange={(e) => updateDescriptorGroup('general input', group.id, 'max', e.target.value)}
+                      className="w-full p-2 border rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Units (optional)</label>
+                    <input
+                      type="text"
+                      value={group.units}
+                      onChange={(e) => updateDescriptorGroup('general input', group.id, 'units', e.target.value)}
+                      className="w-full p-2 border rounded"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+
+          {/* Formulation Inputs Section */}
+          <div className="mb-6 p-4 border-2 border-gray-400 rounded-lg">
+            <h2 className="text-lg font-bold mb-2">Formulation Inputs</h2>
+            <button
+              onClick={() => addDescriptorGroup('formulation input')}
+              className="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Add Formulation Input
+            </button>
+            {formulationInputs.map(group => (
+              <div key={group.id} className="mb-6 p-4 border rounded-lg relative">
+                <button
+                  onClick={() => removeDescriptorGroup('formulation input', group.id)}
+                  className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+                >
+                  ✕
+                </button>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Descriptor name</label>
+                    <input
+                      type="text"
+                      value={group.name}
+                      onChange={(e) => updateDescriptorGroup('formulation input', group.id, 'name', e.target.value)}
+                      className="w-full p-2 border rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Minimum possible value</label>
+                    <input
+                      type="number"
+                      value={group.min}
+                      onChange={(e) => updateDescriptorGroup('formulation input', group.id, 'min', e.target.value)}
+                      className="w-full p-2 border rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Maximum possible value</label>
+                    <input
+                      type="number"
+                      value={group.max}
+                      onChange={(e) => updateDescriptorGroup('formulation input', group.id, 'max', e.target.value)}
+                      className="w-full p-2 border rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Units (optional)</label>
+                    <input
+                      type="text"
+                      value={group.units}
+                      onChange={(e) => updateDescriptorGroup('formulation input', group.id, 'units', e.target.value)}
+                      className="w-full p-2 border rounded"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Outputs Section */}
+          <div className="mb-6 p-4 border-2 border-gray-400 rounded-lg">
+            <h2 className="text-lg font-bold mb-2">Outputs</h2>
+            <button
+              onClick={() => addDescriptorGroup('output')}
+              className="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Add Output
+            </button>
+            {outputs.map(group => (
+              <div key={group.id} className="mb-6 p-4 border rounded-lg relative">
+                <button
+                  onClick={() => removeDescriptorGroup('output', group.id)}
+                  className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+                >
+                  ✕
+                </button>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Descriptor name</label>
+                    <input
+                      type="text"
+                      value={group.name}
+                      onChange={(e) => updateDescriptorGroup('output', group.id, 'name', e.target.value)}
+                      className="w-full p-2 border rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Minimum possible value</label>
+                    <input
+                      type="number"
+                      value={group.min}
+                      onChange={(e) => updateDescriptorGroup('output', group.id, 'min', e.target.value)}
+                      className="w-full p-2 border rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Maximum possible value</label>
+                    <input
+                      type="number"
+                      value={group.max}
+                      onChange={(e) => updateDescriptorGroup('output', group.id, 'max', e.target.value)}
+                      className="w-full p-2 border rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Units (optional)</label>
+                    <input
+                      type="text"
+                      value={group.units}
+                      onChange={(e) => updateDescriptorGroup('output', group.id, 'units', e.target.value)}
+                      className="w-full p-2 border rounded"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {plotData && (
