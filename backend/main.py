@@ -11,7 +11,7 @@ from plotly.subplots import make_subplots
 import shap
 import uvicorn
 
-from utils import fig2img, get_dataset_name_from_model, get_dataset, get_model_and_metadata
+from utils import fig2img, get_dataset_name_from_model, get_dataset, get_model_and_metadata, build_sythetic_demo_dataset
 
 
 app = FastAPI()
@@ -333,6 +333,39 @@ async def get_molecular_design(model_name: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@app.post("/api/dataset-generator")
+async def get_synthetic_demo_dataset(body: dict = Body(...)):
+    general_inputs = body.get("general_inputs", [])
+    formulation_inputs = body.get("formulation_inputs", {})
+    outputs = body.get("outputs", [])
+    num_rows = body.get("num_rows", [])
+
+    ### TODO: maybe make a function for this operation, instead of explicitly repreating it a bunch of times? (for better readability?)
+    general_inputs = {item["name"]: {"min": int(item["min"]), "max": int(item["max"]), "units": item["units"]} for item in general_inputs}
+    formulation_inputs = {item["name"]: {"min": int(item["min"]), "max": int(item["max"]), "units": item["units"]} for item in formulation_inputs}
+    outputs = {item["name"]: {"min": int(item["min"]), "max": int(item["max"]), "units": item["units"]} for item in outputs}
+
+
+    inputs = {
+        "general": general_inputs,
+        "formulation": formulation_inputs,
+    }
+
+    try:
+        synthetic_demo_data_df, synthetic_demo_coefs_df = build_sythetic_demo_dataset(inputs=inputs, outputs=outputs, num_rows=num_rows)
+        
+
+
+        print(synthetic_demo_data_df)
+        print(synthetic_demo_coefs_df)
+
+
+
+        return {"synthetic_demo_data": synthetic_demo_data_df}
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":

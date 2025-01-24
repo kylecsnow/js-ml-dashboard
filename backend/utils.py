@@ -335,7 +335,9 @@ def build_sythetic_demo_dataset(inputs=5, outputs=1, num_rows=10, noise=0, coefs
             if col in general_inputs or col in outputs:
                 df_scaled[col] = df_scaled[col] * (all_columns[col]["max"] - all_columns[col]["min"]) + all_columns[col]["min"]
 
-        column_renaming = {col: f'{col}-{all_columns[col]["units"]}' for col in general_inputs or col in outputs}
+        # concatenate column names with user's specified units, with a hyphen in between (but don't add hyphen if no units were specified)
+        column_renaming = {col: f'{col}-{all_columns[col]["units"]}' for col in general_inputs if all_columns[col]["units"] != ""}
+        column_renaming.update({col: f'{col}-{all_columns[col]["units"]}' for col in outputs if all_columns[col]["units"] != ""})
         df_scaled = df_scaled.rename(column_renaming, axis=1)
         coefs_df = coefs_df.rename(column_renaming, axis=0)
         coefs_df = coefs_df.rename(column_renaming, axis=1)
