@@ -66,9 +66,12 @@ const DatasetGeneratorPage = () => {
     }
   };
 
+  const preventWheelChange = (e: React.WheelEvent<HTMLInputElement>) => {
+    e.currentTarget.blur();
+  };
+
 
   async function generateData() {
-
     // Validate filename
     if (!filename.trim()) {
       setError("Filename is required.");
@@ -104,6 +107,16 @@ const DatasetGeneratorPage = () => {
       }
     }
 
+    // Validate formulation input bounds are between 0 and 1
+    for (const group of formulationInputs) {
+      const min = parseFloat(group.min);
+      const max = parseFloat(group.max);
+      if (min < 0 || min > 1 || max < 0 || max > 1) {
+        setError("Formulation Input bounds must all have values between 0 and 1.");
+        return;
+      }
+    }
+
     // Clear any existing error
     setError("");
     
@@ -124,6 +137,18 @@ const DatasetGeneratorPage = () => {
         }
       );
 
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (response.status === 400) {
+          setError(errorData.detail);
+        } else if (response.status === 500) {
+          setError("An internal server error occurred. Please try again later.");
+        } else {
+          setError(errorData.detail || "An unexpected error occurred");
+        }
+        return;
+      }
+
       const data = await response.json();
       const blob = new Blob([data.csv_string], { type: 'text/csv' });
 
@@ -142,6 +167,7 @@ const DatasetGeneratorPage = () => {
 
     } catch (error) {
       console.error('Error fetching synthetic demo data:', error);
+      setError("An error occurred while generating the dataset. Please try again later.");
     }
   };
 
@@ -168,8 +194,14 @@ const DatasetGeneratorPage = () => {
 
         </div>
         <div>
-          <h1>Under construction...</h1>
-          <p>TODOs: 1. preview rows of generated data (include interactive table somehow?), 2. (someday) add an "advanced" menu that allows users to specify their coefficients.</p>
+          <p>Under construction...</p>
+        </div>
+        <div>
+          <h3>TODOs:</h3>
+          <ol className="list-decimal ml-6">
+            <li>preview rows of generated data (include interactive table somehow?)</li>
+            <li>(someday) add an "advanced" menu that allows users to specify their coefficients</li>
+          </ol>
         </div>
         <div>
           <p>Biggest TODO:  DEPLOY!!!!</p>
@@ -188,6 +220,7 @@ const DatasetGeneratorPage = () => {
               type="number"
               value={numRows}
               onChange={(e) => setNumRows(Number(e.target.value) || '')}
+              onWheel={preventWheelChange}
               min="1"
               className="w-36 p-2 border border-gray-600 rounded mr-2"
             />
@@ -243,6 +276,7 @@ const DatasetGeneratorPage = () => {
                       type="number"
                       value={group.min}
                       onChange={(e) => updateDescriptorGroup('general input', group.id, 'min', e.target.value)}
+                      onWheel={preventWheelChange}
                       className="w-full p-2 border border-gray-600 rounded"
                     />
                   </div>
@@ -252,6 +286,7 @@ const DatasetGeneratorPage = () => {
                       type="number"
                       value={group.max}
                       onChange={(e) => updateDescriptorGroup('general input', group.id, 'max', e.target.value)}
+                      onWheel={preventWheelChange}
                       className="w-full p-2 border border-gray-600 rounded"
                     />
                   </div>
@@ -272,6 +307,10 @@ const DatasetGeneratorPage = () => {
           {/* Formulation Inputs Section */}
           <div className="mb-6 p-4 border-2 border-gray-400 rounded-lg">
             <h2 className="text-lg font-bold mb-2">Formulation Inputs</h2>
+            <p className="mb-4 text-sm text-gray-600">
+              Note: Lower and upper bounds must be between 0 and 1, representing percentages that will sum to 100%.
+              Ex: 0.25 represents 25%.
+            </p>
             <button
               onClick={() => addDescriptorGroup('formulation input')}
               className="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
@@ -302,6 +341,7 @@ const DatasetGeneratorPage = () => {
                       type="number"
                       value={group.min}
                       onChange={(e) => updateDescriptorGroup('formulation input', group.id, 'min', e.target.value)}
+                      onWheel={preventWheelChange}
                       className="w-full p-2 border border-gray-600 rounded"
                     />
                   </div>
@@ -311,15 +351,7 @@ const DatasetGeneratorPage = () => {
                       type="number"
                       value={group.max}
                       onChange={(e) => updateDescriptorGroup('formulation input', group.id, 'max', e.target.value)}
-                      className="w-full p-2 border border-gray-600 rounded"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Units (optional)</label>
-                    <input
-                      type="text"
-                      value={group.units}
-                      onChange={(e) => updateDescriptorGroup('formulation input', group.id, 'units', e.target.value)}
+                      onWheel={preventWheelChange}
                       className="w-full p-2 border border-gray-600 rounded"
                     />
                   </div>
@@ -361,6 +393,7 @@ const DatasetGeneratorPage = () => {
                       type="number"
                       value={group.min}
                       onChange={(e) => updateDescriptorGroup('output', group.id, 'min', e.target.value)}
+                      onWheel={preventWheelChange}
                       className="w-full p-2 border border-gray-600 rounded"
                     />
                   </div>
@@ -370,6 +403,7 @@ const DatasetGeneratorPage = () => {
                       type="number"
                       value={group.max}
                       onChange={(e) => updateDescriptorGroup('output', group.id, 'max', e.target.value)}
+                      onWheel={preventWheelChange}
                       className="w-full p-2 border border-gray-600 rounded"
                     />
                   </div>

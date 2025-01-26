@@ -162,12 +162,12 @@ def sample_from_constrained_simplex(
     if constraints is None:
         constraints = [None] * n_dimensions
     elif len(constraints) != n_dimensions:
-        raise ValueError("Length of constraints must match n_dimensions")
+        raise ValueError("Length of constraints must match n_dimensions.")
     
     # Validate constraints
     total_min = sum(c[0] for c in constraints if c is not None)
     if total_min > 1:
-        raise ValueError("Sum of minimum constraints exceeds 1")
+        raise ValueError("Sum of formulation lower bounds exceeds 1.")
     
     for attempt in range(max_attempts):
         try:
@@ -189,7 +189,7 @@ def sample_from_constrained_simplex(
                             free_indices = [j for j, c in enumerate(constraints) 
                                          if c is None or (j != i and sample[j] > c[0])]
                             if not free_indices:
-                                raise ValueError("Cannot satisfy minimum constraint")
+                                raise ValueError("Cannot satisfy minimum constraint.")
                             weights = np.array([sample[j] for j in free_indices])
                             weights = weights / weights.sum()
                             for j, w in zip(free_indices, weights):
@@ -202,7 +202,7 @@ def sample_from_constrained_simplex(
                             free_indices = [j for j, c in enumerate(constraints) 
                                          if c is None or (j != i and sample[j] < c[1])]
                             if not free_indices:
-                                raise ValueError("Cannot satisfy maximum constraint")
+                                raise ValueError("Cannot satisfy maximum constraint.")
                             sample[free_indices] += excess / len(free_indices)
                             sample[i] = max_val
                             modified = True
@@ -225,7 +225,7 @@ def sample_from_constrained_simplex(
         except ValueError:
             continue
             
-    raise ValueError(f"Could not find valid solution after {max_attempts} attempts")
+    raise ValueError(f"Could not find any valid formulation after {max_attempts} attempts. Please check that your formulations are not over-constrained. (Your lower & upper bounds might make it impossible to find a formulation where the ingredient quantities sum to 100%)")
 
 
 ### D-dimensional sigmoid function with the given set of D coefficients:
