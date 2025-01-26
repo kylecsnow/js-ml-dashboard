@@ -19,6 +19,8 @@ const DatasetGeneratorPage = () => {
   const [formulationInputs, setFormulationInputs] = useState<DescriptorGroup[]>([]);
   const [outputs, setOutputs] = useState<DescriptorGroup[]>([]);
   const [numRows, setNumRows] = useState<number | ''>(10);
+  const [filename, setFilename] = useState<string>("generated_dataset.csv");
+  const [error, setError] = useState<string>("");
 
   const addDescriptorGroup = (category: 'general input' | 'formulation input' | 'output') => {
     const newGroup = {
@@ -66,6 +68,43 @@ const DatasetGeneratorPage = () => {
 
 
   async function generateData() {
+    // Validate filename
+    if (!filename.trim()) {
+      setError("Filename is required");
+      return;
+    }
+
+    // Validate that at least one input type exists
+    if (generalInputs.length === 0 && formulationInputs.length === 0) {
+      setError("At least one General Input OR one Formulation Input is required.");
+      return;
+    }
+
+    // Validate that at least one output exists
+    if (outputs.length === 0) {
+      setError("At least one Output is required.");
+      return;
+    }
+
+    // Validate all descriptor groups
+    const allGroups = [...generalInputs, ...formulationInputs, ...outputs];
+    for (const group of allGroups) {
+      if (!group.name.trim()) {
+        setError("Variable names cannot be left blank.");
+        return;
+      }
+      if (!group.min.trim()) {
+        setError("All lower bounds are required.");
+        return;
+      }
+      if (!group.max.trim()) {
+        setError("All upper bounds are required.");
+        return;
+      }
+    }
+
+    // Clear any existing error
+    setError("");
     
     // print a bunch of stuff just to check the user input is being captured correctly. TODO: Can probably remove this eventually... 
     console.log(`Generating ${numRows} rows of data...`);
@@ -99,7 +138,7 @@ const DatasetGeneratorPage = () => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'generated_dataset.csv';
+      a.download = filename;
       
       // Trigger download
       document.body.appendChild(a);
@@ -144,6 +183,11 @@ const DatasetGeneratorPage = () => {
           <p>Biggest TODO:  DEPLOY!!!!</p>
         </div>
         <div className="w-full max-w-4xl">
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              {error}
+            </div>
+          )}
           <div className="mb-6 flex items-center">
             <label className="block text-sm font-medium mb-1 mr-2">
               Number of Rows
@@ -153,7 +197,18 @@ const DatasetGeneratorPage = () => {
               value={numRows}
               onChange={(e) => setNumRows(Number(e.target.value) || '')}
               min="1"
-              className="w-full p-2 border rounded mr-2"
+              className="w-36 p-2 border border-gray-600 rounded mr-2"
+            />
+            <label className="block text-sm font-medium mb-1 mr-2">
+              Filename
+            </label>
+            <input
+              type="text"
+              value={filename}
+              placeholder="generated_dataset.csv"
+              onChange={(e) => setFilename(e.target.value)}
+              min="1"
+              className="w-full p-2 border border-gray-600 rounded mr-2"
             />
             <button
               onClick={generateData}
@@ -187,7 +242,7 @@ const DatasetGeneratorPage = () => {
                       type="text"
                       value={group.name}
                       onChange={(e) => updateDescriptorGroup('general input', group.id, 'name', e.target.value)}
-                      className="w-full p-2 border rounded"
+                      className="w-full p-2 border border-gray-600 rounded"
                     />
                   </div>
                   <div>
@@ -196,7 +251,7 @@ const DatasetGeneratorPage = () => {
                       type="number"
                       value={group.min}
                       onChange={(e) => updateDescriptorGroup('general input', group.id, 'min', e.target.value)}
-                      className="w-full p-2 border rounded"
+                      className="w-full p-2 border border-gray-600 rounded"
                     />
                   </div>
                   <div>
@@ -205,7 +260,7 @@ const DatasetGeneratorPage = () => {
                       type="number"
                       value={group.max}
                       onChange={(e) => updateDescriptorGroup('general input', group.id, 'max', e.target.value)}
-                      className="w-full p-2 border rounded"
+                      className="w-full p-2 border border-gray-600 rounded"
                     />
                   </div>
                   <div>
@@ -214,7 +269,7 @@ const DatasetGeneratorPage = () => {
                       type="text"
                       value={group.units}
                       onChange={(e) => updateDescriptorGroup('general input', group.id, 'units', e.target.value)}
-                      className="w-full p-2 border rounded"
+                      className="w-full p-2 border border-gray-600 rounded"
                     />
                   </div>
                 </div>
@@ -246,7 +301,7 @@ const DatasetGeneratorPage = () => {
                       type="text"
                       value={group.name}
                       onChange={(e) => updateDescriptorGroup('formulation input', group.id, 'name', e.target.value)}
-                      className="w-full p-2 border rounded"
+                      className="w-full p-2 border border-gray-600 rounded"
                     />
                   </div>
                   <div>
@@ -255,7 +310,7 @@ const DatasetGeneratorPage = () => {
                       type="number"
                       value={group.min}
                       onChange={(e) => updateDescriptorGroup('formulation input', group.id, 'min', e.target.value)}
-                      className="w-full p-2 border rounded"
+                      className="w-full p-2 border border-gray-600 rounded"
                     />
                   </div>
                   <div>
@@ -264,7 +319,7 @@ const DatasetGeneratorPage = () => {
                       type="number"
                       value={group.max}
                       onChange={(e) => updateDescriptorGroup('formulation input', group.id, 'max', e.target.value)}
-                      className="w-full p-2 border rounded"
+                      className="w-full p-2 border border-gray-600 rounded"
                     />
                   </div>
                   <div>
@@ -273,7 +328,7 @@ const DatasetGeneratorPage = () => {
                       type="text"
                       value={group.units}
                       onChange={(e) => updateDescriptorGroup('formulation input', group.id, 'units', e.target.value)}
-                      className="w-full p-2 border rounded"
+                      className="w-full p-2 border border-gray-600 rounded"
                     />
                   </div>
                 </div>
@@ -305,7 +360,7 @@ const DatasetGeneratorPage = () => {
                       type="text"
                       value={group.name}
                       onChange={(e) => updateDescriptorGroup('output', group.id, 'name', e.target.value)}
-                      className="w-full p-2 border rounded"
+                      className="w-full p-2 border border-gray-600 rounded"
                     />
                   </div>
                   <div>
@@ -314,7 +369,7 @@ const DatasetGeneratorPage = () => {
                       type="number"
                       value={group.min}
                       onChange={(e) => updateDescriptorGroup('output', group.id, 'min', e.target.value)}
-                      className="w-full p-2 border rounded"
+                      className="w-full p-2 border border-gray-600 rounded"
                     />
                   </div>
                   <div>
@@ -323,7 +378,7 @@ const DatasetGeneratorPage = () => {
                       type="number"
                       value={group.max}
                       onChange={(e) => updateDescriptorGroup('output', group.id, 'max', e.target.value)}
-                      className="w-full p-2 border rounded"
+                      className="w-full p-2 border border-gray-600 rounded"
                     />
                   </div>
                   <div>
@@ -332,7 +387,7 @@ const DatasetGeneratorPage = () => {
                       type="text"
                       value={group.units}
                       onChange={(e) => updateDescriptorGroup('output', group.id, 'units', e.target.value)}
-                      className="w-full p-2 border rounded"
+                      className="w-full p-2 border border-gray-600 rounded"
                     />
                   </div>
                 </div>
