@@ -345,8 +345,6 @@ async def get_synthetic_demo_dataset(body: dict = Body(...)):
     general_inputs = {item["name"]: {"min": int(item["min"]), "max": int(item["max"]), "units": item["units"]} for item in general_inputs}
     formulation_inputs = {item["name"]: {"min": int(item["min"]), "max": int(item["max"]), "units": item["units"]} for item in formulation_inputs}
     outputs = {item["name"]: {"min": int(item["min"]), "max": int(item["max"]), "units": item["units"]} for item in outputs}
-
-
     inputs = {
         "general": general_inputs,
         "formulation": formulation_inputs,
@@ -354,15 +352,8 @@ async def get_synthetic_demo_dataset(body: dict = Body(...)):
 
     try:
         synthetic_demo_data_df, synthetic_demo_coefs_df = build_sythetic_demo_dataset(inputs=inputs, outputs=outputs, num_rows=num_rows)
-        
-
-
-        print(synthetic_demo_data_df)
-        print(synthetic_demo_coefs_df)
-
-
-
-        return {"synthetic_demo_data": synthetic_demo_data_df}
+        csv_string = synthetic_demo_data_df.to_csv()
+        return {"csv_string": csv_string}
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

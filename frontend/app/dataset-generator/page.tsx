@@ -92,6 +92,23 @@ const DatasetGeneratorPage = () => {
           }),
         }
       );
+
+      const data = await response.json();
+      const blob = new Blob([data.csv_string], { type: 'text/csv' });
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'generated_dataset.csv';
+      
+      // Trigger download
+      document.body.appendChild(a);
+      a.click();
+      
+      // Cleanup
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
     } catch (error) {
       console.error('Error fetching synthetic demo data:', error);
     }
@@ -121,7 +138,10 @@ const DatasetGeneratorPage = () => {
         </div>
         <div>
           <h1>Under construction...</h1>
-          <p>TODOs: 1. Make "name", "min", and "max" fields required, 2. preview rows of generated data (include interactive table somehow?), 3. Add capability for CSV export via another button, 4. handle if a user enters nothing, 5. (someday) add an "advanced" menu that allows users to specify their coefficients</p>
+          <p>TODOs: 1. preview rows of generated data (include interactive table somehow?), 2. handle if a user enters nothing, 3. make "name", "min", and "max" fields required, 4. (someday) add an "advanced" menu that allows users to specify their coefficients</p>
+        </div>
+        <div>
+          <p>Biggest TODO:  DEPLOY!!!!</p>
         </div>
         <div className="w-full max-w-4xl">
           <div className="mb-6 flex items-center">
@@ -139,7 +159,7 @@ const DatasetGeneratorPage = () => {
               onClick={generateData}
               className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
             >
-              Generate Data
+              Generate Data & Download CSV
             </button>
           </div>
 
@@ -162,7 +182,7 @@ const DatasetGeneratorPage = () => {
                 </button>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Descriptor name</label>
+                    <label className="block text-sm font-medium mb-1">Variable name</label>
                     <input
                       type="text"
                       value={group.name}
@@ -171,7 +191,7 @@ const DatasetGeneratorPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Minimum possible value</label>
+                    <label className="block text-sm font-medium mb-1">Lower bound</label>
                     <input
                       type="number"
                       value={group.min}
@@ -180,7 +200,7 @@ const DatasetGeneratorPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Maximum possible value</label>
+                    <label className="block text-sm font-medium mb-1">Upper bound</label>
                     <input
                       type="number"
                       value={group.max}
@@ -221,7 +241,7 @@ const DatasetGeneratorPage = () => {
                 </button>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Descriptor name</label>
+                    <label className="block text-sm font-medium mb-1">Variable name</label>
                     <input
                       type="text"
                       value={group.name}
@@ -230,7 +250,7 @@ const DatasetGeneratorPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Minimum possible value</label>
+                    <label className="block text-sm font-medium mb-1">Lower bound</label>
                     <input
                       type="number"
                       value={group.min}
@@ -239,7 +259,7 @@ const DatasetGeneratorPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Maximum possible value</label>
+                    <label className="block text-sm font-medium mb-1">Upper bound</label>
                     <input
                       type="number"
                       value={group.max}
@@ -280,7 +300,7 @@ const DatasetGeneratorPage = () => {
                 </button>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Descriptor name</label>
+                    <label className="block text-sm font-medium mb-1">Variable name</label>
                     <input
                       type="text"
                       value={group.name}
@@ -289,7 +309,7 @@ const DatasetGeneratorPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Minimum possible value</label>
+                    <label className="block text-sm font-medium mb-1">Lower bound</label>
                     <input
                       type="number"
                       value={group.min}
@@ -298,7 +318,7 @@ const DatasetGeneratorPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Maximum possible value</label>
+                    <label className="block text-sm font-medium mb-1">Upper bound</label>
                     <input
                       type="number"
                       value={group.max}
