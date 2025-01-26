@@ -68,9 +68,10 @@ const DatasetGeneratorPage = () => {
 
 
   async function generateData() {
+
     // Validate filename
     if (!filename.trim()) {
-      setError("Filename is required");
+      setError("Filename is required.");
       return;
     }
 
@@ -106,15 +107,6 @@ const DatasetGeneratorPage = () => {
     // Clear any existing error
     setError("");
     
-    // print a bunch of stuff just to check the user input is being captured correctly. TODO: Can probably remove this eventually... 
-    console.log(`Generating ${numRows} rows of data...`);
-    console.log(`General Inputs:`);
-    generalInputs.forEach(group => {console.log(`- Name: ${group.name}, Min: ${group.min}, Max: ${group.max}, Units: ${group.units}`);});
-    console.log(`Formulation Inputs:`);
-    formulationInputs.forEach(group => {console.log(`- Name: ${group.name}, Min: ${group.min}, Max: ${group.max}, Units: ${group.units}`);});
-    console.log(`Outputs:`);
-    outputs.forEach(group => {console.log(`- Name: ${group.name}, Min: ${group.min}, Max: ${group.max}, Units: ${group.units}`);});
-    console.log(`Completed generating data.`);
 
     try {
       const response = await fetch(
@@ -177,7 +169,7 @@ const DatasetGeneratorPage = () => {
         </div>
         <div>
           <h1>Under construction...</h1>
-          <p>TODOs: 1. preview rows of generated data (include interactive table somehow?), 2. handle if a user enters nothing, 3. make "name", "min", and "max" fields required, 4. (someday) add an "advanced" menu that allows users to specify their coefficients</p>
+          <p>TODOs: 1. preview rows of generated data (include interactive table somehow?), 2. (someday) add an "advanced" menu that allows users to specify their coefficients.</p>
         </div>
         <div>
           <p>Biggest TODO:  DEPLOY!!!!</p>
