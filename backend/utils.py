@@ -51,6 +51,9 @@ def fig2img(
 
 
 def wide_to_compact_format(df):
+
+    ### TODO: this function should ideally catch duplicate ingredient name columns if they exist and consolidate them before converting to compact format (so you don't get "Ingredient A" and "Ingredient A.1" showing up in the compact format)
+
     """
     Convert formulation data from wide format to compact format.
     
