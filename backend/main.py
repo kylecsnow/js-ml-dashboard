@@ -314,24 +314,6 @@ async def get_shap_summary_plot(model_name: str, body: dict = Body(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-### TODO: finish this code!
-@app.get("/api/molecular-design/{model_name}")
-async def get_molecular_design(model_name: str):
-    try:
-        # model_and_metadata = get_model_and_metadata(model_name=model_name)
-        # outputs = list(model_and_metadata["estimators_by_output"].keys())
-        # all_estimator_inputs = set()
-        # for output in outputs:
-        #     all_estimator_inputs = all_estimator_inputs.union(
-        #         set(model_and_metadata["estimators_by_output"][output]["inputs_reals"])
-        #     )
-        # all_estimator_inputs = list(all_estimator_inputs)
-        # variable_options = all_estimator_inputs + outputs
-        # return {"variable_options": variable_options}
-        return {""}
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/dataset-generator")
