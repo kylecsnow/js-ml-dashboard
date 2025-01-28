@@ -174,37 +174,10 @@ const DatasetGeneratorPage = () => {
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar />
       
       <div className="flex-1 flex flex-col items-center p-8 gap-8">
         <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <Link
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="./"
-          >
-            <Image
-              className="dark:invert"
-              src="/snowflake.svg"
-              alt="My snowflake logomark"
-              width={20}
-              height={20}
-            />
-            Home
-          </Link>
 
-        </div>
-        <div>
-          <p>Under construction...</p>
-        </div>
-        <div>
-          <h3>TODOs:</h3>
-          <ol className="list-decimal ml-6">
-            <li>preview rows of generated data (include interactive table somehow?)</li>
-            <li>(someday) add an "advanced" menu that allows users to specify their coefficients</li>
-          </ol>
-        </div>
-        <div>
-          <p>Biggest TODO:  DEPLOY!!!!</p>
         </div>
         <div className="w-full max-w-4xl">
           {error && (
