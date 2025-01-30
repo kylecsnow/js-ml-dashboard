@@ -123,7 +123,8 @@ const DatasetGeneratorPage = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:8000/api/dataset-generator/`, {
+        // `http://localhost:8000/api/dataset-generator/`, {
+        `./api/dataset-generator/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
