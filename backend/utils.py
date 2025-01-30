@@ -11,45 +11,6 @@ from typing import Any, List, Tuple, Optional
 PROJECT_ROOT_DIR = os.path.abspath(__file__)
 
 
-# TODO: someday, may want to implement MLflow for model tracking & retreival, rather than pickling locally
-def get_dataset_name_from_model(model_name: str) -> str:
-    dataset_name = f"{model_name.split('_')[0]}_dataset"
-    return dataset_name
-
-
-def get_dataset(dataset_name: str) -> pd.DataFrame:
-    datasets_path = os.path.join(
-        os.path.dirname(PROJECT_ROOT_DIR), "datasets"
-    )
-    dataset_path = os.path.join(datasets_path, f"{dataset_name}.pkl")
-
-    with open(dataset_path, "rb") as f:
-        dataset = pickle.load(f)
-
-    return dataset
-
-
-def get_model_and_metadata(model_name: str) -> dict[str, Any]:
-    models_path = os.path.join(os.path.dirname(PROJECT_ROOT_DIR), "models")
-    model_path = os.path.join(models_path, f"{model_name}.pkl")
-
-    with open(model_path, "rb") as f:
-        model_and_metadata = pickle.load(f)
-
-    return model_and_metadata
-
-
-def fig2img(
-    fig: Figure, dpi: str | float = "figure", bbox_inches: str | None = None
-) -> Image.Image:
-    """Convert a Matplotlib figure to a PIL Image and return it"""
-    buf = io.BytesIO()
-    fig.savefig(buf, dpi=dpi, bbox_inches=bbox_inches)
-    buf.seek(0)
-    img = Image.open(buf)
-    return img
-
-
 def wide_to_compact_format(df):
 
     ### TODO: this function should ideally catch duplicate ingredient name columns if they exist and consolidate them before converting to compact format (so you don't get "Ingredient A" and "Ingredient A.1" showing up in the compact format)

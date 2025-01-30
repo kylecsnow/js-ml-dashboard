@@ -124,7 +124,9 @@ export default function DatasetGeneratorPage() {
 
     try {
       const response = await fetch(
-        `http://localhost:8000/api/dataset-generator/`, {
+        
+        // 'http://localhost:8001/api/dataset-generator', {
+        './api/dataset-generator', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -151,20 +153,33 @@ export default function DatasetGeneratorPage() {
       }
 
       const data = await response.json();
-      const blob = new Blob([data.csv_string], { type: 'text/csv' });
-
+      const blob = new Blob([data.csv_string], { type: 'text/csv;charset=utf-8;' });
+      
+      // Create download URL
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
       
-      // Trigger download
-      document.body.appendChild(a);
-      a.click();
+      // Create hidden iframe for download
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
       
-      // Cleanup
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      try {
+        // Write download link to iframe and click it
+        const iframeDoc = iframe.contentWindow?.document;
+        if (iframeDoc) {
+          iframeDoc.open();
+          iframeDoc.write(`<a href="${url}" download="${filename}"></a>`);
+          iframeDoc.close();
+          const downloadLink = iframeDoc.querySelector('a');
+          downloadLink?.click();
+        }
+      } finally {
+        // Cleanup
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+          window.URL.revokeObjectURL(url);
+        }, 100);
+      }
 
     } catch (error) {
       console.error('Error fetching synthetic demo data:', error);
