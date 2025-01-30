@@ -24,7 +24,8 @@ const MolecularDesignPage = () => {
     async function fetchMolecularDesignData() {
       try {
         const response = await fetch(
-          `http://localhost:8000/api/molecular-design/${selectedModel}`, {
+          // `http://localhost:8000/api/molecular-design/${selectedModel}`, {
+          `./api/molecular-design/${selectedModel}`, {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',

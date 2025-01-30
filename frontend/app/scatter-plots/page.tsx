@@ -27,7 +27,8 @@ const ScatterPlotsPage = () => {
     const fetchVariableOptions = async () => {
       if (selectedModel) {
         try {
-          const response = await fetch(`http://localhost:8000/api/variable-options/${selectedModel}`);
+          // const response = await fetch(`http://localhost:8000/api/variable-options/${selectedModel}`);
+          const response = await fetch(`./api/variable-options/${selectedModel}`);
           const data = await response.json();
           const options = data.variable_options.map((option: string) => ({ value: option, label: option }));
           setVariableOptions(options);
@@ -52,7 +53,8 @@ const ScatterPlotsPage = () => {
     async function fetchScatterPlotData() {
       try {
         const response = await fetch(
-          `http://localhost:8000/api/scatter-plots/${selectedModel}`, {
+          // `http://localhost:8000/api/scatter-plots/${selectedModel}`, {
+          `./api/scatter-plots/${selectedModel}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

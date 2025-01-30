@@ -13,7 +13,8 @@ export default function Home() {
   useEffect(() => {
     async function fetchModels() {
       try {
-        const response = await fetch('http://localhost:8000/api/models');
+        // const response = await fetch('http://localhost:8000/api/models');
+        const response = await fetch('./api/models');
         const data = await response.json();
         setModels(data.models);
         if (data.models.length > 0 && !selectedModel && !localStorage.getItem('selectedModel')) {

@@ -27,7 +27,8 @@ const ViolinPlotsPage = () => {
     async function fetchViolinPlotData() {
       try {
         const response = await fetch(
-          `http://localhost:8000/api/violin-plots/${selectedModel}`, {
+          // `http://localhost:8000/api/violin-plots/${selectedModel}`, {
+          `./api/violin-plots/${selectedModel}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

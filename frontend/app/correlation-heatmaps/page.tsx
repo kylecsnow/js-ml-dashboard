@@ -18,7 +18,7 @@ interface PlotDataType {
 
 const CorrelationHeatmapsPage = () => {
   const { selectedModel } = useModel();
-  const [selectedHeatmapType, setSelectedHeatmapType] = useState('input-input');
+  const [selectedHeatmapType, setSelectedHeatmapType] = useState('input-output');
   const [clusterMapToggle, setClusterMapToggle] = useState<boolean>(false);
   const [plotData, setPlotData] = useState<PlotDataType | null>(null);
   // const [loading, setLoading] = useState(false);
@@ -28,7 +28,8 @@ const CorrelationHeatmapsPage = () => {
     async function fetchHeatmapData() {
       try {
         const response = await fetch(
-          `http://localhost:8000/api/correlation-heatmap/${selectedModel}/${selectedHeatmapType}`
+          // `http://localhost:8000/api/correlation-heatmap/${selectedModel}/${selectedHeatmapType}`
+          `./api/correlation-heatmap/${selectedModel}/${selectedHeatmapType}`
         );
         const data = await response.json();
         setPlotData(data.plot_data);

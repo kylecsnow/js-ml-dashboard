@@ -204,9 +204,6 @@ const DatasetGeneratorPage = () => {
             <li>(someday) add an "advanced" menu that allows users to specify their coefficients</li>
           </ol>
         </div>
-        <div>
-          <p>Biggest TODO:  DEPLOY!!!!</p>
-        </div>
         <div className="w-full max-w-4xl">
           {error && (
             <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">

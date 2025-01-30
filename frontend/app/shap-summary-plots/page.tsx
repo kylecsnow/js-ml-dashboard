@@ -27,7 +27,8 @@ const ShapSummaryPlotsPage = () => {
     const fetchOutputVariableOptions = async () => {
       if (selectedModel) {
         try {
-          const response = await fetch(`http://localhost:8000/api/output-variable-options/${selectedModel}`);
+          // const response = await fetch(`http://localhost:8000/api/output-variable-options/${selectedModel}`);
+          const response = await fetch(`./api/output-variable-options/${selectedModel}`);
           const data = await response.json();
           const options = data.output_variable_options.map((option: string) => ({ value: option, label: option }));
           setOutputVariableOptions(options);
@@ -51,7 +52,8 @@ const ShapSummaryPlotsPage = () => {
     async function fetchShapSummaryPlotData() {
       try {
         const response = await fetch(
-          `http://localhost:8000/api/shap-summary-plots/${selectedModel}`, {
+          // `http://localhost:8000/api/shap-summary-plots/${selectedModel}`, {
+          `./api/shap-summary-plots/${selectedModel}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
