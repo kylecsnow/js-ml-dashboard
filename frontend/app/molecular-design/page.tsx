@@ -78,7 +78,14 @@ const MolecularDesignPage = () => {
         </div>
         <div>
           <h1>Under construction...</h1>
-          <p>TODOs: Build the page!</p>
+        </div>
+        <div>
+          <h3>TODOs:</h3>
+          <ol className="list-decimal ml-6">
+            <li>Build the page!</li>
+            <li>maybe try the Bokeh plot here...? Will it even work with React/Javascript?</li>
+          </ol>
+
         </div>
         {/* <div className="flex gap-4">
           <div>

@@ -116,7 +116,13 @@ const ScatterPlotsPage = () => {
         </div>
         <div>
           <h1>Under construction...</h1>
-          <p>(TODOs: make the dropdown bar a constant width; needs a border when 3D scatterplot is shown; also needs to show errors if `selectedVariables.length` is not 2 or 3.)</p>
+        </div>
+        <div>
+          <h3>TODOs:</h3>
+          <ol className="list-decimal ml-6">
+            <li>make the dropdown bar a constant width; needs a border when 3D scatterplot is shown</li>
+            <li>also needs to show errors if `selectedVariables.length` is not 2 or 3.</li>
+          </ol>
         </div>
         <div className="w-full max-w-4xl">
           {plotData && (

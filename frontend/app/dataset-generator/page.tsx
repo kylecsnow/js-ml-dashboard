@@ -151,20 +151,52 @@ const DatasetGeneratorPage = () => {
       }
 
       const data = await response.json();
-      const blob = new Blob([data.csv_string], { type: 'text/csv' });
 
+
+
+      // const blob = new Blob([data.csv_string], { type: 'text/csv' });
+      // const url = window.URL.createObjectURL(blob);
+
+      // const a = document.createElement('a');
+      // a.href = url;
+      // a.download = filename;
+      
+      // // Trigger download
+      // document.body.appendChild(a);
+      // a.click();
+      
+      // // Cleanup
+      // document.body.removeChild(a);
+      // window.URL.revokeObjectURL(url);
+
+
+
+      // stuff to make the CSV download compatible with iframes...?
+      const blob = new Blob([data.csv_string], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
       
-      // Trigger download
-      document.body.appendChild(a);
-      a.click();
+      // Create hidden iframe for download
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
       
-      // Cleanup
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      try {
+        // Write download link to iframe and click it
+        const iframeDoc = iframe.contentWindow?.document;
+        if (iframeDoc) {
+          iframeDoc.open();
+          iframeDoc.write(`<a href="${url}" download="${filename}"></a>`);
+          iframeDoc.close();
+          const downloadLink = iframeDoc.querySelector('a');
+          downloadLink?.click();
+        }
+      } finally {
+        // Cleanup
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+          window.URL.revokeObjectURL(url);
+        }, 100);
+      }
 
     } catch (error) {
       console.error('Error fetching synthetic demo data:', error);
