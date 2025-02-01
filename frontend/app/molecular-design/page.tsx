@@ -1,5 +1,13 @@
 'use client';
 
+import 'ketcher-react/dist/index.css';
+
+import { ButtonsConfig, Editor, InfoModal } from 'ketcher-react';
+import {
+  Ketcher,
+  RemoteStructServiceProvider,
+  StructServiceProvider,
+} from 'ketcher-core';
 import dynamic from 'next/dynamic';
 import Image from "next/image";
 import Link from 'next/link';
@@ -15,9 +23,49 @@ interface PlotDataType {
     layout: any;
 }
 
+// TODO: need to learn what this part is actually doing
+declare global {
+  interface Window {
+    ketcher: Ketcher;
+  }
+}
+
+
+const getHiddenButtonsConfig = (): ButtonsConfig => {
+  const searchParams = new URLSearchParams(window.location.search);
+  const hiddenButtons = searchParams.get('hiddenControls');
+
+  if (!hiddenButtons) return {};
+
+  return hiddenButtons.split(',').reduce<Record<string, { hidden: boolean }>>((acc, button) => {
+    if (button) acc[button] = { hidden: true };
+
+    return acc;
+  }, {});
+};
+
+let structServiceProvider: StructServiceProvider =
+  new RemoteStructServiceProvider(
+    process.env.API_PATH || process.env.REACT_APP_API_PATH || '',
+  );
+
+if (process.env.MODE === 'standalone') {
+  const {
+    StandaloneStructServiceProvider,
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+  } = require('ketcher-standalone');
+  structServiceProvider =
+    new StandaloneStructServiceProvider() as StructServiceProvider;
+}
+
+
 const MolecularDesignPage = () => {
   const { selectedModel } = useModel();
   const [plotData, setPlotData] = useState<PlotDataType | null>(null);
+
+  const hiddenButtonsConfig = getHiddenButtonsConfig();
+  const [hasError, setHasError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   
   useEffect(() => {
@@ -84,45 +132,45 @@ const MolecularDesignPage = () => {
           <ol className="list-decimal ml-6">
             <li>Build the page!</li>
             <li>maybe try the Bokeh plot here...? Will it even work with React/Javascript?</li>
+            <li>Try to include Ketcher as a molecule editor...? (figure out why certain things don't work: 1) copy-pasting, 2) structure cleanup, 3) inputting SMILES.</li>
           </ol>
 
         </div>
-        {/* <div className="flex gap-4">
-          <div>
-            <label className="mr-2">Show Box Plot</label>
-            <Switch
-              checked={boxPlotToggle}
-              onChange={setBoxPlotToggle}
-              className={`${
-                boxPlotToggle ? 'bg-blue-600' : 'bg-gray-200'
-              } relative inline-flex items-center h-6 rounded-full w-11`}
-            >
-              <span className="sr-only">Toggle Box Plot</span>
-              <span
-                className={`${
-                  boxPlotToggle ? 'translate-x-6' : 'translate-x-1'
-                } inline-block w-4 h-4 transform bg-white rounded-full transition`}
-              />
-            </Switch>
-          </div>
-          <div>
-            <label className="mr-2">Show Data Points</label>
-            <Switch
-              checked={dataPointsToggle}
-              onChange={setDataPointsToggle}
-              className={`${
-                dataPointsToggle ? 'bg-blue-600' : 'bg-gray-200'
-              } relative inline-flex items-center h-6 rounded-full w-11`}
-            >
-              <span className="sr-only">Toggle Data Points</span>
-              <span
-                className={`${
-                  dataPointsToggle ? 'translate-x-6' : 'translate-x-1'
-                } inline-block w-4 h-4 transform bg-white rounded-full transition`}
-              />
-            </Switch>
-          </div>
-        </div> */}
+
+        <Editor
+          errorHandler={(message: string) => {
+            setHasError(true);
+            setErrorMessage(message.toString());
+          }}
+          buttons={hiddenButtonsConfig}
+          staticResourcesUrl={process.env.PUBLIC_URL || ''}
+          structServiceProvider={structServiceProvider}
+          onInit={(ketcher: Ketcher) => {
+            window.ketcher = ketcher;
+
+            window.parent.postMessage(
+              {
+                eventType: 'init',
+              },
+              '*',
+            );
+            window.scrollTo(0, 0);
+          }}
+        />
+        {hasError && (
+          <InfoModal
+            message={errorMessage}
+            close={() => {
+              setHasError(false);
+
+              // Focus on editor after modal is closed
+              const cliparea: HTMLElement | null =
+                document.querySelector('.cliparea');
+              cliparea?.focus();
+            }}
+          />
+        )}
+
         <div className="w-full max-w-4xl">
           {plotData && (
             <Plot
