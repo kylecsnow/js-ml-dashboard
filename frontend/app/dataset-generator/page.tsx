@@ -269,7 +269,13 @@ const DatasetGeneratorPage = () => {
               onClick={generateData}
               className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
             >
-              Generate Data & Download CSV
+              Download CSV
+            </button>
+            <button
+              // onClick={generateData}
+              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+            >
+              Generate Data & Preview
             </button>
           </div>
 
