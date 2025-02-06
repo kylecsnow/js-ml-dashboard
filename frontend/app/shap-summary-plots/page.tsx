@@ -94,10 +94,14 @@ const ShapSummaryPlotsPage = () => {
 
         </div>
         <div className="relative">
-          <Select
+        <Select
             options={outputVariableOptions}
-            onChange={(selected) => setSelectedOutputVariable(selected.value)}
-            value={outputVariableOptions.filter(option => selectedOutputVariable.includes(option.value))} // Set selected values
+            onChange={(selected: { value: string; label: string } | null) => {
+              if (selected) {
+                setSelectedOutputVariable([selected.value]);
+              }
+            }}
+            value={outputVariableOptions.filter(option => selectedOutputVariable?.includes(option.value))} // Set selected values
             name="selected-variables"
             classNamePrefix="select"
           />
@@ -114,42 +118,6 @@ const ShapSummaryPlotsPage = () => {
           <h1>Under construction...</h1>
           <p>TODOs: get loading animation working, get plot sized more appropriately</p>
         </div>
-        {/* <div className="flex gap-4">
-          <div>
-            <label className="mr-2">Show Box Plot</label>
-            <Switch
-              checked={boxPlotToggle}
-              onChange={setBoxPlotToggle}
-              className={`${
-                boxPlotToggle ? 'bg-blue-600' : 'bg-gray-200'
-              } relative inline-flex items-center h-6 rounded-full w-11`}
-            >
-              <span className="sr-only">Toggle Box Plot</span>
-              <span
-                className={`${
-                  boxPlotToggle ? 'translate-x-6' : 'translate-x-1'
-                } inline-block w-4 h-4 transform bg-white rounded-full transition`}
-              />
-            </Switch>
-          </div>
-          <div>
-            <label className="mr-2">Show Data Points</label>
-            <Switch
-              checked={dataPointsToggle}
-              onChange={setDataPointsToggle}
-              className={`${
-                dataPointsToggle ? 'bg-blue-600' : 'bg-gray-200'
-              } relative inline-flex items-center h-6 rounded-full w-11`}
-            >
-              <span className="sr-only">Toggle Data Points</span>
-              <span
-                className={`${
-                  dataPointsToggle ? 'translate-x-6' : 'translate-x-1'
-                } inline-block w-4 h-4 transform bg-white rounded-full transition`}
-              />
-            </Switch>
-          </div>
-        </div> */}
         <div className="w-full max-w-4xl">
           {plotData && (
             <Plot
