@@ -1,13 +1,13 @@
 'use client';
 
-import 'ketcher-react/dist/index.css';
+// import 'ketcher-react/dist/index.css';
+// import { ButtonsConfig, Editor, InfoModal } from 'ketcher-react';
+// import {
+//   Ketcher,
+//   RemoteStructServiceProvider,
+//   StructServiceProvider,
+// } from 'ketcher-core';
 
-import { ButtonsConfig, Editor, InfoModal } from 'ketcher-react';
-import {
-  Ketcher,
-  RemoteStructServiceProvider,
-  StructServiceProvider,
-} from 'ketcher-core';
 import dynamic from 'next/dynamic';
 import Image from "next/image";
 import Link from 'next/link';
@@ -24,46 +24,46 @@ interface PlotDataType {
 }
 
 // TODO: need to learn what this part is actually doing
-declare global {
-  interface Window {
-    ketcher: Ketcher;
-  }
-}
+// declare global {
+//   interface Window {
+//     ketcher: Ketcher;
+//   }
+// }
 
 
-const getHiddenButtonsConfig = (): ButtonsConfig => {
-  const searchParams = new URLSearchParams(window.location.search);
-  const hiddenButtons = searchParams.get('hiddenControls');
+// const getHiddenButtonsConfig = (): ButtonsConfig => {
+//   const searchParams = new URLSearchParams(window.location.search);
+//   const hiddenButtons = searchParams.get('hiddenControls');
 
-  if (!hiddenButtons) return {};
+//   if (!hiddenButtons) return {};
 
-  return hiddenButtons.split(',').reduce<Record<string, { hidden: boolean }>>((acc, button) => {
-    if (button) acc[button] = { hidden: true };
+//   return hiddenButtons.split(',').reduce<Record<string, { hidden: boolean }>>((acc, button) => {
+//     if (button) acc[button] = { hidden: true };
 
-    return acc;
-  }, {});
-};
+//     return acc;
+//   }, {});
+// };
 
-let structServiceProvider: StructServiceProvider =
-  new RemoteStructServiceProvider(
-    process.env.API_PATH || process.env.REACT_APP_API_PATH || '',
-  );
+// let structServiceProvider: StructServiceProvider =
+//   new RemoteStructServiceProvider(
+//     process.env.API_PATH || process.env.REACT_APP_API_PATH || '',
+//   );
 
-if (process.env.MODE === 'standalone') {
-  const {
-    StandaloneStructServiceProvider,
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-  } = require('ketcher-standalone');
-  structServiceProvider =
-    new StandaloneStructServiceProvider() as StructServiceProvider;
-}
+// if (process.env.MODE === 'standalone') {
+//   const {
+//     StandaloneStructServiceProvider,
+//     // eslint-disable-next-line @typescript-eslint/no-var-requires
+//   } = require('ketcher-standalone');
+//   structServiceProvider =
+//     new StandaloneStructServiceProvider() as StructServiceProvider;
+// }
 
 
 const MolecularDesignPage = () => {
   const { selectedModel } = useModel();
   const [plotData, setPlotData] = useState<PlotDataType | null>(null);
 
-  const hiddenButtonsConfig = getHiddenButtonsConfig();
+  // const hiddenButtonsConfig = getHiddenButtonsConfig();
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -137,7 +137,7 @@ const MolecularDesignPage = () => {
 
         </div>
 
-        <Editor
+        {/* <Editor
           errorHandler={(message: string) => {
             setHasError(true);
             setErrorMessage(message.toString());
@@ -156,8 +156,8 @@ const MolecularDesignPage = () => {
             );
             window.scrollTo(0, 0);
           }}
-        />
-        {hasError && (
+        /> */}
+        {/* {hasError && (
           <InfoModal
             message={errorMessage}
             close={() => {
@@ -169,7 +169,7 @@ const MolecularDesignPage = () => {
               cliparea?.focus();
             }}
           />
-        )}
+        )} */}
 
         <div className="w-full max-w-4xl">
           {plotData && (

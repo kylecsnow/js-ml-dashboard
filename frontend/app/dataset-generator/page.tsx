@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from 'next/link';
 import Sidebar from '../components/Sidebar';
+import { Switch } from '@headlessui/react';
 import { useState } from 'react';
 
 
@@ -19,6 +20,7 @@ const DatasetGeneratorPage = () => {
   const [formulationInputs, setFormulationInputs] = useState<DescriptorGroup[]>([]);
   const [outputs, setOutputs] = useState<DescriptorGroup[]>([]);
   const [numRows, setNumRows] = useState<number | ''>(10);
+  const [showCoefficientsToggle, setShowCoefficientsToggle] = useState<boolean>(false);
   const [filename, setFilename] = useState<string>("generated_dataset.csv");
   const [error, setError] = useState<string>("");
 
@@ -224,8 +226,8 @@ const DatasetGeneratorPage = () => {
             />
             Home
           </Link>
-
         </div>
+
         <div>
           <p>Under construction...</p>
         </div>
@@ -235,6 +237,23 @@ const DatasetGeneratorPage = () => {
             <li>preview rows of generated data (include interactive table somehow?)</li>
             <li>(someday) add an "advanced" menu that allows users to specify their coefficients</li>
           </ol>
+        </div>
+        <div>
+          <label className="mr-2">Show coefficients</label>
+          <Switch
+            checked={showCoefficientsToggle}
+            onChange={setShowCoefficientsToggle}
+            className={`${
+              showCoefficientsToggle ? 'bg-blue-600' : 'bg-gray-200'
+            } relative inline-flex items-center h-6 rounded-full w-11`}
+          >
+            <span className="sr-only">Cluster variables</span>
+            <span
+              className={`${
+                showCoefficientsToggle ? 'translate-x-6' : 'translate-x-1'
+              } inline-block w-4 h-4 transform bg-white rounded-full transition`}
+            />
+          </Switch>
         </div>
         <div className="w-full max-w-4xl">
           {error && (
@@ -267,15 +286,15 @@ const DatasetGeneratorPage = () => {
             />
             <button
               onClick={generateData}
+              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 mr-2"
+            >
+              Generate data & preview
+            </button>
+            <button
+              // onClick={downloadCSV}
               className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
             >
               Download CSV
-            </button>
-            <button
-              // onClick={generateData}
-              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-            >
-              Generate Data & Preview
             </button>
           </div>
 
