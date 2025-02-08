@@ -93,7 +93,16 @@ const ShapSummaryPlotsPage = () => {
           </Link>
 
         </div>
+        <div>
+          <h2>
+            {selectedModel
+              ? `Selected model: ${selectedModel}`
+              : 'No model selected'
+            }
+          </h2>
+        </div>
         <div className="relative">
+        <label>{"Selected output variable:"}</label>
         <Select
             options={outputVariableOptions}
             onChange={(selected: { value: string; label: string } | null) => {
@@ -107,24 +116,16 @@ const ShapSummaryPlotsPage = () => {
           />
         </div>
         <div>
-          <h2>
-            {selectedModel
-              ? `Selected model: ${selectedModel}`
-              : 'No model selected'
-            }
-          </h2>
-        </div>
-        <div>
           <h1>Under construction...</h1>
-          <p>TODOs: get loading animation working, get plot sized more appropriately</p>
+          <p>TODOs: get loading animation working</p>
         </div>
-        <div className="w-full max-w-4xl">
+        <div className="w-full max-w-8xl mx-auto">
           {plotData && (
             <Plot
               data={plotData.data}
               layout={plotData.layout}
               config={{ responsive: true }}
-              style={{ width: '100%', height: '600px' }}
+              style={{ width: '100%', height: '750px' }}
             />
           )}
         </div>
