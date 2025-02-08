@@ -52,6 +52,20 @@ export default function Sidebar() {
         >
           SHAP Summary Plots
         </Link>
+        {/* <Link
+          href="/shap-feature-effects-plots"
+          className={`flex items-center gap-2 p-1 pl-2 rounded-lg 
+            ${pathName === '/shap-feature-effects-plots' ? 'bg-black text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'} text-[14.5px}`}
+        >
+          SHAP Feature Effects Plots
+        </Link> */}
+        <Link
+          href="/shap-waterfall-plots"
+          className={`flex items-center gap-2 p-1 pl-2 rounded-lg 
+            ${pathName === '/shap-waterfall-plots' ? 'bg-black text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'} text-[14.5px}`}
+        >
+          SHAP Waterfall Plots
+        </Link>
         <Link
           href="/molecular-design"
           className={`flex items-center gap-2 p-1 pl-2 rounded-lg 
