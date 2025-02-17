@@ -24,8 +24,12 @@ const CorrelationHeatmapsPage = () => {
   // const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-
     async function fetchHeatmapData() {
+      if (!selectedModel) {
+        console.error('No model selected');
+        return;
+      }
+
       try {
         const response = await fetch(
           // `http://localhost:8000/api/correlation-heatmap/${selectedModel}/${selectedHeatmapType}`
@@ -64,6 +68,17 @@ const CorrelationHeatmapsPage = () => {
             Home
           </Link>
 
+
+        </div>
+        <div>
+          <h2>
+            {selectedModel 
+              ? `Selected model: ${selectedModel}`
+              : 'No model selected'
+            }
+          </h2>
+        </div>
+        <div className="flex gap-4 items-center">
           <select
             value={selectedHeatmapType}
             onChange={(e) => setSelectedHeatmapType(e.target.value)}
@@ -90,18 +105,9 @@ const CorrelationHeatmapsPage = () => {
               />
             </Switch>
           </div>
+        </div>
 
-        </div>
         <div>
-          <h2>
-            {selectedModel 
-              ? `Selected model: ${selectedModel}`
-              : 'No model selected'
-            }
-          </h2>
-        </div>
-        <div>
-          <h1>Under construction...</h1>
           <p>(TODOs: 1. get toggle switches actually working for grouping/clustering variables, and 2. choosing whether to hide certain features (possibly showing a number entry field for the threshold) - #2 might be hard to do though, actually...)</p>
         </div>
         <div className="w-full max-w-8xl mx-auto">

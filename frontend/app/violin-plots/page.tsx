@@ -80,7 +80,6 @@ const ViolinPlotsPage = () => {
           </h2>
         </div>
         <div>
-          <h1>Under construction...</h1>
           <p>TODOs: re-size the violin plots to fit the page better</p>
         </div>
         <div className="flex gap-4">
