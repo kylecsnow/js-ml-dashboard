@@ -6,14 +6,14 @@ import Sidebar from '../components/Sidebar';
 import { Switch } from '@headlessui/react';
 import { useState } from 'react';
 
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import Paper from '@mui/material/Paper';
-import { TableVirtuoso, TableComponents } from 'react-virtuoso';
+// import Table from '@mui/material/Table';
+// import TableBody from '@mui/material/TableBody';
+// import TableCell from '@mui/material/TableCell';
+// import TableContainer from '@mui/material/TableContainer';
+// import TableHead from '@mui/material/TableHead';
+// import TableRow from '@mui/material/TableRow';
+// import Paper from '@mui/material/Paper';
+// import { TableVirtuoso, TableComponents } from 'react-virtuoso';
 
 interface DescriptorGroup {
   id: string;
@@ -219,7 +219,7 @@ const DatasetGeneratorPage = () => {
     <div className="flex min-h-screen">
       <Sidebar />
       
-      <div className="flex-1 flex flex-col items-center p-8 gap-8">
+      <div className="flex-1 flex flex-col items-center p-8 gap-4">
         <div className="flex gap-4 items-center flex-col sm:flex-row">
           <Link
             className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"

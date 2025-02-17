@@ -76,7 +76,7 @@ const ShapSummaryPlotsPage = () => {
     <div className="flex min-h-screen">
       <Sidebar />
       
-      <div className="flex-1 flex flex-col items-center p-8 gap-8">
+      <div className="flex-1 flex flex-col items-center p-8 gap-4">
         <div className="flex gap-4 items-center flex-col sm:flex-row">
           <Link
             className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
@@ -116,8 +116,12 @@ const ShapSummaryPlotsPage = () => {
           />
         </div>
         <div>
-          <h1>Under construction...</h1>
-          <p>TODOs: get loading animation working</p>
+          <h3>TODOs:</h3>
+            <ol className="list-decimal ml-6">
+              <li>Investigate the error happening when selecting a different output variable than the one initially loaded (is this just experienced with the docker container?)</li>
+              <li>Show an error when a categorical output is selected!!!</li>
+              <li>get loading animation working</li>
+            </ol>
         </div>
         <div className="w-full max-w-8xl mx-auto">
           {plotData && (
