@@ -21,7 +21,8 @@ const ScatterPlotsPage = () => {
   const { selectedModel } = useModel();
   const [plotData, setPlotData] = useState<PlotDataType | null>(null);
   const [variableOptions, setVariableOptions] = useState<{ value: string; label: string }[]>([]);
-  const [selectedVariables, setSelectedVariables] = useState<string[]>([]);
+  const [selectedVariables, setSelectedVariables] = useState<string[]>(["Variable 1", "Variable 2"]);
+  const [error, setError] = useState<string>("");
 
   useEffect(() => {
     const fetchVariableOptions = async () => {
@@ -33,7 +34,6 @@ const ScatterPlotsPage = () => {
           const options = data.variable_options.map((option: string) => ({ value: option, label: option }));
           setVariableOptions(options);
 
-          // Set the first two options as selected by default
           if (options.length >= 2) {
             setSelectedVariables([options[0].value, options[1].value]);
           }
@@ -48,12 +48,20 @@ const ScatterPlotsPage = () => {
  
   
   useEffect(() => {
+    if (selectedVariables.length === 0) {
+      setError("At least one variable must be selected.");
+    } else if (selectedVariables.length > 3) {
+      setError("Too many variables selected. Only 1 to 3 selected variables are allowed.");
+    } else {
+      setError(""); // Clear error if valid
+    }
+  }, [selectedVariables]);
 
-    // const fetchScatterPlotData = async () => {
+
+  useEffect(() => {
     async function fetchScatterPlotData() {
       try {
         const response = await fetch(
-          // `http://localhost:8000/api/scatter-plots/${selectedModel}`, {
           `./api/scatter-plots/${selectedModel}`, {
             method: 'POST',
             headers: {
@@ -62,6 +70,7 @@ const ScatterPlotsPage = () => {
             body: JSON.stringify({ selected_variables: selectedVariables }), // Send as JSON
           }
         );
+
         const data = await response.json();
         setPlotData(data.plot_data);
       } catch (error) {
@@ -69,7 +78,9 @@ const ScatterPlotsPage = () => {
       }
     };
 
-    fetchScatterPlotData();
+    if (selectedVariables.length > 0 && selectedVariables.length <= 3) {
+      fetchScatterPlotData();
+    }
   }, [selectedModel, selectedVariables]);
 
 
@@ -102,34 +113,31 @@ const ScatterPlotsPage = () => {
             }
           </h2>
         </div>
-        {/* TODO: figure out how to put a border around the plot area if a 3D scatter plot is chosen...*/}
         <div className="relative">
           <Select
             isMulti
             options={variableOptions}
             onChange={(selected) => setSelectedVariables(selected.map(option => option.value))}
-            value={variableOptions.filter(option => selectedVariables.includes(option.value))} // Set selected values
+            value={variableOptions.filter(option => selectedVariables.includes(option.value))}
             name="selected-variables"
             className="basic-multi-select"
             classNamePrefix="select"
             styles={{ control: (base) => ({ ...base, width: '600px' }) }}
           />
         </div>
-        <div>
-          <h3>TODOs:</h3>
-          <ol className="list-decimal ml-6">
-            <li>why not show a distplot/rugplot when 1 variable is selected?</li>
-            <li>also needs to show errors if `selectedVariables.length` is not 1, 2, or 3.</li>
-          </ol>
-        </div>
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+            {error}
+          </div>
+        )}
         <div
           className={`w-full max-w-5xl`}
-          style={selectedVariables.length === 3 ? {
-            border: '2px solid #80888f', // Your chosen border color
-            borderRadius: '8px', // Rounded corners
-            boxSizing: 'border-box', // Include border in total width/height
+          style={selectedVariables.length >= 3 ? {
+            border: '2px solid #80888f',
+            borderRadius: '8px',
+            boxSizing: 'border-box',
             padding: '2px',
-            paddingRight: '10px', // Optional: padding to the right
+            paddingRight: '10px',
           } : {}}
         >
           {plotData && (

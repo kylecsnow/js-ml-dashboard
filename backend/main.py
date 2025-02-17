@@ -195,11 +195,16 @@ async def get_scatter_plot(model_name: str, body: dict = Body(...)):
         #     f"Retrieved training dataset for model. [model_name={model_name}, dataset_name={dataset_name}]"
         # )
 
-        style = {
-            "height": "40rem",
-        }
+        print(selected_variables)
+        print(dataset[selected_variables[0]])
+        if len(selected_variables) == 1:
+            fig = px.histogram(
+                dataset,
+                x=selected_variables[0],
+                marginal="rug",
+            )
 
-        if len(selected_variables) == 2:
+        elif len(selected_variables) == 2:
             fig = px.scatter(
                 dataset,
                 x=selected_variables[0],
@@ -216,19 +221,11 @@ async def get_scatter_plot(model_name: str, body: dict = Body(...)):
             fig.update_layout(
                 margin=dict(r=0, l=0, b=0, t=0),
             )
-            style = {
-                "height": "40rem",
-                "border": "1px solid black",  # only add a border if making a 3D scatterplot
-            }
 
         else:
             fig = pd.DataFrame([])
             fig = px.imshow(fig)
 
-        # graph_container = dcc.Graph(
-        #     figure=fig,
-        #     style=style,
-        # )
         plot_json = json.loads(fig.to_json())
         
         return {"plot_data": plot_json}
