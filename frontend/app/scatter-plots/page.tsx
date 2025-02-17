@@ -93,18 +93,6 @@ const ScatterPlotsPage = () => {
             Home
           </Link>
 
-          {/* TODO: figure out how to put a border around the plot area if a 3D scatter plot is chosen...*/}
-          <div className="relative">
-            <Select
-              isMulti
-              options={variableOptions}
-              onChange={(selected) => setSelectedVariables(selected.map(option => option.value))}
-              value={variableOptions.filter(option => selectedVariables.includes(option.value))} // Set selected values
-              name="selected-variables"
-              className="basic-multi-select"
-              classNamePrefix="select"
-            />
-          </div>
         </div>
         <div>
           <h2>
@@ -114,23 +102,42 @@ const ScatterPlotsPage = () => {
             }
           </h2>
         </div>
-        <div>
-          <h1>Under construction...</h1>
+        {/* TODO: figure out how to put a border around the plot area if a 3D scatter plot is chosen...*/}
+        <div className="relative">
+          <Select
+            isMulti
+            options={variableOptions}
+            onChange={(selected) => setSelectedVariables(selected.map(option => option.value))}
+            value={variableOptions.filter(option => selectedVariables.includes(option.value))} // Set selected values
+            name="selected-variables"
+            className="basic-multi-select"
+            classNamePrefix="select"
+            styles={{ control: (base) => ({ ...base, width: '600px' }) }}
+          />
         </div>
         <div>
           <h3>TODOs:</h3>
           <ol className="list-decimal ml-6">
-            <li>make the dropdown bar a constant width; needs a border when 3D scatterplot is shown</li>
-            <li>also needs to show errors if `selectedVariables.length` is not 2 or 3.</li>
+            <li>why not show a distplot/rugplot when 1 variable is selected?</li>
+            <li>also needs to show errors if `selectedVariables.length` is not 1, 2, or 3.</li>
           </ol>
         </div>
-        <div className="w-full max-w-4xl">
+        <div
+          className={`w-full max-w-5xl`}
+          style={selectedVariables.length === 3 ? {
+            border: '2px solid #80888f', // Your chosen border color
+            borderRadius: '8px', // Rounded corners
+            boxSizing: 'border-box', // Include border in total width/height
+            padding: '2px',
+            paddingRight: '10px', // Optional: padding to the right
+          } : {}}
+        >
           {plotData && (
             <Plot
               data={plotData.data}
               layout={plotData.layout}
               config={{ responsive: true }}
-              style={{ width: '100%', height: '600px' }}
+              style={{ width: '99%', height: '600px' }}
             />
           )}
         </div>
