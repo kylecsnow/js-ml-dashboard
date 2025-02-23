@@ -5,14 +5,14 @@ const nextConfig = {
         {
           source: '/api/:path*',
           destination: 'http://127.0.0.1:8000/api/:path*' // Redirect to backend  -->  needs to be `127.0.0.1` for macOS instead of `localhost`...?
-        //   destination: 'http://localhost:8000/api/dataset-generator' // Redirect to backend  -->  needs to be `127.0.0.1` for macOS instead of `localhost`...?
+          // destination: 'http://localhost:8000/api/:path*' // Redirect to backend  -->  needs to be `127.0.0.1` for macOS instead of `localhost`...?
         }
       ]
     },
-    typescript: {
-      ignoreBuildErrors: true,
-    },
-    assetPrefix: "/",  // --> needs to be `./` for Ubuntu...?
+    // typescript: {
+    //   ignoreBuildErrors: true,
+    // },
+    // assetPrefix: "/",  // --> needs to be `./` for Ubuntu...?
     // assetPrefix: "./",  // --> needs to be `./` for Ubuntu...?
     eslint: {
       dirs: ['src'],

@@ -1,4 +1,4 @@
-from fastapi import Body, FastAPI, HTTPException
+from fastapi import Body, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 import json
 import matplotlib
@@ -10,6 +10,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import shap
 import uvicorn
+import argparse
 
 from utils import fig2img, get_dataset_name_from_model, get_dataset, get_model_and_metadata, build_sythetic_demo_dataset
 
@@ -24,6 +25,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+### TODO: validate that this is even doing what you want it to do.....
+@app.get("/health", status_code=status.HTTP_200_OK)
+async def health_check():
+    return {
+        "status": "healthy",
+        "service": "js-ml-dashboard"
+    }
+
 
 ### Keeping models & datasets contained in the backend directory for the following reasons:
 # 1. Separation of Concerns: The frontend's public directory is meant for static assets that need to be directly served to the client (like images, fonts, etc.). ML models and datasets should be handled by your Python backend.
@@ -195,8 +206,6 @@ async def get_scatter_plot(model_name: str, body: dict = Body(...)):
         #     f"Retrieved training dataset for model. [model_name={model_name}, dataset_name={dataset_name}]"
         # )
 
-        print(selected_variables)
-        print(dataset[selected_variables[0]])
         if len(selected_variables) == 1:
             fig = px.histogram(
                 dataset,
@@ -363,6 +372,12 @@ async def get_synthetic_demo_dataset(body: dict = Body(...)):
         raise HTTPException(status_code=500, detail=str(e))
     
 
+# Add this function to parse command line arguments
+def parse_args():
+    parser = argparse.ArgumentParser(description="Run the FastAPI application.")
+    parser.add_argument("--port", type=int, default=8000, help="Port to run the FastAPI app on.")
+    return parser.parse_args()
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    args = parse_args()
+    uvicorn.run("main:app", host="0.0.0.0", port=args.port, reload=True)
