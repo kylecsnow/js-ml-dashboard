@@ -21,6 +21,8 @@ const ShapSummaryPlotsPage = () => {
   const [plotData, setPlotData] = useState<PlotDataType | null>(null);
   const [outputVariableOptions, setOutputVariableOptions] = useState<{ value: string; label: string }[]>([]);
   const [selectedOutputVariable, setSelectedOutputVariable] = useState<string[]>();
+  const [sampleOptions, setSampleOptions] = useState<{ value: string; label: string }[]>([]);
+  const [selectedSample, setSelectedSample] = useState<string[]>();
 
 
   useEffect(() => {
@@ -47,7 +49,29 @@ const ShapSummaryPlotsPage = () => {
   }, [selectedModel]);
 
 
+  useEffect(() => {
+    const fetchSampleOptions = async () => {
+      if (selectedModel) {
+        try {
+          const response = await fetch(`./api/sample-options/${selectedModel}`);
+          const data = await response.json();
+          const options = data.sample_options.map((option: string) => ({ value: option, label: option }));
+          setSampleOptions(options);
+
+          // Set the first option as selected by default
+          if (options.length >= 1) {
+            setSelectedSample(options[0].value);
+          }
+        } catch (error) {
+          console.error('Error fetching variable options:', error);
+        }
+      }
+    };
+
+    fetchSampleOptions();
+  }, [selectedModel, selectedOutputVariable]);
   
+
   useEffect(() => {
     async function fetchShapWaterfallPlotData() {
       try {
@@ -57,7 +81,7 @@ const ShapSummaryPlotsPage = () => {
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ selected_output: selectedOutputVariable }), // Send as JSON
+            body: JSON.stringify({ selected_output: selectedOutputVariable, selected_sample: selectedSample }), // Send as JSON
           }
         );
         const data = await response.json();
@@ -68,13 +92,12 @@ const ShapSummaryPlotsPage = () => {
     };
 
     fetchShapWaterfallPlotData();
-  }, [selectedModel, selectedOutputVariable]);
+  }, [selectedModel, selectedOutputVariable, selectedSample]);
 
 
   return (
     <div className="flex min-h-screen">
       <Sidebar />
-      
       <div className="flex-1 flex flex-col items-center p-8 gap-4">
         <div className="flex gap-4 items-center flex-col sm:flex-row">
           <Link
@@ -113,16 +136,17 @@ const ShapSummaryPlotsPage = () => {
             name="selected-variables"
             classNamePrefix="select"
           />
-        <label>{"Selected a sample from the dataset::"}</label>
+        <label>{"Selected a sample from the dataset:"}</label>
         <Select
-            options={outputVariableOptions}
+            options={sampleOptions}
             onChange={(selected: { value: string; label: string } | null) => {
               if (selected) {
-                setSelectedOutputVariable([selected.value]);
+                setSelectedSample([selected.value]);
               }
             }}
-            value={outputVariableOptions.filter(option => selectedOutputVariable?.includes(option.value))} // Set selected values
-            name="selected-variables"
+            // value={selectedSample} // Set selected values
+            value={sampleOptions.filter(option => selectedSample?.includes(option.value))} // Set selected values
+            name="selected-sample"
             classNamePrefix="select"
           />        
         </div>
@@ -130,7 +154,6 @@ const ShapSummaryPlotsPage = () => {
           <h1>Under construction...</h1>
           <h3>TODOs:</h3>
           <ol className="list-decimal ml-6">
-            <li>Get the page working!!! (need to add backend methods to main.py)</li>
             <li>get loading animation working</li>
           </ol>
         </div>

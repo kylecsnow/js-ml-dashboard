@@ -259,7 +259,6 @@ async def get_output_variable_options(model_name: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-### TODO: finish this code!
 @app.post("/api/shap-summary-plots/{model_name}")
 async def get_shap_summary_plot(model_name: str, body: dict = Body(...)):
     try:
@@ -317,11 +316,70 @@ async def get_shap_summary_plot(model_name: str, body: dict = Body(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/sample-options/{model_name}")
+async def get_sample_options(model_name: str):
+    try:
+        dataset_name = get_dataset_name_from_model(model_name)
+        dataset = get_dataset(dataset_name)
+
+        dataset_sample_index_options = dataset.index.tolist()
+        dataset_sample_index_options = [str(item) for item in dataset_sample_index_options]
+
+        return {"sample_options": dataset_sample_index_options}
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 ### TODO: finish this code!
 @app.post("/api/shap-waterfall-plots/{model_name}")
 async def get_shap_waterfall_plot(model_name: str, body: dict = Body(...)):
     try:
-        return {""}
+        selected_output = body.get("selected_output", [])
+        selected_sample = body.get("selected_sample", [])
+        # TODO: someday, get this to not require the selected sample to be referred to by an integer value?
+        selected_sample = int(selected_sample[0])
+
+        model_and_metadata = get_model_and_metadata(model_name)
+        dataset_name = get_dataset_name_from_model(model_name)
+        dataset = get_dataset(dataset_name)
+
+        # logger.debug(
+        #     f"Retrieved training dataset for model. [model_name={model_name}, dataset_name={dataset_name}]"
+        # )
+
+        estimators_by_output = model_and_metadata["estimators_by_output"]
+        estimator = estimators_by_output[selected_output]["estimator"]
+
+        # TODO: eventually this needs to distinguish between real-valued outputs and categorical outputs
+        # outputs = model_and_metadata["outputs_reals"]
+        # outputs_reals = outputs
+
+        # TODO: eventually this needs to distinguish between real-valued inputs and categorical inputs
+        inputs = estimators_by_output[selected_output]["inputs_reals"]
+        # inputs_reals = inputs
+
+        matplotlib.use("agg")
+        plt.figure()
+        explainer = shap.Explainer(estimator)
+        shap_values = explainer(dataset[inputs])
+
+        fig = shap.waterfall_plot(
+            shap_values[selected_sample],
+        )
+        fig = plt.gcf()
+
+        fig = px.imshow(fig2img(fig, dpi=150, bbox_inches="tight"))
+        fig.update_layout(
+            showlegend=False,
+            xaxis=dict(visible=False),
+            yaxis=dict(visible=False),
+            hovermode=False,
+        )
+
+        plot_json = json.loads(fig.to_json())
+
+        return {"plot_data": plot_json}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
