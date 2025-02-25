@@ -263,9 +263,6 @@ async def get_output_variable_options(model_name: str):
 @app.post("/api/shap-summary-plots/{model_name}")
 async def get_shap_summary_plot(model_name: str, body: dict = Body(...)):
     try:
-
-
-
         selected_output = body.get("selected_output", [])
 
         model_and_metadata = get_model_and_metadata(model_name)
@@ -318,6 +315,17 @@ async def get_shap_summary_plot(model_name: str, body: dict = Body(...)):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+### TODO: finish this code!
+@app.post("/api/shap-waterfall-plots/{model_name}")
+async def get_shap_waterfall_plot(model_name: str, body: dict = Body(...)):
+    try:
+        return {""}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 
 ### TODO: finish this code!
