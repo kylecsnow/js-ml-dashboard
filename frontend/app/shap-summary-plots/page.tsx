@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from 'next/link';
 import Select from 'react-select';
 import Sidebar from '../components/Sidebar';
+import Spinner from '../components/Spinner';
 import { useState, useEffect } from 'react';
 import { useModel } from '../contexts/ModelContext';
 
@@ -21,13 +22,14 @@ const ShapSummaryPlotsPage = () => {
   const [plotData, setPlotData] = useState<PlotDataType | null>(null);
   const [outputVariableOptions, setOutputVariableOptions] = useState<{ value: string; label: string }[]>([]);
   const [selectedOutputVariable, setSelectedOutputVariable] = useState<string[]>();
+  const [isLoading, setIsLoading] = useState(true);
 
 
   useEffect(() => {
     const fetchOutputVariableOptions = async () => {
       if (selectedModel) {
         try {
-          // const response = await fetch(`http://localhost:8000/api/output-variable-options/${selectedModel}`);
+          setIsLoading(true);
           const response = await fetch(`./api/output-variable-options/${selectedModel}`);
           const data = await response.json();
           const options = data.output_variable_options.map((option: string) => ({ value: option, label: option }));
@@ -37,6 +39,7 @@ const ShapSummaryPlotsPage = () => {
           if (options.length >= 1) {
             setSelectedOutputVariable(options[0].value);
           }
+          setIsLoading(false);
         } catch (error) {
           console.error('Error fetching variable options:', error);
         }
@@ -51,8 +54,8 @@ const ShapSummaryPlotsPage = () => {
   useEffect(() => {
     async function fetchShapSummaryPlotData() {
       try {
+        setIsLoading(true);
         const response = await fetch(
-          // `http://localhost:8000/api/shap-summary-plots/${selectedModel}`, {
           `./api/shap-summary-plots/${selectedModel}`, {
             method: 'POST',
             headers: {
@@ -63,9 +66,10 @@ const ShapSummaryPlotsPage = () => {
         );
         const data = await response.json();
         setPlotData(data.plot_data);
+        setIsLoading(false);
       } catch (error) {
         console.error('Error fetching scatter plot data:', error);
-      }
+      } 
     };
 
     fetchShapSummaryPlotData();
@@ -120,17 +124,18 @@ const ShapSummaryPlotsPage = () => {
             <ol className="list-decimal ml-6">
               <li>Investigate the error happening when selecting a different output variable than the one initially loaded</li>
               <li>Show an error when a categorical output is selected!!!</li>
-              <li>get loading animation working</li>
+              <li>get loading animation working... with less delay between it disappearing & the plot being shown?</li>
             </ol>
         </div>
         <div className="w-full max-w-8xl mx-auto">
-          {plotData && (
-            <Plot
-              data={plotData.data}
-              layout={plotData.layout}
-              config={{ responsive: true }}
-              style={{ width: '100%', height: '750px' }}
-            />
+          {isLoading ? <Spinner /> : 
+            plotData && (
+              <Plot
+                data={plotData.data}
+                layout={plotData.layout}
+                config={{ responsive: true }}
+                style={{ width: '100%', height: '750px' }}
+              />
           )}
         </div>
       </div>

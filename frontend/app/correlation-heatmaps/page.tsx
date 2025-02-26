@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from 'next/link';
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import { Switch } from '@headlessui/react';
+// import { Switch } from '@headlessui/react';
 import { useModel } from '../contexts/ModelContext';
 
 // Dynamically import Plot from plotly.js-dist-min
@@ -16,12 +16,12 @@ interface PlotDataType {
   layout: any;
 }
 
+
 const CorrelationHeatmapsPage = () => {
   const { selectedModel } = useModel();
   const [selectedHeatmapType, setSelectedHeatmapType] = useState('input-output');
-  const [clusterMapToggle, setClusterMapToggle] = useState<boolean>(false);
   const [plotData, setPlotData] = useState<PlotDataType | null>(null);
-  // const [loading, setLoading] = useState(false);
+  // const [clusterMapToggle, setClusterMapToggle] = useState<boolean>(false);
 
   useEffect(() => {
     async function fetchHeatmapData() {
@@ -32,15 +32,12 @@ const CorrelationHeatmapsPage = () => {
 
       try {
         const response = await fetch(
-          // `http://localhost:8000/api/correlation-heatmap/${selectedModel}/${selectedHeatmapType}`
           `./api/correlation-heatmap/${selectedModel}/${selectedHeatmapType}`
         );
         const data = await response.json();
         setPlotData(data.plot_data);
       } catch (error) {
         console.error('Error fetching heatmap:', error);
-      } finally {
-        // setLoading(false);
       }
     }
 
@@ -88,7 +85,7 @@ const CorrelationHeatmapsPage = () => {
             <option value="input-output">Input-Output Correlations</option>
             <option value="output-output">Output-Output Correlations</option>
           </select>
-          <div>
+          {/* <div>
             <label className="mr-2">Cluster variables</label>
             <Switch
               checked={clusterMapToggle}
@@ -104,25 +101,20 @@ const CorrelationHeatmapsPage = () => {
                 } inline-block w-4 h-4 transform bg-white rounded-full transition`}
               />
             </Switch>
-          </div>
+          </div> */}
         </div>
 
-        <div>
+        {/* <div>
           <p>(TODOs: 1. get toggle switches actually working for grouping/clustering variables, and 2. choosing whether to hide certain features (possibly showing a number entry field for the threshold) - #2 might be hard to do though, actually...)</p>
-        </div>
+        </div> */}
         <div className="w-full max-w-8xl mx-auto">
-          {/* {loading ? (
-            <div>Loading...</div>
-          ) : plotData && ( */}
-
-          {/* TODO: make the correlation heatmaps bigger */}
-          {plotData && (
-            <Plot
-              data={plotData.data}
-              layout={plotData.layout}
-              config={{ responsive: true }}
-              style={{ width: '100%', height: '600px' }}
-            />
+            {plotData && (
+              <Plot
+                data={plotData.data}
+                layout={plotData.layout}
+                config={{ responsive: true }}
+                style={{ width: '100%', height: '600px' }}
+              />
           )}
         </div>
       </div>
