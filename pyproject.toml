@@ -24,7 +24,7 @@ dependencies = [
 ]
 
 [tool.setuptools]
-packages = ["backend"]
+package-dir = {"ml_dashboard_backend" = "backend"}
 
 [tool.black]
 line-length = 88
