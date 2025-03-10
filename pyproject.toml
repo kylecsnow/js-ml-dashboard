@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ml_dashboard_backend"
+version = "0.1.0"
+description = "Backend code for a dashboard for ML and data analysis"
+authors = [{name = "Kyle Snow", email = "kylecsnow@gmail.com"}]
+dependencies = [
+    "catboost>=1.2.7,<2.0.0",
+    "jupyter>=1.1.1,<2.0.0",
+    "jupyterlab>=4.3.5,<5.0.0",
+    "ngboost>=0.5.5,<0.6.0",
+    "matplotlib>=3.10.1,<4.0.0",
+    "mordred>=1.2.0,<2.0.0",
+    "openpyxl>=3.1.5,<4.0.0",
+    "pandas>=2.2.3,<3.0.0",
+    "plotly>=6.0.0,<7.0.0",
+    "rdkit>=2024.9.5,<2025.0.0",
+    "scikit-learn>=1.6.1,<2.0.0",
+    "torch>=2.5.0,<3.0.0",
+    "xgboost>=2.1.4,<3.0.0"
+]
+
+[tool.setuptools]
+packages = ["backend"]
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.isort]
+profile = "black"
+
+[tool.pytest.ini_options]
+addopts = "--verbose"
