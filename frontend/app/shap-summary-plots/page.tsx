@@ -21,7 +21,7 @@ const ShapSummaryPlotsPage = () => {
   const { selectedModel } = useModel();
   const [plotData, setPlotData] = useState<PlotDataType | null>(null);
   const [outputVariableOptions, setOutputVariableOptions] = useState<{ value: string; label: string }[]>([]);
-  const [selectedOutputVariable, setSelectedOutputVariable] = useState<string[]>();
+  const [selectedOutputVariable, setSelectedOutputVariable] = useState<string>();
   const [isLoading, setIsLoading] = useState(true);
 
 
@@ -111,10 +111,10 @@ const ShapSummaryPlotsPage = () => {
             options={outputVariableOptions}
             onChange={(selected: { value: string; label: string } | null) => {
               if (selected) {
-                setSelectedOutputVariable([selected.value]);
+                setSelectedOutputVariable(selected.value);
               }
             }}
-            value={outputVariableOptions.filter(option => selectedOutputVariable?.includes(option.value))} // Set selected values
+            value={outputVariableOptions.filter(option => selectedOutputVariable?.includes(option.value))}
             name="selected-variables"
             classNamePrefix="select"
           />
@@ -122,7 +122,6 @@ const ShapSummaryPlotsPage = () => {
         <div>
           <h3>TODOs:</h3>
             <ol className="list-decimal ml-6">
-              <li>Investigate the error happening when selecting a different output variable than the one initially loaded</li>
               <li>Show an error when a categorical output is selected!!!</li>
               <li>get loading animation working... with less delay between it disappearing & the plot being shown?</li>
             </ol>

@@ -130,9 +130,10 @@ const MolecularDesignPage = () => {
         <div>
           <h3>TODOs:</h3>
           <ol className="list-decimal ml-6">
-            <li>Build the page!</li>
-            <li>maybe try the Bokeh plot here...? Will it even work with React/Javascript?</li>
-            <li>Try to include Ketcher as a molecule editor...? (figure out why certain things don't work: 1) copy-pasting, 2) structure cleanup, 3) inputting SMILES.</li>
+            <li>Plotly molecular space diagram</li>
+            <li>Try out a 2D molecule viewer (`smilesDrawer`?)</li>
+            <li>Try out a 3D molecule viewer (`3Dmol.js`?)</li>
+            <li>Try out ASKCOS (askcos.mit.edu) molecule editor...? (figure out why certain things don't work: 1) copy-pasting, 2) structure cleanup, 3) inputting SMILES.</li>
           </ol>
 
         </div>

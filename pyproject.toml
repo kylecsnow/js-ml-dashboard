@@ -8,19 +8,26 @@ version = "0.1.0"
 description = "Backend code for a dashboard for ML and data analysis"
 authors = [{name = "Kyle Snow", email = "kylecsnow@gmail.com"}]
 dependencies = [
+    "black>=25.0.0,<26.0.0",
     "catboost>=1.2.7,<2.0.0",
+    "fastapi==0.115.4",
     "jupyter>=1.1.1,<2.0.0",
     "jupyterlab>=4.3.5,<5.0.0",
     "ngboost>=0.5.5,<0.6.0",
     "matplotlib>=3.10.1,<4.0.0",
     "mordred>=1.2.0,<2.0.0",
+    "mypy<2.0.0",
+    "numpy>=1.0.0,<2.0.0",
     "openpyxl>=3.1.5,<4.0.0",
     "pandas>=2.2.3,<3.0.0",
     "plotly>=6.0.0,<7.0.0",
     "rdkit>=2024.9.5,<2025.0.0",
+    "ruff==0.5.1",
     "scikit-learn>=1.6.1,<2.0.0",
+    "shap==0.43.0",
     "torch>=2.5.0,<3.0.0",
-    "xgboost>=2.1.4,<3.0.0"
+    "uvicorn[standard]==0.32.0",
+    "xgboost>=2.1.4,<3.0.0",
 ]
 
 [tool.setuptools]

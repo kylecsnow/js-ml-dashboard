@@ -263,6 +263,7 @@ async def get_output_variable_options(model_name: str):
 async def get_shap_summary_plot(model_name: str, body: dict = Body(...)):
     try:
         selected_output = body.get("selected_output", [])
+        print("selected output is...: ", selected_output)
 
         model_and_metadata = get_model_and_metadata(model_name)
         dataset_name = get_dataset_name_from_model(model_name)
@@ -295,10 +296,7 @@ async def get_shap_summary_plot(model_name: str, body: dict = Body(...)):
             show=False,
         )
         fig = plt.gcf()
-
-        print(type(fig2img(fig, dpi=150)))
-
-        fig = px.imshow(fig2img(fig, dpi=150))
+        fig = px.imshow(fig2img(fig, dpi=200))
         fig.update_layout(
             showlegend=False,
             xaxis=dict(visible=False),
