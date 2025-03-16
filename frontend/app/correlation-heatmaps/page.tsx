@@ -4,17 +4,13 @@ import dynamic from 'next/dynamic';
 import Image from "next/image";
 import Link from 'next/link';
 import React, { useState, useEffect } from 'react';
+import { PlotDataType } from '@/types/types';
 import Sidebar from '../components/Sidebar';
 // import { Switch } from '@headlessui/react';
 import { useModel } from '../contexts/ModelContext';
 
 // Dynamically import Plot from plotly.js-dist-min
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
-
-interface PlotDataType {
-  data: any[];
-  layout: any;
-}
 
 
 const CorrelationHeatmapsPage = () => {

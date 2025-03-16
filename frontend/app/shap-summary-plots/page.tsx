@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import Image from "next/image";
 import Link from 'next/link';
+import { PlotDataType } from '@/types/types';
 import Select from 'react-select';
 import Sidebar from '../components/Sidebar';
 import Spinner from '../components/Spinner';
@@ -11,11 +12,6 @@ import { useModel } from '../contexts/ModelContext';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
-// TODO: don't re-make this interface in every page; pull it out into some other place and then import it in each of your pages.
-interface PlotDataType {
-    data: any[];
-    layout: any;
-}
 
 const ShapSummaryPlotsPage = () => {
   const { selectedModel } = useModel();

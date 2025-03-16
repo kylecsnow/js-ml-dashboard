@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import Image from "next/image";
 import Link from 'next/link';
+import { PlotDataType } from '@/types/types';
 import Sidebar from '../components/Sidebar';
 import { useState, useEffect } from 'react';
 import { useModel } from '../contexts/ModelContext';
@@ -10,11 +11,6 @@ import { Switch } from '@headlessui/react';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
-// TODO: don't re-make this interface in every page; pull it out into some other place and then import it in each of your pages.
-interface PlotDataType {
-    data: any[];
-    layout: any;
-}
 
 const ViolinPlotsPage = () => {
   const { selectedModel } = useModel();
