@@ -50,6 +50,12 @@ def fig2img(
     return img
 
 
+### D-dimensional sigmoid function with the given set of D coefficients:
+def sigmoid(input_row, coefs):
+    value = 1 / (1 + np.exp(-1 * np.matmul(input_row, coefs)))
+    return value
+
+
 def wide_to_compact_format(df):
 
     ### TODO: this function should ideally catch duplicate ingredient name columns if they exist and consolidate them before converting to compact format (so you don't get "Ingredient A" and "Ingredient A.1" showing up in the compact format)
@@ -136,6 +142,7 @@ def compact_to_wide_format(df):
     return result_df
 
 
+### TODO: get rid of this function someday?
 def sample_from_constrained_simplex(
     n_dimensions: int,
     constraints: Optional[List[Tuple[float, float]]] = None,
@@ -231,16 +238,99 @@ def sample_from_constrained_simplex(
     raise ValueError(f"Could not find any valid formulation after {max_attempts} attempts. Please check that your formulations are not over-constrained. (Your lower & upper bounds might make it impossible to find a formulation where the ingredient quantities sum to 100%)")
 
 
-### D-dimensional sigmoid function with the given set of D coefficients:
-def sigmoid(input_row, coefs):
-    value = 1 / (1 + np.exp(-1 * np.matmul(input_row, coefs)))
-    return value
+def gibbs_sample_formulation_space(
+    n_ingredients: int,
+    constraints: Optional[List[Tuple[float, float]]] = None,
+    n_samples: int = 100,
+    burn_in: int = 100,
+):
+    """
+    Generate samples of ingredient formulations using Gibbs sampling.
+    
+    Parameters:
+    - n_ingredients: number of ingredients
+    - mins: minimum percentages (array of length n_ingredients)
+    - maxs: maximum percentages (array of length n_ingredients)
+    - n_samples: number of samples to generate
+    - burn_in: number of initial samples to discard
+    
+    Returns:
+    - samples: array of shape (n_samples, n_ingredients)
+    """
+
+    if constraints is None:
+        constraints = [None] * n_ingredients
+    elif len(constraints) != n_ingredients:
+        raise ValueError(f"Length of formulation constraints (provided: {len(constraints)}) must equal n_ingredients (provided: {n_ingredients}).")
+    
+
+    mins = [c[0] for c in constraints if c is not None]
+    maxs = [c[1] for c in constraints if c is not None]
+    
+    # Validate that a solution is possible
+    if sum(mins) > 1:
+        raise ValueError("Sum of formulation lower bounds exceeds 1; these constraints don't allow for a solution that sums to 1.")
+    elif sum(maxs) < 1:
+        raise ValueError("Sum of formulation upper bounds is less than 1; these constraints don't allow for a solution that sums to 1.")
+    
+    # Initialize with a valid starting point
+    current = np.array(mins, dtype=float)
+    remaining = 1 - sum(current)
+    
+    # Distribute remaining amount within constraints
+    room_for_more = np.array([max_val - min_val for min_val, max_val in zip(mins, maxs)])
+    if sum(room_for_more) > 0:  # Avoid division by zero
+        distribution = room_for_more / sum(room_for_more) * remaining
+        # Ensure we don't exceed max values
+        for i in range(n_ingredients):
+            add_amount = min(distribution[i], maxs[i] - current[i])
+            current[i] += add_amount
+            remaining -= add_amount
+    
+    # If there's still remaining percentage, distribute it to ingredients that have room
+    while remaining > 1e-12:
+        can_increase = [i for i in range(n_ingredients) if current[i] < maxs[i]]
+        if not can_increase:
+            break
+        idx = np.random.choice(can_increase)
+        add_amount = min(remaining, maxs[idx] - current[idx])
+        current[idx] += add_amount
+        remaining -= add_amount
+    
+    # Verify sum is 1 (or 100%)
+    ### TODO: is this assertion statement accurate??? Is it the initial point, or some other point?
+    assert abs(sum(current) - 1) < 1e-12, f"Ingredient quantities of initial point don't sum to 1: {sum(current)}" 
+    
+    # Collect samples
+    samples = []
+    for t in range(n_samples + burn_in):
+        # Perform several Gibbs steps per iteration for better mixing
+        for _ in range(n_ingredients):
+            # Select two random ingredients to adjust
+            i, j = np.random.choice(n_ingredients, 2, replace=False)
+            
+            # Calculate valid range for transfer
+            delta_min = max(mins[i] - current[i], current[j] - maxs[j])
+            delta_max = min(maxs[i] - current[i], current[j] - mins[j])
+            
+            if delta_max > delta_min:
+                # Sample transfer amount
+                delta = np.random.uniform(delta_min, delta_max)
+                
+                # Update formulation
+                current[i] += delta
+                current[j] -= delta
+        
+        # Only keep samples after burn-in
+        if t >= burn_in:
+            samples.append(current.copy())
+    
+    return np.array(samples)
 
 
 def build_sythetic_demo_dataset(inputs=5, outputs=1, num_rows=10, noise=0, coefs=None, output_format="compact"):
 
     ### TODO: allow user to add noise to the response functions (using the `noise` argument)
-    
     if isinstance(inputs, int):
         num_inputs = inputs
     else:
@@ -282,7 +372,7 @@ def build_sythetic_demo_dataset(inputs=5, outputs=1, num_rows=10, noise=0, coefs
     else:
         X_general = np.array([[np.random.uniform(-2, 2) for i in range(num_general_inputs)] for j in range(num_rows)])
         if inputs["formulation"]:
-            X_formulation = np.array([sample_from_constrained_simplex(n_dimensions=num_formulation_inputs, constraints=formulation_constraints) for j in range(num_rows)])
+            X_formulation = gibbs_sample_formulation_space(n_ingredients=num_formulation_inputs, constraints=formulation_constraints, n_samples=num_rows)
             X = np.concatenate((X_general, X_formulation), axis=1)
         else:
             X = X_general

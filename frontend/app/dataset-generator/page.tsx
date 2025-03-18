@@ -241,9 +241,21 @@ const DatasetGeneratorPage = () => {
         </div>
         <div>
           <h3>TODOs:</h3>
+          
+          
+          
           <ol className="list-decimal ml-6">
-            <li>preview rows of generated data (include interactive table somehow?)</li>
-            <li>(someday) add an "advanced" menu that allows users to specify their coefficients</li>
+            <li>Fix sampling for narrow formulation ranges</li>
+            <li>Add an "advanced" menu that allows users to specify their coefficients</li>
+            <li>Allow users to add noise to the functions generating their data (one for each output)</li>
+          </ol>
+          <br></br>
+
+
+
+          <ol className="list-decimal ml-6">
+            <li>(someday) allow users to preview rows of generated data (include interactive table somehow?)</li>
+            <li>(someday) For formulation ingredients, add logic for "must include", "can include", or "exclude"</li>
           </ol>
         </div>
         <div>

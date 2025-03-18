@@ -304,8 +304,6 @@ async def get_shap_summary_plot(model_name: str, body: dict = Body(...)):
             hovermode=False,
         )
 
-
-        # TODO: finish this part
         plot_json = json.loads(fig.to_json())
         
         return {"plot_data": plot_json}
@@ -329,7 +327,6 @@ async def get_sample_options(model_name: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-### TODO: finish this code!
 @app.post("/api/shap-waterfall-plots/{model_name}")
 async def get_shap_waterfall_plot(model_name: str, body: dict = Body(...)):
     try:
@@ -383,11 +380,13 @@ async def get_shap_waterfall_plot(model_name: str, body: dict = Body(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-
 ### TODO: finish this code!
 @app.get("/api/molecular-design/{model_name}")
 async def get_molecular_design(model_name: str):
     try:
+
+        ### TODO: hardcode molecules for now --> generalize this later
+
         # model_and_metadata = get_model_and_metadata(model_name=model_name)
         # outputs = list(model_and_metadata["estimators_by_output"].keys())
         # all_estimator_inputs = set()
@@ -398,7 +397,14 @@ async def get_molecular_design(model_name: str):
         # all_estimator_inputs = list(all_estimator_inputs)
         # variable_options = all_estimator_inputs + outputs
         # return {"variable_options": variable_options}
-        return {""}
+        
+
+        fig = pd.DataFrame([])
+        fig = px.imshow(fig)
+
+        plot_json = json.loads(fig.to_json())
+        
+        return {"plot_data": plot_json}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
