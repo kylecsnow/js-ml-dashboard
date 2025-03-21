@@ -15,42 +15,42 @@ const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
 
 // TODO: fix this mess
-const ShowMolecule: React.FC<ShowMoleculeProps> = ({ molecule }) => {
-  const [molgenResults] = al;skfdj;aweac;
-  const smiles = molecule?.SMILES
-  const svgRef = useRef<SVGSVGElement>(null);
+// const ShowMolecule: React.FC<ShowMoleculeProps> = ({ molecule }) => {
+//   const [molgenResults] = al;skfdj;aweac;
+//   const smiles = molecule?.SMILES
+//   const svgRef = useRef<SVGSVGElement>(null);
 
 
 
-  const display2DMolecule = useCallback(() => {
-    // const svgRef = useRef(null);
-    // const [showTooltip, setShowTooltip] = useState(false);
+//   const display2DMolecule = useCallback(() => {
+//     // const svgRef = useRef(null);
+//     // const [showTooltip, setShowTooltip] = useState(false);
     
-    if (!smiles || !svgRef.current) return;
+//     if (!smiles || !svgRef.current) return;
     
-    // first, clear the SVG
-    while (svgRef.current.firstChild) {
-      svgRef.current.removeChild(svgRef.current.firstChild);
-    }
+//     // first, clear the SVG
+//     while (svgRef.current.firstChild) {
+//       svgRef.current.removeChild(svgRef.current.firstChild);
+//     }
     
-    const drawer = new SmilesDrawer.SvgDrawer({
-      width: 400,
-      height: 400,
-      bondThickness: 1.5,
-      fontSizeLarge: 12,
-      fontSizeSmall: 10,
-    });
+//     const drawer = new SmilesDrawer.SvgDrawer({
+//       width: 400,
+//       height: 400,
+//       bondThickness: 1.5,
+//       fontSizeLarge: 12,
+//       fontSizeSmall: 10,
+//     });
     
-    SmilesDrawer.parse(smiles, function (tree) {
-      if (svgRef.current) {
-        drawer.draw(tree, svgRef.current, 'light');
-        console.log('2D Molecule drawn successfully');
-      }
-    }, function (error) {
-      console.error('SMILES parsing error:', error);
-    });
-  }, [smiles]);
-}
+//     SmilesDrawer.parse(smiles, function (tree) {
+//       if (svgRef.current) {
+//         drawer.draw(tree, svgRef.current, 'light');
+//         console.log('2D Molecule drawn successfully');
+//       }
+//     }, function (error) {
+//       console.error('SMILES parsing error:', error);
+//     });
+//   }, [smiles]);
+// }
 
 
 const MolecularDesignPage = () => {
@@ -87,12 +87,7 @@ const MolecularDesignPage = () => {
 
     fetchMolecularDesignData();
   }, [selectedModel]);
-
-
-
-
-
-  
+ 
 
 
   const turboColorscale: [number, string][] = [
@@ -272,7 +267,7 @@ const MolecularDesignPage = () => {
             />
           )} */}
 
-          {/* <div className="w-full max-w-4xl">
+          <div className="w-full max-w-4xl">
             {plotData && (
               <Plot
                 data={plotData.data}
@@ -281,12 +276,12 @@ const MolecularDesignPage = () => {
                 style={{ width: '100%', height: '600px' }}
               />
             )}
-          </div> */}
+          </div>
 
 
 
 
-
+{/* 
           <div>
             <Plot
               data={[trace]}
@@ -294,7 +289,7 @@ const MolecularDesignPage = () => {
               config={{ responsive: true }}
               style={{ width: '100%', height: '400px' }}
             />
-          </div>
+          </div> */}
 
 
 

@@ -13,6 +13,7 @@ import uvicorn
 import argparse
 
 from utils import fig2img, get_dataset_name_from_model, get_dataset, get_model_and_metadata, build_sythetic_demo_dataset
+from molecule_viz import create_plotly_molecular_space_map, process_molecular_space_map_data
 
 
 app = FastAPI()
@@ -382,27 +383,36 @@ async def get_shap_waterfall_plot(model_name: str, body: dict = Body(...)):
 
 ### TODO: finish this code!
 @app.get("/api/molecular-design/{model_name}")
-async def get_molecular_design(model_name: str):
+async def get_molecular_design_results(model_name: str):
+    
+    
+    print('calling backend function...')
+
+    
     try:
 
-        ### TODO: hardcode molecules for now --> generalize this later
 
-        # model_and_metadata = get_model_and_metadata(model_name=model_name)
-        # outputs = list(model_and_metadata["estimators_by_output"].keys())
-        # all_estimator_inputs = set()
-        # for output in outputs:
-        #     all_estimator_inputs = all_estimator_inputs.union(
-        #         set(model_and_metadata["estimators_by_output"][output]["inputs_reals"])
-        #     )
-        # all_estimator_inputs = list(all_estimator_inputs)
-        # variable_options = all_estimator_inputs + outputs
-        # return {"variable_options": variable_options}
+        print("trying to get mol_images_df...")
+
+        ### TODO: hardcode molecules for now --> generalize this later
+        # mol_images_df, mol_images_data = get_cached_mol_results(num_rows_limit)
+        # molgen_results = pd.read_excel("./datasets/vapor_pressure_train.xlsx")
+        mol_images_df = pd.read_excel("./datasets/vapor_pressure_train.xlsx")
+        mol_images_df = mol_images_df.rename(columns={"Smiles": "SMILES"})
+        mol_images_df["group"] = "Candidates"
+        mol_images_df = process_molecular_space_map_data(mol_images_df)
+
+        color_prop_options = ["vapor_pressure (mmHg)"]
+        default_color_prop = color_prop_options[0] if color_prop_options else None
         
 
-        fig = pd.DataFrame([])
-        fig = px.imshow(fig)
+        print("successfully got mol_images_df!")
+        print(mol_images_df)
+        print('making molecular space map...')
+        molecular_space_map = create_plotly_molecular_space_map(mol_images_df, color_property=default_color_prop)
+        print('success!')
 
-        plot_json = json.loads(fig.to_json())
+        plot_json = json.loads(molecular_space_map.to_json())
         
         return {"plot_data": plot_json}
 
