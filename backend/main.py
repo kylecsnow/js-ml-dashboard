@@ -392,22 +392,26 @@ async def get_molecular_design_results(model_name: str):
     try:
 
 
-        print("trying to get mol_images_df...")
 
         ### TODO: hardcode molecules for now --> generalize this later
         # mol_images_df, mol_images_data = get_cached_mol_results(num_rows_limit)
         # molgen_results = pd.read_excel("./datasets/vapor_pressure_train.xlsx")
+        print("trying to get mol_images_df...")
         mol_images_df = pd.read_excel("./datasets/vapor_pressure_train.xlsx")
-        mol_images_df = mol_images_df.rename(columns={"Smiles": "SMILES"})
-        mol_images_df["group"] = "Candidates"
+        mol_images_df = mol_images_df.rename(columns={"Smiles": "SMILES", "vapor_pressure(mmHg)": "vapor_pressure (mmHg)"})
+        mol_images_df = mol_images_df[mol_images_df["vapor_pressure (mmHg)"] <= 1_000]
+        mol_images_df["Group"] = "Candidates"
+        # print(mol_images_df)
         mol_images_df = process_molecular_space_map_data(mol_images_df)
+        # print("step...")
 
         color_prop_options = ["vapor_pressure (mmHg)"]
         default_color_prop = color_prop_options[0] if color_prop_options else None
         
+        # print(default_color_prop)
 
         print("successfully got mol_images_df!")
-        print(mol_images_df)
+        # print(mol_images_df)
         print('making molecular space map...')
         molecular_space_map = create_plotly_molecular_space_map(mol_images_df, color_property=default_color_prop)
         print('success!')

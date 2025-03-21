@@ -29,7 +29,7 @@ def mol_to_base64(mol, size=(300, 300)):
     return 'data:image/png;base64,' + base64.b64encode(for_encoding).decode()
 
 
-def process_molecular_space_map_data(smiles_df, featurization_method='morgan'):
+def process_molecular_space_map_data(df, featurization_method='morgan'):
     """
     Create an interactive 2D scatter plot of molecules in chemical space using Bokeh.
     
@@ -45,8 +45,8 @@ def process_molecular_space_map_data(smiles_df, featurization_method='morgan'):
     bokeh.plotting.Figure: Interactive molecular space visualization
     """
 
-    smiles = smiles_df["SMILES"].tolist()
-    group = smiles_df["group"].tolist()
+    smiles = df["SMILES"].tolist()
+    group = df["Group"].tolist()
     molecules = [Chem.MolFromSmiles(smi) for smi in smiles]
 
     # Featurize molecules
@@ -78,17 +78,19 @@ def process_molecular_space_map_data(smiles_df, featurization_method='morgan'):
     embedding = reducer.fit_transform(features_scaled)
 
     # Prepare molecule images and SMILES
-    mol_images = [mol_to_base64(mol) for mol in molecules]
+    # mol_images = [mol_to_base64(mol) for mol in molecules]
 
-    # Prepare data for Bokeh
-    data=dict(
-        x=embedding[:, 0],
-        y=embedding[:, 1],
-        smiles=smiles,
-        group=group,
-        images=mol_images
-    )
-    mol_images_df = pd.DataFrame(data)
+    mol_images_df = df
+    mol_images_df["UMAP1"] = embedding[:, 0]
+    mol_images_df["UMAP2"] = embedding[:, 1]
+    # mol_images_df['Image'] = mol_images
+    # data=dict(
+    #     x=embedding[:, 0],
+    #     y=embedding[:, 1],
+    #     smiles=smiles,
+    #     group=group,
+    #     images=mol_images
+    # )
 
     return mol_images_df
 
@@ -125,7 +127,7 @@ def create_plotly_molecular_space_map(mol_images_df, width=800, height=600, colo
         marker_config = dict(
             size=9 if group == 'Reference' else 7,
             opacity=0.7,
-            symbol='triangle-up' if group == 'Reference' else 'cirlcle'
+            symbol='triangle-up' if group == 'Reference' else 'circle'
         )
 
         if color_property:
