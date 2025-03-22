@@ -57,9 +57,6 @@ def sigmoid(input_row, coefs):
 
 
 def wide_to_compact_format(df):
-
-    ### TODO: this function should ideally catch duplicate ingredient name columns if they exist and consolidate them before converting to compact format (so you don't get "Ingredient A" and "Ingredient A.1" showing up in the compact format)
-
     """
     Convert formulation data from wide format to compact format.
     
@@ -72,6 +69,8 @@ def wide_to_compact_format(df):
     pandas.DataFrame: Transformed DataFrame in compact format with columns:
         - component-1_identifier, component-1_amount, component-2_identifier, component-2_amount, etc.
     """
+
+    ### TODO: this function should ideally catch duplicate ingredient name columns if they exist and consolidate them before converting to compact format (so you don't get "Ingredient A" and "Ingredient A.1" showing up in the compact format)
     # Create an empty list to store the transformed rows
     compact_rows = []
     

@@ -7,6 +7,7 @@ import Script from 'next/script';
 import Sidebar from '@/app/components/Sidebar';
 import { PlotDataType } from '@/types/types';
 import SmilesDrawer from 'smiles-drawer';
+import { atom, useAtom } from 'jotai';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useModel } from '@/app/contexts/ModelContext';
 
@@ -53,15 +54,47 @@ const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 // }
 
 
+
+
+
+// TODO: someday figure out how the heck this jotai stuff works
+// NOTE: *never* put this inside of a useEffect!!
+const selectedMoleculeAtom = atom(null)
+
+
+
 const MolecularDesignPage = () => {
+  
   const { selectedModel } = useModel();
   const [plotData, setPlotData] = useState<PlotDataType | null>(null);
-
+  const [selectedMolecule, setSelectedMolecule] = useAtom(selectedMoleculeAtom);
+  
   // const hiddenButtonsConfig = getHiddenButtonsConfig();
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-
   
+
+  // TODO: figure out handling molecule clicks
+  const handleMoleculeSelect = (event: any) => {
+    console.log("click detected!")
+    if (!event?.points?.[0] && !event?.ID) return;
+  
+    // allow for molecule selection from either plot click or table click
+    const molecule = event.points ?
+      event.points[0] :
+      event; // TODO: eventually, show a table and support clicking on the table to select the molecule
+    
+      if (!molecule) return;
+      setSelectedMolecule(molecule);
+    }
+    
+  // Add this useEffect to log selectedMolecule whenever it changes
+  useEffect(() => {
+    console.log("Selected molecule:")
+    console.log(selectedMolecule);
+  }, [selectedMolecule]);
+  
+
   useEffect(() => {
     if (!selectedModel) return;
     async function fetchMolecularDesignData() {
@@ -73,10 +106,6 @@ const MolecularDesignPage = () => {
             headers: {
               'Content-Type': 'application/json',
             },
-            // body: JSON.stringify({
-            //   box_plot_toggle: boxPlotToggle,
-            //   data_points_toggle: dataPointsToggle,
-            // }),
           }
         );
         const data = await response.json();
@@ -220,9 +249,6 @@ const MolecularDesignPage = () => {
             </h2>
           </div>
           <div>
-            <h1>Under construction...</h1>
-          </div>
-          <div>
             <h3>TODOs:</h3>
             <ol className="list-decimal ml-6">
               <li>display molecule structure on-click</li>
@@ -233,6 +259,25 @@ const MolecularDesignPage = () => {
             </ol>
 
           </div>
+
+          <div className="w-full max-w-4xl">
+            {plotData && (
+              <Plot
+                data={plotData.data}
+                // layout={plotData.layout}
+                layout={{
+                  ...plotData.layout,
+                  clickmode: 'event'
+                }}
+                config={{ responsive: true }}
+                style={{ width: '100%', height: '600px' }}
+                onClick={handleMoleculeSelect}
+              />
+            )}
+          </div>
+
+
+
 
           {/* <Editor
             errorHandler={(message: string) => {
@@ -268,16 +313,6 @@ const MolecularDesignPage = () => {
             />
           )} */}
 
-          <div className="w-full max-w-4xl">
-            {plotData && (
-              <Plot
-                data={plotData.data}
-                layout={plotData.layout}
-                config={{ responsive: true }}
-                style={{ width: '100%', height: '600px' }}
-              />
-            )}
-          </div>
 
 
 
