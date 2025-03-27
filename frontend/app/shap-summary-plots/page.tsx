@@ -19,6 +19,7 @@ const ShapSummaryPlotsPage = () => {
   const [outputVariableOptions, setOutputVariableOptions] = useState<{ value: string; label: string }[]>([]);
   const [selectedOutputVariable, setSelectedOutputVariable] = useState<string>();
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string>("");
 
 
   useEffect(() => {
@@ -45,10 +46,13 @@ const ShapSummaryPlotsPage = () => {
     fetchOutputVariableOptions();
   }, [selectedModel]);
 
-
   
   useEffect(() => {
     async function fetchShapSummaryPlotData() {
+
+      // Clear any existing error
+      setError("");
+
       try {
         setIsLoading(true);
         const response = await fetch(
@@ -60,7 +64,22 @@ const ShapSummaryPlotsPage = () => {
             body: JSON.stringify({ selected_output: selectedOutputVariable }), // Send as JSON
           }
         );
+
+        // if (!response.ok) {
+        //   const errorData = await response.json();
+        //   if (response.status === 400) {
+        //     setError(errorData.detail);
+        //   } else if (response.status === 500) {
+        //     setError("An error occurred. Please check that you are not selecting a categorical output. If you've verified that the selected output is numerical, this may be an internal server error.");
+        //   } else {
+        //     setError(errorData.detail || "An unexpected error occurred");
+        //   }
+        //   return;
+        // }  
+
         const data = await response.json();
+
+
         setPlotData(data.plot_data);
         setIsLoading(false);
       } catch (error) {
@@ -123,6 +142,11 @@ const ShapSummaryPlotsPage = () => {
             </ol>
         </div>
         <div className="w-full max-w-8xl mx-auto">
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              {error}
+            </div>
+          )}
           {isLoading ? <Spinner /> : 
             plotData && (
               <Plot
