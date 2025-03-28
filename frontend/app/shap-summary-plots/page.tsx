@@ -49,6 +49,9 @@ const ShapSummaryPlotsPage = () => {
   
   useEffect(() => {
     async function fetchShapSummaryPlotData() {
+      if (!selectedModel || !selectedOutputVariable) {
+        return;
+      }
 
       // Clear any existing error
       setError("");
@@ -65,17 +68,17 @@ const ShapSummaryPlotsPage = () => {
           }
         );
 
-        // if (!response.ok) {
-        //   const errorData = await response.json();
-        //   if (response.status === 400) {
-        //     setError(errorData.detail);
-        //   } else if (response.status === 500) {
-        //     setError("An error occurred. Please check that you are not selecting a categorical output. If you've verified that the selected output is numerical, this may be an internal server error.");
-        //   } else {
-        //     setError(errorData.detail || "An unexpected error occurred");
-        //   }
-        //   return;
-        // }  
+        if (!response.ok) {
+          const errorData = await response.json();
+          if (response.status === 400) {
+            setError(errorData.detail);
+          } else if (response.status === 500) {
+            setError("An error occurred. Please check that you are not selecting a categorical output. If you've verified that the selected output is numerical, this may be an internal server error.");
+          } else {
+            setError(errorData.detail || "An unexpected error occurred");
+          }
+          return;
+        }  
 
         const data = await response.json();
 
