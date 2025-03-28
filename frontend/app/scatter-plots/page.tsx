@@ -21,41 +21,62 @@ const ScatterPlotsPage = () => {
   const [error, setError] = useState<string>("");
 
   useEffect(() => {
-    const fetchVariableOptions = async () => {
-      if (selectedModel) {
-        try {
-          // const response = await fetch(`http://localhost:8000/api/variable-options/${selectedModel}`);
-          const response = await fetch(`./api/variable-options/${selectedModel}`);
-          const data = await response.json();
-          const options = data.variable_options.map((option: string) => ({ value: option, label: option }));
-          setVariableOptions(options);
-
-          if (options.length >= 2) {
-            setSelectedVariables([options[0].value, options[1].value]);
-          }
-        } catch (error) {
-          console.error('Error fetching variable options:', error);
-        }
+    async function initializeAndFetchData() {
+      if (!selectedModel) {
+        return;
       }
-    };
 
-    fetchVariableOptions();
-  }, [selectedModel]);
- 
-  
-  useEffect(() => {
-    if (selectedVariables.length === 0) {
-      setError("At least one variable must be selected.");
-    } else if (selectedVariables.length > 3) {
-      setError("Too many variables selected. Only 1 to 3 selected variables are allowed.");
-    } else {
-      setError(""); // Clear error if valid
+      try {
+        // First fetch the variable options
+        const response = await fetch(`./api/variable-options/${selectedModel}`);
+        const data = await response.json();
+        const options = data.variable_options.map((option: string) => ({ value: option, label: option }));
+        setVariableOptions(options);
+
+        // Set initial variables only once
+        if (options.length >= 2) {
+          const initialVariables = [options[0].value, options[1].value];
+          setSelectedVariables(initialVariables);
+
+          // Only fetch plot data after we have valid variables
+          const plotResponse = await fetch(
+            `./api/scatter-plots/${selectedModel}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ selected_variables: initialVariables }),
+            }
+          );
+
+          if (!plotResponse.ok) {
+            throw new Error(`HTTP error! status: ${plotResponse.status}`);
+          }
+
+          const plotData = await plotResponse.json();
+          setPlotData(plotData.plot_data);
+        }
+      } catch (error) {
+        console.error('Error initializing data:', error);
+        setError(error instanceof Error ? error.message : 'Failed to initialize data');
+      }
     }
-  }, [selectedVariables]);
 
+    initializeAndFetchData();
+  }, [selectedModel]); // Only depend on selectedModel for initial setup
 
+  // Separate effect for handling subsequent variable changes
   useEffect(() => {
     async function fetchScatterPlotData() {
+      if (!selectedModel || !selectedVariables || selectedVariables.length === 0) {
+        return;
+      }
+
+      if (selectedVariables.length > 3) {
+        setError("Too many variables selected. Only 1 to 3 selected variables are allowed.");
+        return;
+      }
+
       try {
         const response = await fetch(
           `./api/scatter-plots/${selectedModel}`, {
@@ -63,23 +84,30 @@ const ScatterPlotsPage = () => {
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ selected_variables: selectedVariables }), // Send as JSON
+            body: JSON.stringify({ selected_variables: selectedVariables }),
           }
         );
 
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         const data = await response.json();
         setPlotData(data.plot_data);
+        setError(""); // Clear any existing errors
       } catch (error) {
         console.error('Error fetching scatter plot data:', error);
+        setError(error instanceof Error ? error.message : 'Failed to fetch plot data');
       }
-    };
+    }
 
-    if (selectedVariables.length > 0 && selectedVariables.length <= 3) {
+    // Only fetch if this isn't the initial render with default variables
+    if (selectedVariables[0] !== "Variable 1") {
       fetchScatterPlotData();
     }
   }, [selectedModel, selectedVariables]);
 
-
+  
   return (
     <div className="flex min-h-screen">
       <Sidebar />
