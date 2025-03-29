@@ -49,6 +49,26 @@ async def list_models():
     return {"models": model_files}
 
 
+@app.get("/api/overview/{model_name}")
+async def get_model_overview(model_name: str):
+    try:
+        ### stuff goes here
+        model_and_metadata = get_model_and_metadata(model_name)
+        dataset_name = get_dataset_name_from_model(model_name)
+        dataset = get_dataset(dataset_name)
+
+        # TODO: eventually this needs to distinguish between real-valued outputs and categorical outputs
+        outputs = list(model_and_metadata["estimators_by_output"].keys())
+        print(model_and_metadata["estimators_by_output"])
+
+
+        # return {"stuff": stuff}
+        return
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/api/violin-plots/{model_name}")
 async def get_violin_plots(model_name: str, body: dict = Body(...)):
     box_plot_toggle = body.get("box_plot_toggle", [])

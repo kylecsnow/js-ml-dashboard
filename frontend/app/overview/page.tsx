@@ -11,9 +11,20 @@ export default function Overview() {
 
   const { selectedModel } = useModel();
 
-  // useEffect(() => {
+  useEffect(() => {
+    const fetchModelOverview = async () => {
+      if (selectedModel) {
+        try {
+          const response = await fetch(`./api/overview/${selectedModel}`);
+          const data = await response.json();
+        } catch (error) {
+        console.error('Error fetching model overview:', error);
+        }
+      }
+    };
 
-  // }, [selectedModel]);
+    fetchModelOverview();
+  }, [selectedModel]);
 
   return (
     <div className="flex min-h-screen">

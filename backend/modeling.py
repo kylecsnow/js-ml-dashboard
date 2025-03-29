@@ -37,153 +37,6 @@ def calculate_data_fraction_within_uncertainty_bounds(y_test, y_pred_test_lower_
     return data_fraction_within_uncertainty_bounds
 
 
-class MCDropoutNN(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size, dropout_rate=0.1):
-        super(MCDropoutNN, self).__init__()
-        self.fc1 = nn.Linear(input_size, hidden_size)
-        self.dropout = nn.Dropout(dropout_rate)
-        self.fc2 = nn.Linear(hidden_size, output_size)
-        
-    def forward(self, x):
-        x = F.relu(self.fc1(x))
-        x = self.dropout(x)  # Apply dropout even during inference
-        x = self.fc2(x)
-        return x
-    
-    def predict(self, x, num_samples=100):
-        """Make predictions with uncertainty estimates using MC Dropout"""
-        self.train()  # Set model to training mode to enable dropout
-        
-        sampled_predictions = []
-        for _ in range(num_samples):
-            y_pred = self(x)
-            sampled_predictions.append(y_pred)
-            
-        # Stack predictions
-        predictions = torch.stack(sampled_predictions)
-        
-        # Calculate mean and standard deviation
-        mean = predictions.mean(dim=0)
-        std = predictions.std(dim=0)
-        
-        return mean, std
-
-
-def train_NN_model(model, train_loader, num_epochs=1000, lr=0.01):
-    criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=lr)
-    
-    train_loss_history = []
-
-    for epoch in range(num_epochs):
-
-        train_loss = 0.0
-        for inputs, targets in train_loader:
-            optimizer.zero_grad()
-            outputs = model(inputs)
-            loss = criterion(outputs, targets)
-            loss.backward()
-            optimizer.step()
-            train_loss += loss.item()
-
-        avg_train_loss = train_loss / len(train_loader)
-        train_loss_history.append(avg_train_loss)
-
-        if epoch % 100 == 0 or epoch + 1 == num_epochs:
-            print(f"Epoch {epoch} - Loss: {avg_train_loss}")
-    
-    return model, train_loss_history
-
-
-def inverse_transform_BNN_results(trained_model, y_train_pred_mean, y_train_pred_std, y_test_pred_mean, y_test_pred_std, inputs, target, y_train, y_test, y_scaler, best_lambda):   
-    
-    # invert StandardScaler
-    y_train_pred_mean = y_scaler.inverse_transform(y_train_pred_mean.detach().numpy())
-    y_train_pred_std = y_scaler.inverse_transform(y_train_pred_std.detach().numpy())
-    y_test_pred_mean = y_scaler.inverse_transform(y_test_pred_mean.detach().numpy())
-    y_test_pred_std = y_scaler.inverse_transform(y_test_pred_std.detach().numpy())
-    
-    # Convert back to original scale via the Delta Method
-    mu_train = y_train_pred_mean
-    sigma_train = y_train_pred_std
-    y_train_pred = inv_boxcox(mu_train, best_lambda)
-    derivative = (best_lambda * mu_train + 1) ** (1 / best_lambda - 1)  # Calculate the derivative of the inverse Box-Cox function at mu_transformed
-    y_train_pred_uncertainty = np.abs(sigma_train * derivative)  # Propagate the uncertainty via the delta method
-    
-    mu_test = y_test_pred_mean
-    sigma_test = y_test_pred_std
-    y_test_pred = inv_boxcox(mu_test, best_lambda)
-    derivative = (best_lambda * mu_test + 1) ** (1 / best_lambda - 1)  # Calculate the derivative of the inverse Box-Cox function at mu_transformed
-    y_test_pred_uncertainty = np.abs(sigma_test * derivative)  # Propagate the uncertainty via the delta method
-    
-    y_train_pred = y_train_pred.flatten()
-    y_train_pred_uncertainty = y_train_pred_uncertainty.flatten()
-    y_test_pred = y_test_pred.flatten()
-    y_test_pred_uncertainty = y_test_pred_uncertainty.flatten()
-    
-    y_pred_test_lower_bound = y_test_pred - y_test_pred_uncertainty
-    y_pred_test_upper_bound = y_test_pred + y_test_pred_uncertainty
-    test_coverage_fraction = calculate_data_fraction_within_uncertainty_bounds(y_test, y_pred_test_lower_bound, y_pred_test_upper_bound)
-    
-    # compute k and R^2_0
-    reg = LinearRegression(fit_intercept=False)  # enforce zero y-intercept
-    reg.fit(y_test.reshape(-1, 1), y_test_pred.reshape(-1, 1))
-    k = reg.coef_[0][0]
-    r2_0 = reg.score(y_test.reshape(-1, 1), y_test_pred.reshape(-1, 1))
-    
-    metrics = {
-        "train": {
-            "R^2": r2_score(y_train, y_train_pred.flatten()),
-            "MAE": mean_absolute_error(y_train, y_train_pred.flatten()),
-            "RMSE": root_mean_squared_error(y_train, y_train_pred.flatten()),
-        },
-        "test": {
-            "R^2": r2_score(y_test, y_test_pred.flatten()),
-            "MAE": mean_absolute_error(y_test, y_test_pred.flatten()),
-            "RMSE": root_mean_squared_error(y_test, y_test_pred.flatten()),
-            "Coverage Fraction": test_coverage_fraction,
-            "k": k,
-            "R^2_0": r2_0,
-        },
-    }
-    
-    print(f"Train R^2:  {metrics['train']['R^2']}")
-    print(f"Train MAE:  {metrics['train']['MAE']}")
-    print(f"Train RMSE:  {metrics['train']['RMSE']}")
-    print()
-    print(f"Test R^2:  {metrics['test']['R^2']}")
-    print(f"Test MAE:  {metrics['test']['MAE']}")
-    print(f"Test RMSE:  {metrics['test']['RMSE']}")
-    print(f"Test Uncertainty Coverage:  {metrics['test']['Coverage Fraction'] * 100:.2f}%")
-    
-    results = {
-        "target": target,
-        "estimator": trained_model,
-        "inputs": inputs,
-        "metrics": metrics,
-        "y_train": y_train,
-        "y_pred_train": y_train_pred,
-        "y_pred_train_uncertainty": y_train_pred_uncertainty,
-        "y_test": y_test,
-        "y_pred_test": y_test_pred,
-        "y_pred_test_uncertainty": y_test_pred_uncertainty,
-    }
-
-    return results
-
-
-def plot_loss_curve(loss_history, title="Training Loss Curve", figsize=(10, 6)):
-    """Plot the loss curve from training history"""
-    plt.figure(figsize=figsize)
-    plt.plot(loss_history)
-    plt.title(title)
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.grid(True)
-    plt.yscale('log')
-    plt.show()
-
-
 def train_and_evaluate_estimator(estimator, train_df, test_df, inputs, target, data_transform=None):
 
     X = train_df[inputs]
@@ -532,3 +385,150 @@ def get_feature_importances(model_results):
         return None
     
     return feat_imps_df
+
+
+class MCDropoutNN(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size, dropout_rate=0.1):
+        super(MCDropoutNN, self).__init__()
+        self.fc1 = nn.Linear(input_size, hidden_size)
+        self.dropout = nn.Dropout(dropout_rate)
+        self.fc2 = nn.Linear(hidden_size, output_size)
+        
+    def forward(self, x):
+        x = F.relu(self.fc1(x))
+        x = self.dropout(x)  # Apply dropout even during inference
+        x = self.fc2(x)
+        return x
+    
+    def predict(self, x, num_samples=100):
+        """Make predictions with uncertainty estimates using MC Dropout"""
+        self.train()  # Set model to training mode to enable dropout
+        
+        sampled_predictions = []
+        for _ in range(num_samples):
+            y_pred = self(x)
+            sampled_predictions.append(y_pred)
+            
+        # Stack predictions
+        predictions = torch.stack(sampled_predictions)
+        
+        # Calculate mean and standard deviation
+        mean = predictions.mean(dim=0)
+        std = predictions.std(dim=0)
+        
+        return mean, std
+
+
+def train_NN_model(model, train_loader, num_epochs=1000, lr=0.01):
+    criterion = nn.MSELoss()
+    optimizer = optim.Adam(model.parameters(), lr=lr)
+    
+    train_loss_history = []
+
+    for epoch in range(num_epochs):
+
+        train_loss = 0.0
+        for inputs, targets in train_loader:
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            loss = criterion(outputs, targets)
+            loss.backward()
+            optimizer.step()
+            train_loss += loss.item()
+
+        avg_train_loss = train_loss / len(train_loader)
+        train_loss_history.append(avg_train_loss)
+
+        if epoch % 100 == 0 or epoch + 1 == num_epochs:
+            print(f"Epoch {epoch} - Loss: {avg_train_loss}")
+    
+    return model, train_loss_history
+
+
+def inverse_transform_BNN_results(trained_model, y_train_pred_mean, y_train_pred_std, y_test_pred_mean, y_test_pred_std, inputs, target, y_train, y_test, y_scaler, best_lambda):   
+    
+    # invert StandardScaler
+    y_train_pred_mean = y_scaler.inverse_transform(y_train_pred_mean.detach().numpy())
+    y_train_pred_std = y_scaler.inverse_transform(y_train_pred_std.detach().numpy())
+    y_test_pred_mean = y_scaler.inverse_transform(y_test_pred_mean.detach().numpy())
+    y_test_pred_std = y_scaler.inverse_transform(y_test_pred_std.detach().numpy())
+    
+    # Convert back to original scale via the Delta Method
+    mu_train = y_train_pred_mean
+    sigma_train = y_train_pred_std
+    y_train_pred = inv_boxcox(mu_train, best_lambda)
+    derivative = (best_lambda * mu_train + 1) ** (1 / best_lambda - 1)  # Calculate the derivative of the inverse Box-Cox function at mu_transformed
+    y_train_pred_uncertainty = np.abs(sigma_train * derivative)  # Propagate the uncertainty via the delta method
+    
+    mu_test = y_test_pred_mean
+    sigma_test = y_test_pred_std
+    y_test_pred = inv_boxcox(mu_test, best_lambda)
+    derivative = (best_lambda * mu_test + 1) ** (1 / best_lambda - 1)  # Calculate the derivative of the inverse Box-Cox function at mu_transformed
+    y_test_pred_uncertainty = np.abs(sigma_test * derivative)  # Propagate the uncertainty via the delta method
+    
+    y_train_pred = y_train_pred.flatten()
+    y_train_pred_uncertainty = y_train_pred_uncertainty.flatten()
+    y_test_pred = y_test_pred.flatten()
+    y_test_pred_uncertainty = y_test_pred_uncertainty.flatten()
+    
+    y_pred_test_lower_bound = y_test_pred - y_test_pred_uncertainty
+    y_pred_test_upper_bound = y_test_pred + y_test_pred_uncertainty
+    test_coverage_fraction = calculate_data_fraction_within_uncertainty_bounds(y_test, y_pred_test_lower_bound, y_pred_test_upper_bound)
+    
+    # compute k and R^2_0
+    reg = LinearRegression(fit_intercept=False)  # enforce zero y-intercept
+    reg.fit(y_test.reshape(-1, 1), y_test_pred.reshape(-1, 1))
+    k = reg.coef_[0][0]
+    r2_0 = reg.score(y_test.reshape(-1, 1), y_test_pred.reshape(-1, 1))
+    
+    metrics = {
+        "train": {
+            "R^2": r2_score(y_train, y_train_pred.flatten()),
+            "MAE": mean_absolute_error(y_train, y_train_pred.flatten()),
+            "RMSE": root_mean_squared_error(y_train, y_train_pred.flatten()),
+        },
+        "test": {
+            "R^2": r2_score(y_test, y_test_pred.flatten()),
+            "MAE": mean_absolute_error(y_test, y_test_pred.flatten()),
+            "RMSE": root_mean_squared_error(y_test, y_test_pred.flatten()),
+            "Coverage Fraction": test_coverage_fraction,
+            "k": k,
+            "R^2_0": r2_0,
+        },
+    }
+    
+    print(f"Train R^2:  {metrics['train']['R^2']}")
+    print(f"Train MAE:  {metrics['train']['MAE']}")
+    print(f"Train RMSE:  {metrics['train']['RMSE']}")
+    print()
+    print(f"Test R^2:  {metrics['test']['R^2']}")
+    print(f"Test MAE:  {metrics['test']['MAE']}")
+    print(f"Test RMSE:  {metrics['test']['RMSE']}")
+    print(f"Test Uncertainty Coverage:  {metrics['test']['Coverage Fraction'] * 100:.2f}%")
+    
+    results = {
+        "target": target,
+        "estimator": trained_model,
+        "inputs": inputs,
+        "metrics": metrics,
+        "y_train": y_train,
+        "y_pred_train": y_train_pred,
+        "y_pred_train_uncertainty": y_train_pred_uncertainty,
+        "y_test": y_test,
+        "y_pred_test": y_test_pred,
+        "y_pred_test_uncertainty": y_test_pred_uncertainty,
+    }
+
+    return results
+
+
+def plot_loss_curve(loss_history, title="Training Loss Curve", figsize=(10, 6)):
+    """Plot the loss curve from training history"""
+    plt.figure(figsize=figsize)
+    plt.plot(loss_history)
+    plt.title(title)
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.grid(True)
+    plt.yscale('log')
+    plt.show()
