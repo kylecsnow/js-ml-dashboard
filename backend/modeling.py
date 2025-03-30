@@ -37,7 +37,7 @@ def calculate_data_fraction_within_uncertainty_bounds(y_test, y_pred_test_lower_
     return data_fraction_within_uncertainty_bounds
 
 
-def train_and_evaluate_estimator(estimator, train_df, test_df, inputs, target, data_transform=None):
+def train_and_evaluate_estimator(estimator, train_df, test_df, inputs, target, data_transform=None, verbose=True):
 
     X = train_df[inputs]
     X_test = test_df[inputs]
@@ -124,6 +124,7 @@ def train_and_evaluate_estimator(estimator, train_df, test_df, inputs, target, d
     k = reg.coef_[0][0]
     r2_0 = reg.score(y_test.reshape(-1, 1), y_pred_test.reshape(-1, 1))
 
+    ### TODO: currently this handles Regression problems only; need to add support for Classification problems
     metrics = {
         "train": {
             "R^2": r2_score(y, y_pred_train),
@@ -140,13 +141,14 @@ def train_and_evaluate_estimator(estimator, train_df, test_df, inputs, target, d
         },
     }
 
-    print(f"Train R^2:  {metrics['train']['R^2']}")
-    print(f"Train MAE:  {metrics['train']['MAE']}")
-    print(f"Train RMSE:  {metrics['train']['RMSE']}")
-    print()
-    print(f"Test R^2:  {metrics['test']['R^2']}")
-    print(f"Test MAE:  {metrics['test']['MAE']}")
-    print(f"Test RMSE:  {metrics['test']['RMSE']}")
+    if verbose==True:
+        print(f"Train R^2:  {metrics['train']['R^2']}")
+        print(f"Train MAE:  {metrics['train']['MAE']}")
+        print(f"Train RMSE:  {metrics['train']['RMSE']}")
+        print()
+        print(f"Test R^2:  {metrics['test']['R^2']}")
+        print(f"Test MAE:  {metrics['test']['MAE']}")
+        print(f"Test RMSE:  {metrics['test']['RMSE']}")
 
     results = {
         "target": target,
