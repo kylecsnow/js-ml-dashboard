@@ -153,7 +153,7 @@ def train_and_evaluate_estimator(estimator, train_df, test_df, inputs, target, d
     results = {
         "target": target,
         "estimator": estimator,
-        "inputs": inputs,
+        "inputs_numerical": inputs,
         "metrics": metrics,
         "y_train": y,
         "y_pred_train": y_pred_train,
@@ -373,13 +373,13 @@ def get_feature_importances(model_results):
     
     if isinstance(estimator, NGBRegressor):
         feat_imps_df = pd.DataFrame()
-        feat_imps_df["Feature"] = model_results["inputs"]
+        feat_imps_df["Feature"] = model_results["inputs_numerical"]
         feat_imps_df["Importance (mean)"] = estimator.feature_importances_[0]
         feat_imps_df["Importance (variance)"] = estimator.feature_importances_[1]
         feat_imps_df = feat_imps_df.sort_values(by="Importance (mean)", ascending=False)
     elif isinstance(estimator, (RandomForestRegressor, CatBoostRegressor, XGBRegressor, NGBRegressor)):
         feat_imps_df = pd.DataFrame()
-        feat_imps_df["Feature"] = model_results["inputs"]
+        feat_imps_df["Feature"] = model_results["inputs_numerical"]
         feat_imps_df["Importance"] = estimator.feature_importances_
         feat_imps_df = feat_imps_df.sort_values(by="Importance", ascending=False)
     else:
@@ -387,6 +387,12 @@ def get_feature_importances(model_results):
         return None
     
     return feat_imps_df
+
+
+def get_estimator_type_from_estimator(estimator):
+    estimator_type = str(type(estimator)).split("<class '")[-1].split("'>")[0]
+    estimator_type = f"{estimator_type.split('.')[0]} {estimator_type.split('.')[-1]}"
+    return estimator_type
 
 
 class MCDropoutNN(nn.Module):
@@ -511,7 +517,7 @@ def inverse_transform_BNN_results(trained_model, y_train_pred_mean, y_train_pred
     results = {
         "target": target,
         "estimator": trained_model,
-        "inputs": inputs,
+        "inputs_numerical": inputs,
         "metrics": metrics,
         "y_train": y_train,
         "y_pred_train": y_train_pred,
