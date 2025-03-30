@@ -54,10 +54,9 @@ async def get_model_overview(model_name: str):
     try:
         model_and_metadata = get_model_and_metadata(model_name)
         dataset_name = get_dataset_name_from_model(model_name)
-        dataset = get_dataset(dataset_name)
+        # dataset = get_dataset(dataset_name)
         estimators_by_output = model_and_metadata["estimators_by_output"]
 
-        # Create a serializable version of estimators_by_output
         serializable_estimators = {}
         for output, data in estimators_by_output.items():
             serializable_estimators[output] = {

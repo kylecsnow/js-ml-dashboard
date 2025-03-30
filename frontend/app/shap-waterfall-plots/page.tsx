@@ -13,7 +13,7 @@ import { useModel } from '../contexts/ModelContext';
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
 
-const ShapSummaryPlotsPage = () => {
+const ShapWaterfallPlotsPage = () => {
   const { selectedModel } = useModel();
   const [plotData, setPlotData] = useState<PlotDataType | null>(null);
   const [outputVariableOptions, setOutputVariableOptions] = useState<{ value: string; label: string }[]>([]);
@@ -170,4 +170,4 @@ const ShapSummaryPlotsPage = () => {
 };
 
 
-export default ShapSummaryPlotsPage;
+export default ShapWaterfallPlotsPage;

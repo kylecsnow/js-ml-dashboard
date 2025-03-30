@@ -25,23 +25,8 @@ export default function Overview() {
     const fetchModelOverview = async () => {
       if (selectedModel) {
         try {
-
-
-          console.log('trying to fetch model overview data...')
-
-
           const response = await fetch(`./api/overview/${selectedModel}`);
-
-
-          console.log(response)
-
-
           const data = await response.json();
-          
-          
-          console.log(data)
-          
-          
           setModelOverviewData(data);
         } catch (error) {
         console.error('Error fetching model overview:', error);
@@ -71,7 +56,6 @@ export default function Overview() {
             />
             Home
           </Link>
-
         </div>
         <div>
           <h2>
@@ -81,12 +65,19 @@ export default function Overview() {
             }
           </h2>
         </div>
-
-        {/* Main content */}
         <div className="flex-1 grid grid-rows-[20px_1fr_20px] items-center justify-items-center p-8 pb-20 gap-16 sm:p-20">
-          <h1>Under Construction...</h1>
-          <p>TODO: Show model metrics...?</p>
           <div>
+            <h3>TODOs:</h3>
+              <ol className="list-decimal ml-6">
+                <li>Show model performance metrics...?</li>
+                <li>Show parity plots</li>
+              </ol>
+          </div>
+          <div>
+            {selectedModel && modelOverviewData
+              ? <p>Training dataset: {modelOverviewData.dataset_name}</p>
+              : 'No model selected'
+            }
             {selectedModel && modelOverviewData
               ? modelOverviewData.model_outputs.map(output => (
                   <p key={output}>
