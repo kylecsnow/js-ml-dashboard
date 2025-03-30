@@ -52,18 +52,29 @@ async def list_models():
 @app.get("/api/overview/{model_name}")
 async def get_model_overview(model_name: str):
     try:
-        ### stuff goes here
         model_and_metadata = get_model_and_metadata(model_name)
         dataset_name = get_dataset_name_from_model(model_name)
         dataset = get_dataset(dataset_name)
+        estimators_by_output = model_and_metadata["estimators_by_output"]
 
-        # TODO: eventually this needs to distinguish between real-valued outputs and categorical outputs
-        outputs = list(model_and_metadata["estimators_by_output"].keys())
-        print(model_and_metadata["estimators_by_output"])
+        # Create a serializable version of estimators_by_output
+        serializable_estimators = {}
+        for output, data in estimators_by_output.items():
+            serializable_estimators[output] = {
+                "inputs_reals": data["inputs_reals"],
+                # Get the type name as a string
+                # "estimator_type": type(data["estimator"]).__name__,
+                # If you want the full module path, use this instead:
+                "estimator_type": f"{type(data['estimator']).__module__}.{type(data['estimator']).__name__}",
+            }
 
+        model_overview_data = {
+            "dataset_name": dataset_name,
+            "model_outputs": list(estimators_by_output.keys()),
+            "estimators_by_output": serializable_estimators,
+        }
 
-        # return {"stuff": stuff}
-        return
+        return model_overview_data
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

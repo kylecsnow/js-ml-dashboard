@@ -33,6 +33,7 @@ const ScatterPlotsPage = () => {
         const options = data.variable_options.map((option: string) => ({ value: option, label: option }));
         setVariableOptions(options);
 
+        // TODO: may need to check if this couldn't cause inadvertent problems with simpler models, using less inputs...
         // Set initial variables only once
         if (options.length >= 2) {
           const initialVariables = [options[0].value, options[1].value];
@@ -63,9 +64,8 @@ const ScatterPlotsPage = () => {
     }
 
     initializeAndFetchData();
-  }, [selectedModel]); // Only depend on selectedModel for initial setup
+  }, [selectedModel]);
 
-  // Separate effect for handling subsequent variable changes
   useEffect(() => {
     async function fetchScatterPlotData() {
       if (!selectedModel || !selectedVariables || selectedVariables.length === 0) {
@@ -107,7 +107,7 @@ const ScatterPlotsPage = () => {
     }
   }, [selectedModel, selectedVariables]);
 
-  
+
   return (
     <div className="flex min-h-screen">
       <Sidebar />
