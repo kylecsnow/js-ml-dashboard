@@ -60,7 +60,7 @@ async def get_model_overview(model_name: str):
         serializable_estimators = {}
         for output, data in estimators_by_output.items():
             serializable_estimators[output] = {
-                "inputs_reals": data["inputs_reals"],
+                "inputs_numerical": data["inputs_numerical"],
                 # Get the type name as a string
                 # "estimator_type": type(data["estimator"]).__name__,
                 # If you want the full module path, use this instead:
@@ -102,7 +102,7 @@ async def get_violin_plots(model_name: str, body: dict = Body(...)):
         all_estimator_inputs = set()
         for output in outputs:
             all_estimator_inputs = all_estimator_inputs.union(
-                set(model_and_metadata["estimators_by_output"][output]["inputs_reals"])
+                set(model_and_metadata["estimators_by_output"][output]["inputs_numerical"])
             )
         inputs = list(all_estimator_inputs)
         # inputs_reals = inputs
@@ -163,7 +163,7 @@ async def get_correlation_heatmap(model_name: str, correlation_type: str):
         all_estimator_inputs = set()
         for output in outputs:
             all_estimator_inputs = all_estimator_inputs.union(
-                set(model_and_metadata["estimators_by_output"][output]["inputs_reals"])
+                set(model_and_metadata["estimators_by_output"][output]["inputs_numerical"])
             )
         inputs = list(all_estimator_inputs)
         # inputs_reals = inputs
@@ -214,7 +214,7 @@ async def get_variable_options(model_name: str):
         all_estimator_inputs = set()
         for output in outputs:
             all_estimator_inputs = all_estimator_inputs.union(
-                set(model_and_metadata["estimators_by_output"][output]["inputs_reals"])
+                set(model_and_metadata["estimators_by_output"][output]["inputs_numerical"])
             )
         all_estimator_inputs = list(all_estimator_inputs)
         variable_options = all_estimator_inputs + outputs
@@ -282,7 +282,7 @@ async def get_output_variable_options(model_name: str):
         all_estimator_inputs = set()
         for output in outputs:
             all_estimator_inputs = all_estimator_inputs.union(
-                set(model_and_metadata["estimators_by_output"][output]["inputs_reals"])
+                set(model_and_metadata["estimators_by_output"][output]["inputs_numerical"])
             )
         return {"output_variable_options": outputs}
     
@@ -312,7 +312,7 @@ async def get_shap_summary_plot(model_name: str, body: dict = Body(...)):
         # outputs_reals = outputs
 
         # TODO: eventually this needs to distinguish between real-valued inputs and categorical inputs
-        inputs = estimators_by_output[selected_output]["inputs_reals"]
+        inputs = estimators_by_output[selected_output]["inputs_numerical"]
         # inputs_reals = inputs
 
         matplotlib.use("agg")
@@ -382,7 +382,7 @@ async def get_shap_waterfall_plot(model_name: str, body: dict = Body(...)):
         # outputs_reals = outputs
 
         # TODO: eventually this needs to distinguish between real-valued inputs and categorical inputs
-        inputs = estimators_by_output[selected_output]["inputs_reals"]
+        inputs = estimators_by_output[selected_output]["inputs_numerical"]
         # inputs_reals = inputs
 
         matplotlib.use("agg")
