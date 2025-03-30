@@ -140,7 +140,6 @@ const ShapSummaryPlotsPage = () => {
         <div>
           <h3>TODOs:</h3>
             <ol className="list-decimal ml-6">
-              <li>Show an error when a categorical output is selected!!!</li>
               <li>get loading animation working... with less delay between it disappearing & the plot being shown?</li>
             </ol>
         </div>

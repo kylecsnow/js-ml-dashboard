@@ -69,7 +69,6 @@ export default function Overview() {
           <div>
             <h3>STANDARDIZE DATA STRUCTURE FOR MODEL METADATA:</h3>
               <ol className="list-decimal ml-6">
-                <li>Update Diabetes model metadata</li>
                 <li>Update Linnerud model metadata</li>
               </ol>
             <h3>TODOs:</h3>
