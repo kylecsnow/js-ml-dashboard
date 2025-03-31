@@ -14,6 +14,7 @@ import argparse
 
 from utils import fig2img, get_dataset_name_from_model, get_dataset, get_model_and_metadata, build_sythetic_demo_dataset
 from molecule_viz import create_plotly_molecular_space_map, process_molecular_space_map_data
+from modeling import create_parity_plot, create_residual_plot
 
 
 app = FastAPI()
@@ -57,20 +58,41 @@ async def get_model_overview(model_name: str):
         # dataset = get_dataset(dataset_name)
         estimators_by_output = model_and_metadata["estimators_by_output"]
 
+
+        # print(estimators_by_output)
+
+
+
         serializable_estimators = {}
         for output, data in estimators_by_output.items():
+
+            parity_plot_fig = create_parity_plot(data, title=f"Parity Plot - {output}")
+            parity_plot_json = json.loads(parity_plot_fig.to_json())
+            residual_plot_fig = create_residual_plot(data)
+            residual_plot_json = json.loads(residual_plot_fig.to_json())
+
             serializable_estimators[output] = {
                 "inputs_numerical": data["inputs_numerical"],
+
                 # Get the type name as a string
                 # "estimator_type": type(data["estimator"]).__name__,
                 # If you want the full module path, use this instead:
                 "estimator_type": f"{type(data['estimator']).__module__}.{type(data['estimator']).__name__}",
+
+                "parity_plot_data": parity_plot_json,
+                "residual_plot_data": residual_plot_json,
             }
+
+
+
+        # print(serializable_estimators)
+
 
         model_overview_data = {
             "dataset_name": dataset_name,
             "model_outputs": list(estimators_by_output.keys()),
             "estimators_by_output": serializable_estimators,
+            # "estimator_results_by_output": 
         }
 
         return model_overview_data
@@ -363,6 +385,7 @@ async def get_shap_waterfall_plot(model_name: str, body: dict = Body(...)):
     try:
         selected_output = body.get("selected_output", [])
         selected_sample = body.get("selected_sample", [])
+
         # TODO: someday, get this to not require the selected sample to be referred to by an integer value?
         selected_sample = int(selected_sample[0])
 

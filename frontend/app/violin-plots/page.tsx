@@ -111,6 +111,12 @@ const ViolinPlotsPage = () => {
             </Switch>
           </div>
         </div>
+        <div>
+          <h3>TODOs:</h3>
+            <ol className="list-decimal ml-6">
+              <li>fix POST errors upon loading page</li>
+            </ol>
+        </div>
         <div className="w-full max-w-8xl">
           {plotData && (
             <Plot

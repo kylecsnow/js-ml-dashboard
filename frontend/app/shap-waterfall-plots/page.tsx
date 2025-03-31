@@ -17,7 +17,7 @@ const ShapWaterfallPlotsPage = () => {
   const { selectedModel } = useModel();
   const [plotData, setPlotData] = useState<PlotDataType | null>(null);
   const [outputVariableOptions, setOutputVariableOptions] = useState<{ value: string; label: string }[]>([]);
-  const [selectedOutputVariable, setSelectedOutputVariable] = useState<string[]>();
+  const [selectedOutputVariable, setSelectedOutputVariable] = useState<string>();
   const [sampleOptions, setSampleOptions] = useState<{ value: string; label: string }[]>([]);
   const [selectedSample, setSelectedSample] = useState<string[]>();
   const [isLoading, setIsLoading] = useState(true);
@@ -75,6 +75,10 @@ const ShapWaterfallPlotsPage = () => {
 
   useEffect(() => {
     async function fetchShapWaterfallPlotData() {
+      if (!selectedModel || !selectedOutputVariable) {
+        return;
+      }
+
       try {
         setIsLoading(true);
         const response = await fetch(
@@ -132,7 +136,7 @@ const ShapWaterfallPlotsPage = () => {
             options={outputVariableOptions}
             onChange={(selected: { value: string; label: string } | null) => {
               if (selected) {
-                setSelectedOutputVariable([selected.value]);
+                setSelectedOutputVariable(selected.value);
               }
             }}
             value={outputVariableOptions.filter(option => selectedOutputVariable?.includes(option.value))} // Set selected values
@@ -152,6 +156,12 @@ const ShapWaterfallPlotsPage = () => {
             name="selected-sample"
             classNamePrefix="select"
           />        
+        </div>
+        <div>
+          <h3>TODOs:</h3>
+            <ol className="list-decimal ml-6">
+              <li>fix POST errors upon loading page</li>
+            </ol>
         </div>
         <div className="w-full max-w-8xl mx-auto">
         {isLoading ? <Spinner /> : 

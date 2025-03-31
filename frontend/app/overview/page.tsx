@@ -2,9 +2,11 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { PlotDataType } from '@/types/types';
 import Sidebar from '../components/Sidebar';
 import { useEffect, useState } from 'react';
 import { useModel } from '../contexts/ModelContext';
+import Plot from 'react-plotly.js';
 
 interface ModelOverviewData {
   dataset_name: string;
@@ -13,6 +15,8 @@ interface ModelOverviewData {
     [key: string]: {
       inputs_reals: string[];
       estimator_type: string;
+      parity_plot_data: PlotDataType;
+      residual_plot_data: PlotDataType;
     };
   };
 }
@@ -27,6 +31,11 @@ export default function Overview() {
         try {
           const response = await fetch(`./api/overview/${selectedModel}`);
           const data = await response.json();
+
+
+          console.log(data)
+          
+          
           setModelOverviewData(data);
         } catch (error) {
         console.error('Error fetching model overview:', error);
@@ -67,14 +76,11 @@ export default function Overview() {
         </div>
         <div className="flex-1 grid grid-rows-[20px_1fr_20px] items-center justify-items-center p-8 pb-20 gap-16 sm:p-20">
           <div>
-            <h3>STANDARDIZE DATA STRUCTURE FOR MODEL METADATA:</h3>
-              <ol className="list-decimal ml-6">
-                <li>Update Linnerud model metadata</li>
-              </ol>
             <h3>TODOs:</h3>
               <ol className="list-decimal ml-6">
-                <li>Show model performance metrics...?</li>
-                <li>Show parity plots</li>
+                <li>Fix console errors upon loading page</li>
+                <li>Narrow the width of the plot titles</li>
+                <li>Show residual plots...?</li>
               </ol>
           </div>
           <div>
@@ -87,6 +93,17 @@ export default function Overview() {
                   <p key={output}>
                     Model type for {output}: {modelOverviewData.estimators_by_output[output].estimator_type}
                   </p>
+                ))
+              : 'No model selected'
+            }
+            {selectedModel && modelOverviewData
+              ? modelOverviewData.model_outputs.map(output => (
+                    <Plot
+                      data={modelOverviewData.estimators_by_output[output].parity_plot_data.data}
+                      layout={modelOverviewData.estimators_by_output[output].parity_plot_data.layout}
+                      config={{ responsive: true }}
+                      style={{ width: '100%', height: '750px' }}
+                    />
                 ))
               : 'No model selected'
             }
