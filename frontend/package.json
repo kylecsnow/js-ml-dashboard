@@ -11,8 +11,7 @@
   "dependencies": {
     "@headlessui/react": "^2.2.0",
     "@types/plotly.js": "^2.33.5",
-    "ketcher-react": "^2.27.0",
-    "ketcher-standalone": "^2.27.0",
+    "jotai": "^2.12.2",
     "next": "14.2.14",
     "plotly.js-dist-min": "^2.35.2",
     "react": "^18",

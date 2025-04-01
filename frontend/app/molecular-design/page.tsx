@@ -6,60 +6,60 @@ import Link from 'next/link';
 import Script from 'next/script';
 import Sidebar from '@/app/components/Sidebar';
 import { PlotDataType } from '@/types/types';
-import SmilesDrawer from 'smiles-drawer';
-import { atom, useAtom } from 'jotai';
+// import SmilesDrawer from 'smiles-drawer';
+import { atom, useAtom, useAtomValue } from 'jotai';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useModel } from '@/app/contexts/ModelContext';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
 
+// TODO: someday figure out how the heck this jotai stuff works
+// NOTE: *never* put this inside of a useEffect!!
+const selectedMoleculeAtom = atom(null)
 
-// TODO: fix this mess
-// const ShowMolecule: React.FC<ShowMoleculeProps> = ({ molecule }) => {
-//   const [molgenResults] = al;skfdj;aweac;
-//   const smiles = molecule?.SMILES
+
+// SOMEDAY: fix this mess, but start from scratch. 
+// const ShowMolecule = () => {
+//   const molecule = useAtomValue(selectedMoleculeAtom);
+//   const smiles = molecule?.SMILES;
 //   const svgRef = useRef<SVGSVGElement>(null);
 
 
 
 //   const display2DMolecule = useCallback(() => {
-//     // const svgRef = useRef(null);
-//     // const [showTooltip, setShowTooltip] = useState(false);
-    
 //     if (!smiles || !svgRef.current) return;
     
 //     // first, clear the SVG
-//     while (svgRef.current.firstChild) {
+//     while (svgRef.current.firstChild) {   
 //       svgRef.current.removeChild(svgRef.current.firstChild);
 //     }
-    
+
 //     const drawer = new SmilesDrawer.SvgDrawer({
 //       width: 400,
 //       height: 400,
 //       bondThickness: 1.5,
 //       fontSizeLarge: 12,
-//       fontSizeSmall: 10,
 //     });
     
 //     SmilesDrawer.parse(smiles, function (tree) {
 //       if (svgRef.current) {
 //         drawer.draw(tree, svgRef.current, 'light');
-//         console.log('2D Molecule drawn successfully');
 //       }
-//     }, function (error) {
-//       console.error('SMILES parsing error:', error);
 //     });
 //   }, [smiles]);
-// }
+
+//   return (
+//         console.log('2D Molecule drawn successfully');
+//   );
+//     }, function (error) {
+//       console.error('SMILES parsing error:', error);
+
+
+// TODO (SOMEDAY): Try out ASKCOS (askcos.mit.edu) molecule editor...? (figure out why certain things don't work: 1) copy-pasting, 2) structure cleanup, 3) inputting SMILES.
 
 
 
-
-
-// TODO: someday figure out how the heck this jotai stuff works
-// NOTE: *never* put this inside of a useEffect!!
-const selectedMoleculeAtom = atom(null)
 
 
 
@@ -255,14 +255,17 @@ const MolecularDesignPage = () => {
               <li>Try plotting with Plotly.js instead of plotly on the backend?</li>
               <li>Try out a 2D molecule viewer (`smilesDrawer`?)</li>
               <li>Try out a 3D molecule viewer (`3Dmol.js`?)</li>
-              <li>Try out ASKCOS (askcos.mit.edu) molecule editor...? (figure out why certain things don't work: 1) copy-pasting, 2) structure cleanup, 3) inputting SMILES.</li>
             </ol>
-
           </div>
 
-          <div className="w-full max-w-4xl">
-            {plotData && (
-              <Plot
+          <div className="flex flex-row items-center justify-between w-full">
+            <div>
+              <h3>Put 2D/3D view of molecules here...</h3>
+
+            </div>
+            <div className="w-full max-w-4xl">
+              {plotData && (
+                <Plot
                 data={plotData.data}
                 // layout={plotData.layout}
                 layout={{
@@ -272,67 +275,10 @@ const MolecularDesignPage = () => {
                 config={{ responsive: true }}
                 style={{ width: '100%', height: '600px' }}
                 onClick={handleMoleculeSelect}
-              />
-            )}
+                />
+              )}
+            </div>
           </div>
-
-
-
-
-          {/* <Editor
-            errorHandler={(message: string) => {
-              setHasError(true);
-              setErrorMessage(message.toString());
-            }}
-            buttons={hiddenButtonsConfig}
-            staticResourcesUrl={process.env.PUBLIC_URL || ''}
-            structServiceProvider={structServiceProvider}
-            onInit={(ketcher: Ketcher) => {
-              window.ketcher = ketcher;
-
-              window.parent.postMessage(
-                {
-                  eventType: 'init',
-                },
-                '*',
-              );
-              window.scrollTo(0, 0);
-            }}
-          /> */}
-          {/* {hasError && (
-            <InfoModal
-              message={errorMessage}
-              close={() => {
-                setHasError(false);
-
-                // Focus on editor after modal is closed
-                const cliparea: HTMLElement | null =
-                  document.querySelector('.cliparea');
-                cliparea?.focus();
-              }}
-            />
-          )} */}
-
-
-
-
-
-{/* 
-          <div>
-            <Plot
-              data={[trace]}
-              layout={layout}
-              config={{ responsive: true }}
-              style={{ width: '100%', height: '400px' }}
-            />
-          </div> */}
-
-
-
-
-
-
-
         </div>
       </div>
     </>

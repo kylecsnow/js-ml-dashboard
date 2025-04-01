@@ -2,11 +2,14 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { PlotDataType } from '@/types/types';
 import Sidebar from '../components/Sidebar';
+import Spinner from '../components/Spinner';
 import { useEffect, useState } from 'react';
 import { useModel } from '../contexts/ModelContext';
-import Plot from 'react-plotly.js';
+
+const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
 interface ModelOverviewData {
   dataset_name: string;
@@ -24,11 +27,13 @@ interface ModelOverviewData {
 export default function Overview() {
   const { selectedModel } = useModel();
   const [modelOverviewData, setModelOverviewData] = useState<ModelOverviewData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchModelOverview = async () => {
       if (selectedModel) {
         try {
+          setIsLoading(true);
           const response = await fetch(`./api/overview/${selectedModel}`);
           const data = await response.json();
 
@@ -38,7 +43,9 @@ export default function Overview() {
           
           setModelOverviewData(data);
         } catch (error) {
-        console.error('Error fetching model overview:', error);
+          console.error('Error fetching model overview:', error);
+        } finally {
+          setIsLoading(false);
         }
       }
     };
@@ -84,29 +91,31 @@ export default function Overview() {
               </ol>
           </div>
           <div>
-            {selectedModel && modelOverviewData
-              ? <p>Training dataset: {modelOverviewData.dataset_name}</p>
-              : 'No model selected'
-            }
-            {selectedModel && modelOverviewData
-              ? modelOverviewData.model_outputs.map(output => (
+            {selectedModel && modelOverviewData ? (
+              <>
+                <p>Training dataset: {modelOverviewData.dataset_name}</p>
+                {modelOverviewData.model_outputs.map(output => (
                   <p key={output}>
                     Model type for {output}: {modelOverviewData.estimators_by_output[output].estimator_type}
                   </p>
-                ))
-              : 'No model selected'
-            }
-            {selectedModel && modelOverviewData
-              ? modelOverviewData.model_outputs.map(output => (
+                ))}
+                {isLoading ? (
+                  <Spinner />
+                ) : (
+                  modelOverviewData.model_outputs.map(output => (
                     <Plot
+                      key={output}
                       data={modelOverviewData.estimators_by_output[output].parity_plot_data.data}
                       layout={modelOverviewData.estimators_by_output[output].parity_plot_data.layout}
                       config={{ responsive: true }}
                       style={{ width: '100%', height: '750px' }}
                     />
-                ))
-              : 'No model selected'
-            }
+                  ))
+                )}
+              </>
+            ) : (
+              'No model selected'
+            )}
           </div>
         </div>
       </div>
