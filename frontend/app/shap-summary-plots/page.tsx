@@ -137,12 +137,12 @@ const ShapSummaryPlotsPage = () => {
             classNamePrefix="select"
           />
         </div>
-        <div>
+        {/* <div>
           <h3>TODOs:</h3>
             <ol className="list-decimal ml-6">
               <li>get loading animation working... with less delay between it disappearing & the plot being shown?</li>
             </ol>
-        </div>
+        </div> */}
         <div className="w-full max-w-8xl mx-auto">
           {error && (
             <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">

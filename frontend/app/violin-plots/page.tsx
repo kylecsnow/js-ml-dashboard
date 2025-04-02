@@ -117,13 +117,13 @@ const ViolinPlotsPage = () => {
               <li>fix POST errors upon loading page</li>
             </ol>
         </div>
-        <div className="w-full max-w-8xl">
+        <div className="w-full flex justify-center">
           {plotData && (
             <Plot
               data={plotData.data}
               layout={plotData.layout}
               config={{ responsive: true }}
-              style={{ width: '100%', height: '600px' }}
+              style={{ width: '85%', height: '600px' }}
             />
           )}
         </div>

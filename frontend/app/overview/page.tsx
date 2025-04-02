@@ -86,13 +86,14 @@ export default function Overview() {
             <h3>TODOs:</h3>
               <ol className="list-decimal ml-6">
                 <li>Fix console errors upon loading page</li>
-                <li>Show residual plots...?</li>
+                {/* <li>Show residual plots...?</li> */}
               </ol>
           </div>
           <div>
             {selectedModel && modelOverviewData ? (
               <>
                 <h3>Training dataset: {modelOverviewData.dataset_name}</h3>
+                <br></br>
                 <h3>Model types:</h3>
                 {modelOverviewData.model_outputs.map(output => (
                   <p key={output}>

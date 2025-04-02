@@ -103,13 +103,13 @@ const CorrelationHeatmapsPage = () => {
         {/* <div>
           <p>(TODOs: 1. get toggle switches actually working for grouping/clustering variables, and 2. choosing whether to hide certain features (possibly showing a number entry field for the threshold) - #2 might be hard to do though, actually...)</p>
         </div> */}
-        <div className="w-full max-w-8xl mx-auto">
+        <div className="w-full flex justify-center">
             {plotData && (
               <Plot
                 data={plotData.data}
                 layout={plotData.layout}
                 config={{ responsive: true }}
-                style={{ width: '100%', height: '600px' }}
+                style={{ width: '85%', height: '600px' }}
               />
           )}
         </div>

@@ -247,8 +247,6 @@ const DatasetGeneratorPage = () => {
           </ol>
           <br></br>
 
-
-
           <ol className="list-decimal ml-6">
             <li>(someday) allow users to preview rows of generated data (include interactive table somehow?)</li>
             <li>(someday) For formulation ingredients, add logic for "must include", "can include", or "exclude"</li>

@@ -252,9 +252,9 @@ const MolecularDesignPage = () => {
             <h3>TODOs:</h3>
             <ol className="list-decimal ml-6">
               <li>display molecule structure on-click</li>
-              <li>Try plotting with Plotly.js instead of plotly on the backend?</li>
-              <li>Try out a 2D molecule viewer (`smilesDrawer`?)</li>
-              <li>Try out a 3D molecule viewer (`3Dmol.js`?)</li>
+              {/* <li>Try plotting with Plotly.js instead of plotly on the backend?</li> */}
+              {/* <li>Try out a 2D molecule viewer (`smilesDrawer`?)</li>
+              <li>Try out a 3D molecule viewer (`3Dmol.js`?)</li> */}
             </ol>
           </div>
 
