@@ -235,7 +235,7 @@ const DatasetGeneratorPage = () => {
           </Link>
         </div>
 
-        <div>
+        {/* <div>
           <h3>TODOs:</h3>
           
           
@@ -251,8 +251,8 @@ const DatasetGeneratorPage = () => {
             <li>(someday) allow users to preview rows of generated data (include interactive table somehow?)</li>
             <li>(someday) For formulation ingredients, add logic for "must include", "can include", or "exclude"</li>
           </ol>
-        </div>
-        <div>
+        </div> */}
+        {/* <div>
           <label className="mr-2">Show coefficients</label>
           <Switch
             checked={showCoefficientsToggle}
@@ -268,7 +268,7 @@ const DatasetGeneratorPage = () => {
               } inline-block w-4 h-4 transform bg-white rounded-full transition`}
             />
           </Switch>
-        </div>
+        </div> */}
         <div className="w-full max-w-4xl">
           {error && (
             <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
@@ -302,14 +302,15 @@ const DatasetGeneratorPage = () => {
               onClick={generateData}
               className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 mr-2"
             >
-              Generate data & preview
+              Download CSV
+              {/* Generate data & preview */}
             </button>
-            <button
+            {/* <button
               // onClick={downloadCSV}
               className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
             >
               Download CSV
-            </button>
+            </button> */}
           </div>
 
           {/* General Inputs Section */}

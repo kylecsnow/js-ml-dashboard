@@ -1,12 +1,10 @@
-black
-catboost>=1.2.7,<2.0.0
+# black
 fastapi==0.115.4
-jupyter
+# jupyter
 matplotlib<4.0.0
-mordred>=1.2.0,<2.0.0
-mypy
-ngboost>=0.5.5,<0.6.0
+# mypy
 numpy<2.0.0
+openpyxl>=3.1.5,<4.0.0
 pandas
 plotly==5.18.0
 plotly-express==0.4.1
@@ -15,7 +13,14 @@ rdkit>=2024.9.5,<2025.0.0
 ruff
 scikit-learn<2.0.0
 shap==0.43.0
-torch>=2.5.0,<3.0.0
+umap-learn>=0.5.7,<1.0.0
 uvicorn[standard]==0.32.0
-xgboost>=2.1.4,<3.0.0
+
+### model-training only(???)
+# catboost>=1.2.7,<2.0.0
+# mordred>=1.2.0,<2.0.0
+# ngboost>=0.5.5,<0.6.0
+# torch>=2.5.0,<3.0.0
+# xgboost>=2.1.4,<3.0.0
+
 # TODO: eventually update `pyproject.toml` by porting this stuff over there, and then git rid of this `requirements.txt` file.

@@ -474,6 +474,11 @@ async def get_molecular_design_results(model_name: str):
         return {"plot_data": plot_json}
 
     except Exception as e:
+        
+        
+        print(e)
+
+
         raise HTTPException(status_code=500, detail=str(e))
 
 

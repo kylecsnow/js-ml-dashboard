@@ -82,13 +82,13 @@ export default function Overview() {
           </h2>
         </div>
         <div className="flex-1 grid grid-rows-[20px_1fr_20px] items-center justify-items-center p-8 pb-20 gap-16 sm:p-20">
-          <div>
+          {/* <div>
             <h3>TODOs:</h3>
               <ol className="list-decimal ml-6">
-                <li>Fix console errors upon loading page</li>
-                {/* <li>Show residual plots...?</li> */}
+                <li></li>
+                <li>Show residual plots...?</li>
               </ol>
-          </div>
+          </div> */}
           <div>
             {selectedModel && modelOverviewData ? (
               <>

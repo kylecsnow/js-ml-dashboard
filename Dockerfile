@@ -9,8 +9,8 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     python3-venv \
     build-essential \
-    # libxrender1 \
-    # libxext6 \
+    libxrender1 \
+    libxext6 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -26,7 +26,14 @@ RUN npm run build
 ########## BACKEND ##########
 #############################
 WORKDIR /app/backend
-COPY backend/ ./
+# COPY backend/ ./
+COPY backend/main.py ./
+COPY backend/utils.py ./
+COPY backend/modeling.py ./
+COPY backend/molecule_viz.py ./
+COPY backend/requirements.txt ./
+COPY backend/models/ ./models/
+COPY backend/datasets/ ./datasets/
 
 # Create a virtual environment and install Python dependencies
 RUN python3 -m venv venv
