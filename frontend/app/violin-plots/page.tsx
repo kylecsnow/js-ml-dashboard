@@ -21,9 +21,10 @@ const ViolinPlotsPage = () => {
   
   useEffect(() => {
     async function fetchViolinPlotData() {
+      if (!selectedModel) return;
+      
       try {
         const response = await fetch(
-          // `http://localhost:8000/api/violin-plots/${selectedModel}`, {
           `./api/violin-plots/${selectedModel}`, {
             method: 'POST',
             headers: {
@@ -38,7 +39,7 @@ const ViolinPlotsPage = () => {
         const data = await response.json();
         setPlotData(data.plot_data);
       } catch (error) {
-        console.error('Error fetching scatter plot data:', error);
+        console.error('Error fetching violin plot data:', error);
       }
     };
 
@@ -111,12 +112,12 @@ const ViolinPlotsPage = () => {
             </Switch>
           </div>
         </div>
-        <div>
+        {/* <div>
           <h3>TODOs:</h3>
             <ol className="list-decimal ml-6">
-              <li>fix POST errors upon loading page</li>
+              <li></li>
             </ol>
-        </div>
+        </div> */}
         <div className="w-full flex justify-center">
           {plotData && (
             <Plot

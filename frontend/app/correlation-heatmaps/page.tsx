@@ -21,21 +21,18 @@ const CorrelationHeatmapsPage = () => {
 
   useEffect(() => {
     async function fetchHeatmapData() {
-      if (!selectedModel) {
-        console.error('No model selected');
-        return;
+      if (selectedModel) {
+        try {
+          const response = await fetch(
+            `./api/correlation-heatmap/${selectedModel}/${selectedHeatmapType}`
+          );
+          const data = await response.json();
+          setPlotData(data.plot_data);
+        } catch (error) {
+          console.error('Error fetching heatmap:', error);
+        }
       }
-
-      try {
-        const response = await fetch(
-          `./api/correlation-heatmap/${selectedModel}/${selectedHeatmapType}`
-        );
-        const data = await response.json();
-        setPlotData(data.plot_data);
-      } catch (error) {
-        console.error('Error fetching heatmap:', error);
-      }
-    }
+    };
 
     fetchHeatmapData();
   }, [selectedModel, selectedHeatmapType]);

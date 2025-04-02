@@ -25,22 +25,26 @@ const ShapWaterfallPlotsPage = () => {
 
   useEffect(() => {
     const fetchOutputVariableOptions = async () => {
-      if (selectedModel) {
-        try {
-          setIsLoading(true);
-          const response = await fetch(`./api/output-variable-options/${selectedModel}`);
-          const data = await response.json();
-          const options = data.output_variable_options.map((option: string) => ({ value: option, label: option }));
-          setOutputVariableOptions(options);
+      if (!selectedModel) {
+        setIsLoading(false);
+        return;
+      }
 
-          // Set the first option as selected by default
-          if (options.length >= 1) {
-            setSelectedOutputVariable(options[0].value);
-          }
-          setIsLoading(false);
-        } catch (error) {
-          console.error('Error fetching variable options:', error);
+      try {
+        setIsLoading(true);
+        const response = await fetch(`./api/output-variable-options/${selectedModel}`);
+        const data = await response.json();
+        const options = data.output_variable_options.map((option: string) => ({ value: option, label: option }));
+        setOutputVariableOptions(options);
+
+        // Set the first option as selected by default
+        if (options.length >= 1) {
+          setSelectedOutputVariable(options[0].value);
         }
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error fetching variable options:', error);
+        setIsLoading(false);
       }
     };
 
@@ -50,22 +54,26 @@ const ShapWaterfallPlotsPage = () => {
 
   useEffect(() => {
     const fetchSampleOptions = async () => {
-      if (selectedModel) {
-        try {
-          setIsLoading(true);
-          const response = await fetch(`./api/sample-options/${selectedModel}`);
-          const data = await response.json();
-          const options = data.sample_options.map((option: string) => ({ value: option, label: option }));
-          setSampleOptions(options);
+      if (!selectedModel) {
+        setIsLoading(false);
+        return;
+      }
 
-          // Set the first option as selected by default
-          if (options.length >= 1) {
-            setSelectedSample(options[0].value);
-          }
-          setIsLoading(false);
-        } catch (error) {
-          console.error('Error fetching variable options:', error);
+      try {
+        setIsLoading(true);
+        const response = await fetch(`./api/sample-options/${selectedModel}`);
+        const data = await response.json();
+        const options = data.sample_options.map((option: string) => ({ value: option, label: option }));
+        setSampleOptions(options);
+
+        // Set the first option as selected by default
+        if (options.length >= 1) {
+          setSelectedSample([options[0].value]);
         }
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error fetching variable options:', error);
+        setIsLoading(false);
       }
     };
 
@@ -75,7 +83,8 @@ const ShapWaterfallPlotsPage = () => {
 
   useEffect(() => {
     async function fetchShapWaterfallPlotData() {
-      if (!selectedModel || !selectedOutputVariable) {
+      if (!selectedModel || !selectedOutputVariable || !selectedSample) {
+        setIsLoading(false);
         return;
       }
 
@@ -87,14 +96,18 @@ const ShapWaterfallPlotsPage = () => {
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ selected_output: selectedOutputVariable, selected_sample: selectedSample }), // Send as JSON
+            body: JSON.stringify({ 
+              selected_output: selectedOutputVariable, 
+              selected_sample: selectedSample 
+            }),
           }
         );
         const data = await response.json();
         setPlotData(data.plot_data);
         setIsLoading(false);
       } catch (error) {
-        console.error('Error fetching scatter plot data:', error);
+        console.error('Error fetching waterfall plot data:', error);
+        setIsLoading(false);
       }
     };
 
