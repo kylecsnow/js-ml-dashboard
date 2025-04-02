@@ -86,17 +86,17 @@ export default function Overview() {
             <h3>TODOs:</h3>
               <ol className="list-decimal ml-6">
                 <li>Fix console errors upon loading page</li>
-                <li>Narrow the width of the plot titles</li>
                 <li>Show residual plots...?</li>
               </ol>
           </div>
           <div>
             {selectedModel && modelOverviewData ? (
               <>
-                <p>Training dataset: {modelOverviewData.dataset_name}</p>
+                <h3>Training dataset: {modelOverviewData.dataset_name}</h3>
+                <h3>Model types:</h3>
                 {modelOverviewData.model_outputs.map(output => (
                   <p key={output}>
-                    Model type for {output}: {modelOverviewData.estimators_by_output[output].estimator_type}
+                    - {output}: {modelOverviewData.estimators_by_output[output].estimator_type}
                   </p>
                 ))}
                 {isLoading ? (
@@ -108,7 +108,7 @@ export default function Overview() {
                       data={modelOverviewData.estimators_by_output[output].parity_plot_data.data}
                       layout={modelOverviewData.estimators_by_output[output].parity_plot_data.layout}
                       config={{ responsive: true }}
-                      style={{ width: '100%', height: '750px' }}
+                      style={{ width: '100%', height: '600px' }}
                     />
                   ))
                 )}

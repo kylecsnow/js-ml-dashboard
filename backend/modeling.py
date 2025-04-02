@@ -266,11 +266,11 @@ def create_parity_plot(model_results, title="Model Prediction Parity Plot", log_
     # Create scatterplot
     fig = px.scatter(
         df, x='Actual', y='Predicted',
-        title=f"{title}<br>R² = {r2:.4f}, RMSE = {rmse:.2f}, MAE = {mae:.2f}, Uncertainty Coverage = {(uncertainty_coverage * 100 if uncertainty_coverage is not None else np.NaN):.2f}%, k = {k:.4f}, R²_0 = {r2_0:.4f}",
+        title=f"<span style='font-size: 20px'>{title}</span><br><span style='font-size: 14px'>R² = {r2:.4f}, RMSE = {rmse:.2f}, MAE = {mae:.2f},<br>Uncertainty Coverage = {(uncertainty_coverage * 100 if uncertainty_coverage is not None else np.NaN):.2f}%, k = {k:.4f}, R²_0 = {r2_0:.4f}</span>",
         template='plotly_white',
         opacity=0.7,
         error_y=error_y,
-        width=1200, height=600,
+        width=800, height=600,
         log_x=log_x,
         log_y=log_y,
     )
@@ -298,7 +298,12 @@ def create_parity_plot(model_results, title="Model Prediction Parity Plot", log_
             scaleratio=1,
             showline=True,
         ),
-        margin=dict(l=80, r=80, t=100, b=80)
+        margin=dict(l=80, r=80, t=100, b=80),
+        title=dict(
+            x=0.5,  # Center the title
+            xanchor='center',  # Anchor point for centering
+            y=0.95  # Adjust vertical position if needed
+        )
     )
     
     # Add grid lines
