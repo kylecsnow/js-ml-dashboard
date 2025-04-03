@@ -20,6 +20,7 @@ class ColumnName(str, Enum):
 # Generate molecule images as base64 encoded strings
 def smiles_to_base64(smiles, size=(300, 300)):
     """Convert SMILES string to base64 encoded image"""
+
     mol = MolFromSmiles(smiles)
     img = Draw.MolToImage(mol, size=size)
     buffer = BytesIO()
@@ -159,7 +160,13 @@ def create_plotly_molecular_space_map(mol_images_df, width=800, height=600, colo
             )
         ))
 
+        if color_property:
+            title = f"Molecular Space Map - color scaled by {color_property}"
+        else:
+            title = "Molecular Space Map"
+
         fig.update_layout(
+            title=title,  # Added title
             xaxis_title='UMAP Dimension 1',
             yaxis_title='UMAP Dimension 2',
             template='plotly_white',

@@ -438,14 +438,9 @@ async def get_shap_waterfall_plot(model_name: str, body: dict = Body(...)):
 @app.post("/api/molecular-design/{model_name}")
 async def get_molecular_design_results(model_name: str):
     
-    
     print('calling backend function...')
-
     
     try:
-
-
-
         ### TODO: hardcode molecules for now --> generalize this later
         # mol_images_df, mol_images_data = get_cached_mol_results(num_rows_limit)
         # molgen_results = pd.read_excel("./datasets/vapor_pressure_train.xlsx")
@@ -466,14 +461,7 @@ async def get_molecular_design_results(model_name: str):
         
         return {"molgen_results": molgen_results}
 
-
-
     except Exception as e:
-      
-        
-        print(e)
-
-
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -489,7 +477,6 @@ async def display_molecule_image(body: dict = Body(...)):
         return {"molecule_image": img}
     
     except Exception as e:
-        print(e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -513,7 +500,7 @@ async def get_plotly_molecular_space_map(model_name: str, body: dict = Body(...)
 
     # Convert the dictionary back to a Pandas DataFrame
     molgen_results_df = pd.DataFrame.from_dict(molgen_results_dict)
-    print(molgen_results_df)
+    print(molgen_results_df.head())
 
 
     try:
@@ -528,26 +515,6 @@ async def get_plotly_molecular_space_map(model_name: str, body: dict = Body(...)
     except Exception as e:
         print(str(e))
         raise HTTPException(500, detail=f"Error creating Plotly molecular space map: {str(e)}")
-
-
-
-    try:
-        # Pass the selected color property to your plotting function.
-        mol_space_map = create_plotly_molecular_space_map(molgen_results_df, color_property=actual_color_property)
-        plot_json = json.loads(mol_space_map.to_json())
-        return {"plot_data": plot_json}
-        
-    except Exception as e:
-        raise HTTPException(500, detail=f"Error creating Plotly molecular space map: {str(e)}")
-
-
-
-
-
-
-
-
-
 
 
 

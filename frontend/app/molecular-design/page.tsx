@@ -7,7 +7,6 @@ import Script from 'next/script';
 import Sidebar from '@/app/components/Sidebar';
 import { PlotDataType } from '@/types/types';
 // import SmilesDrawer from 'smiles-drawer';
-import { atom, useAtom, useAtomValue } from 'jotai';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useModel } from '@/app/contexts/ModelContext';
 
@@ -16,7 +15,6 @@ const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
 // TODO: someday figure out how the heck this jotai stuff works
 // NOTE: *never* put this inside of a useEffect!!
-const selectedMoleculeAtom = atom(null)
 
 
 // SOMEDAY: fix this mess, but start from scratch. 
@@ -67,7 +65,6 @@ const MolecularDesignPage = () => {
   const [molgenResults, setMolgenResults] = useState<any[]>([]);
   const { selectedModel } = useModel();
   const [plotData, setPlotData] = useState<PlotDataType | null>(null);
-  const [selectedMolecule, setSelectedMolecule] = useAtom(selectedMoleculeAtom);
   const [selectedSMILES, setSelectedSMILES] = useState<string | null>(null);
   const [selectedMoleculeImage, setSelectedMoleculeImage] = useState<string | null>(null);
   const [selectedPoint, setSelectedPoint] = useState<{x: number, y: number} | null>(null);
@@ -86,74 +83,70 @@ const MolecularDesignPage = () => {
           `./api/molecular-design/${selectedModel}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({}), // Add empty body to satisfy POST request
           }
         );
+        
+        if (!molgenResponse.ok) {
+          throw new Error(`HTTP error! status: ${molgenResponse.status}`);
+        }
+        
         const molgenData = await molgenResponse.json();
         setMolgenResults(molgenData.molgen_results);
-
-
-        console.log("Successfully fetched molgenData!")
-
-        // // Then fetch color prop options
-        // const colorResponse = await fetch(
-        //   `./api/fetch-color-propoptions`, {
-        //     method: 'POST',
-        //     headers: { 'Content-Type': 'application/json' },
-        //     body: JSON.stringify({ molgen_results: molgenData.molgen_results }),
-        //   }
-        // );
-        // const colorData = await colorResponse.json();
-        // const options = colorData.color_prop_options.map((option: string) => ({ 
-        //   value: option, 
-        //   label: option 
-        // }));
-        // setColorPropOptions(options);
-        
-        // // Set initial color property without triggering a fetch
-        // if (options.length > 0) {
-        //   setColorProp([options[0].value]);
-        // }
+        console.log("Successfully fetched molgenData!");
       } catch (err) {
         console.error('Failed to fetch initial data:', err);
+        setHasError(true);
+        setErrorMessage('Failed to load molecular data. Please try again later.');
       }
     };
 
-    fetchInitialData();
-  }, [selectedModel]); // Only run on mount
+    if (selectedModel) {
+      fetchInitialData();
+    }
+  }, [selectedModel]); // Only run when selectedModel changes
 
 
   useEffect(() => {
-    if (!selectedModel) return;
+    if (!selectedModel || !molgenResults.length) return;
+    
     async function fetchMolecularSpacePlotData() {
       try {
         const response = await fetch(
-          // `http://localhost:8000/api/molecular-design/${selectedModel}`, {
           `./api/molecular-space-map/${selectedModel}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ color_property: colorProp, molgen_results: molgenResults }),
+            body: JSON.stringify({ 
+              color_property: colorProp, 
+              molgen_results: molgenResults 
+            }),
           }
         );
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
         setPlotData(data.plot_data);
       } catch (error) {
         console.error('Error fetching scatter plot data:', error);
+        setHasError(true);
+        setErrorMessage('Failed to load plot data. Please try again later.');
       }
     };
 
     fetchMolecularSpacePlotData();
-  }, [molgenResults, selectedModel]);
+  }, [molgenResults, selectedModel, colorProp]);
 
 
 
   const handlePointClick = async (pointData: any) => {
     console.log("Click detected!");
-    console.log("Full pointData:", pointData);
     
     if (pointData.points && pointData.points[0]) {
-      console.log("Point details:", pointData.points[0]);
       const point = pointData.points[0];
       
       // Store the selected point coordinates
@@ -166,11 +159,8 @@ const MolecularDesignPage = () => {
       const pointIndex = point.pointIndex;
       const selectedMolecule = molgenResults[pointIndex];
 
-
       console.log("SelectedMolecule:")
       console.log(selectedMolecule)
-      console.log(selectedMolecule.SMILES)
-
       
       if (selectedMolecule && selectedMolecule.SMILES) {
         setSelectedSMILES(selectedMolecule.SMILES);
@@ -182,10 +172,11 @@ const MolecularDesignPage = () => {
     }
   };  
 
-
   
   useEffect(() => {
     async function displayMoleculeImage() {
+      if (!selectedSMILES) return;
+      
       try {
         const response = await fetch(
           `./api/display-molecule-image/`, {
@@ -196,10 +187,18 @@ const MolecularDesignPage = () => {
             body: JSON.stringify({ smiles: selectedSMILES }),
           }
         );
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
         setSelectedMoleculeImage(data.molecule_image);
       } catch (error) {
-        console.error('Error fetching scatter plot data:', error);
+        console.error('Error fetching molecule image:', error);
+        setSelectedMoleculeImage(null);
+        setHasError(true);
+        setErrorMessage('Failed to load molecule image. Please try again.');
       }
     };
 
@@ -207,8 +206,6 @@ const MolecularDesignPage = () => {
   }, [selectedSMILES]);
 
  
-
-
   const turboColorscale: [number, string][] = [
     [0.0, 'rgb(48, 18, 59)'],
     [0.05263157894736842, 'rgb(61, 56, 142)'],
@@ -284,16 +281,10 @@ const MolecularDesignPage = () => {
   };
 
 
-
-
-
-
-
-
   return (
     <>
       {/* TODO: try to get these 3 Scripts working */}
-      <Script
+      {/* <Script
         src="https://code.jquery.com/jquery-3.6.0.min.js"
         strategy="beforeInteractive"
         onLoad={() => console.log('jQuery loaded successfully')}
@@ -307,7 +298,7 @@ const MolecularDesignPage = () => {
         src="https://3Dmol.org/build/3Dmol.ui-min.js"
         strategy="beforeInteractive"
         onLoad={() => console.log('3Dmol.ui loaded successfully')}
-      />
+      /> */}
       
       <div className="flex min-h-screen">
         <Sidebar />
@@ -329,23 +320,29 @@ const MolecularDesignPage = () => {
             </Link>
 
           </div>
+
           <div>
-            <h2>
+            {/* <h2>
               {selectedModel
                 ? `Selected model: ${selectedModel}`
                 : 'No model selected'
               }
+            </h2> */}
+            <h2>
+              Selected Dataset: Vapor Pressure of Molecules
             </h2>
           </div>
-          <div>
+
+          {/* <div>
             <h3>TODOs:</h3>
             <ol className="list-decimal ml-6">
-              <li>display molecule structure on-click</li>
-              {/* <li>Try plotting with Plotly.js instead of plotly on the backend?</li> */}
-              {/* <li>Try out a 2D molecule viewer (`smilesDrawer`?)</li>
-              <li>Try out a 3D molecule viewer (`3Dmol.js`?)</li> */}
+              <li>select different properties to color-code by</li>
+              <li>support more than one dataset</li>
+              <li>Try plotting with Plotly.js instead of plotly on the backend?</li>
+              <li>Try out a 2D molecule viewer (`smilesDrawer`?)</li>
+              <li>Try out a 3D molecule viewer (`3Dmol.js`?)</li>
             </ol>
-          </div>
+          </div> */}
 
           <div className="flex flex-row items-center justify-between w-full">
             <div>
@@ -375,7 +372,6 @@ const MolecularDesignPage = () => {
                 }}
                 config={{ responsive: true }}
                 style={{ width: '100%', height: '600px' }}
-                // onClick={handleMoleculeSelect}
                 onClick={handlePointClick}
                 />
               )}
