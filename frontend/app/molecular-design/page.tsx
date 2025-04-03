@@ -331,6 +331,7 @@ const MolecularDesignPage = () => {
             <h2>
               Selected Dataset: Vapor Pressure of Molecules
             </h2>
+            <br></br>
           </div>
 
           {/* <div>
@@ -344,33 +345,50 @@ const MolecularDesignPage = () => {
             </ol>
           </div> */}
 
-          <div className="flex flex-row items-center justify-between w-full">
+          <div className="flex flex-row items-center justify-between w-full p-20">
             <div>
-              <h3>Put 2D/3D view of molecules here...</h3>
-              <div>
-              {selectedMoleculeImage ? (
-                <img 
+              Selected Molecule
+              <div className="rounded-xl border bg-card text-card-foreground shadow w-80 h-80">
+                {selectedMoleculeImage ? (
+                  <img 
                   src={selectedMoleculeImage} 
                   alt="Selected molecule"
-                  className="w-full"
-                />
-              ) : (
-                <div className="flex items-center justify-center h-48 bg-gray-100 rounded-lg">
-                  <p className="text-gray-500">Click a point to view molecule</p>
-                </div>
-              )}
+                  className="w-full h-full object-contain" />
+                ) : (
+                  <div className="flex items-center justify-center h-full bg-gray-100 rounded-lg">
+                    <p className="text-gray-500">Click a point to view molecule</p>
+                  </div>
+                )}
               </div>
             </div>
-            <div className="w-full max-w-4xl">
+            <div className="rounded-xl border bg-card text-card-foreground shadow w-full max-w-4xl">
               {plotData && (
                 <Plot
-                data={plotData.data}
-                // layout={plotData.layout}
-                layout={{
-                  ...plotData.layout,
-                  clickmode: 'event'
+                data={[
+                  ...plotData.data,
+                  selectedPoint ? {
+                    x: [selectedPoint.x],
+                    y: [selectedPoint.y],
+                    mode: 'markers',
+                    marker: {
+                      symbol: 'star',
+                      size: 15,
+                      color: 'white',
+                      line: {
+                        color: 'black',
+                        width: 2
+                      }
+                    },
+                    showlegend: false,
+                    hoverinfo: 'skip'
+                  } : { x: [], y: [], mode: 'markers', showlegend: false }
+                ]}
+                layout={{ 
+                  ...plotData.layout, 
+                  clickmode: 'event',
+                  dragmode: 'pan'
                 }}
-                config={{ responsive: true }}
+            config={{ responsive: true }}
                 style={{ width: '100%', height: '600px' }}
                 onClick={handlePointClick}
                 />
