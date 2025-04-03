@@ -64,48 +64,76 @@ const selectedMoleculeAtom = atom(null)
 
 
 const MolecularDesignPage = () => {
-  
+  const [molgenResults, setMolgenResults] = useState<any[]>([]);
   const { selectedModel } = useModel();
   const [plotData, setPlotData] = useState<PlotDataType | null>(null);
   const [selectedMolecule, setSelectedMolecule] = useAtom(selectedMoleculeAtom);
+  const [selectedSMILES, setSelectedSMILES] = useState<string | null>(null);
+  const [selectedMoleculeImage, setSelectedMoleculeImage] = useState<string | null>(null);
+  const [selectedPoint, setSelectedPoint] = useState<{x: number, y: number} | null>(null);
+  const [colorProp, setColorProp] = useState<string[] | null>(null);
   
   // const hiddenButtonsConfig = getHiddenButtonsConfig();
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   
-
-  // TODO: figure out handling molecule clicks
-  const handleMoleculeSelect = (event: any) => {
-    console.log("click detected!")
-    if (!event?.points?.[0] && !event?.ID) return;
-  
-    // allow for molecule selection from either plot click or table click
-    const molecule = event.points ?
-      event.points[0] :
-      event; // TODO: eventually, show a table and support clicking on the table to select the molecule
-    
-      if (!molecule) return;
-      setSelectedMolecule(molecule);
-    }
-    
-  // Add this useEffect to log selectedMolecule whenever it changes
+ 
   useEffect(() => {
-    console.log("Selected molecule:")
-    console.log(selectedMolecule);
-  }, [selectedMolecule]);
-  
+    const fetchInitialData = async () => {
+      try {
+        // First fetch molgen results
+        const molgenResponse = await fetch(
+          `./api/molecular-design/${selectedModel}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+        const molgenData = await molgenResponse.json();
+        setMolgenResults(molgenData.molgen_results);
+
+
+        console.log("Successfully fetched molgenData!")
+
+        // // Then fetch color prop options
+        // const colorResponse = await fetch(
+        //   `./api/fetch-color-propoptions`, {
+        //     method: 'POST',
+        //     headers: { 'Content-Type': 'application/json' },
+        //     body: JSON.stringify({ molgen_results: molgenData.molgen_results }),
+        //   }
+        // );
+        // const colorData = await colorResponse.json();
+        // const options = colorData.color_prop_options.map((option: string) => ({ 
+        //   value: option, 
+        //   label: option 
+        // }));
+        // setColorPropOptions(options);
+        
+        // // Set initial color property without triggering a fetch
+        // if (options.length > 0) {
+        //   setColorProp([options[0].value]);
+        // }
+      } catch (err) {
+        console.error('Failed to fetch initial data:', err);
+      }
+    };
+
+    fetchInitialData();
+  }, [selectedModel]); // Only run on mount
+
 
   useEffect(() => {
     if (!selectedModel) return;
-    async function fetchMolecularDesignData() {
+    async function fetchMolecularSpacePlotData() {
       try {
         const response = await fetch(
           // `http://localhost:8000/api/molecular-design/${selectedModel}`, {
-          `./api/molecular-design/${selectedModel}`, {
-            method: 'GET',
+          `./api/molecular-space-map/${selectedModel}`, {
+            method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
+            body: JSON.stringify({ color_property: colorProp, molgen_results: molgenResults }),
           }
         );
         const data = await response.json();
@@ -115,8 +143,69 @@ const MolecularDesignPage = () => {
       }
     };
 
-    fetchMolecularDesignData();
-  }, [selectedModel]);
+    fetchMolecularSpacePlotData();
+  }, [molgenResults, selectedModel]);
+
+
+
+  const handlePointClick = async (pointData: any) => {
+    console.log("Click detected!");
+    console.log("Full pointData:", pointData);
+    
+    if (pointData.points && pointData.points[0]) {
+      console.log("Point details:", pointData.points[0]);
+      const point = pointData.points[0];
+      
+      // Store the selected point coordinates
+      setSelectedPoint({
+        x: point.x,
+        y: point.y
+      });
+      
+      // Find the corresponding molecule data in molgenResults
+      const pointIndex = point.pointIndex;
+      const selectedMolecule = molgenResults[pointIndex];
+
+
+      console.log("SelectedMolecule:")
+      console.log(selectedMolecule)
+      console.log(selectedMolecule.SMILES)
+
+      
+      if (selectedMolecule && selectedMolecule.SMILES) {
+        setSelectedSMILES(selectedMolecule.SMILES);
+      } else {
+        console.log("No image found for selected molecule");
+      }
+    } else {
+      console.log("No point data found in click event");
+    }
+  };  
+
+
+  
+  useEffect(() => {
+    async function displayMoleculeImage() {
+      try {
+        const response = await fetch(
+          `./api/display-molecule-image/`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ smiles: selectedSMILES }),
+          }
+        );
+        const data = await response.json();
+        setSelectedMoleculeImage(data.molecule_image);
+      } catch (error) {
+        console.error('Error fetching scatter plot data:', error);
+      }
+    };
+
+    displayMoleculeImage();
+  }, [selectedSMILES]);
+
  
 
 
@@ -261,7 +350,19 @@ const MolecularDesignPage = () => {
           <div className="flex flex-row items-center justify-between w-full">
             <div>
               <h3>Put 2D/3D view of molecules here...</h3>
-
+              <div>
+              {selectedMoleculeImage ? (
+                <img 
+                  src={selectedMoleculeImage} 
+                  alt="Selected molecule"
+                  className="w-full"
+                />
+              ) : (
+                <div className="flex items-center justify-center h-48 bg-gray-100 rounded-lg">
+                  <p className="text-gray-500">Click a point to view molecule</p>
+                </div>
+              )}
+              </div>
             </div>
             <div className="w-full max-w-4xl">
               {plotData && (
@@ -274,7 +375,8 @@ const MolecularDesignPage = () => {
                 }}
                 config={{ responsive: true }}
                 style={{ width: '100%', height: '600px' }}
-                onClick={handleMoleculeSelect}
+                // onClick={handleMoleculeSelect}
+                onClick={handlePointClick}
                 />
               )}
             </div>

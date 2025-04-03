@@ -2,7 +2,7 @@ import base64
 from io import BytesIO
 import numpy as np
 from rdkit import Chem
-from rdkit.Chem import AllChem, Draw
+from rdkit.Chem import AllChem, Draw, MolFromSmiles
 import pandas as pd
 import plotly.graph_objects as go
 from sklearn.preprocessing import StandardScaler
@@ -18,9 +18,9 @@ class ColumnName(str, Enum):
 
 
 # Generate molecule images as base64 encoded strings
-def mol_to_base64(mol, size=(300, 300)):
-    """Convert RDKit mol to base64 encoded image"""
-
+def smiles_to_base64(smiles, size=(300, 300)):
+    """Convert SMILES string to base64 encoded image"""
+    mol = MolFromSmiles(smiles)
     img = Draw.MolToImage(mol, size=size)
     buffer = BytesIO()
     img.save(buffer, format="png")
