@@ -13,70 +13,70 @@ export default function Sidebar() {
         <Link 
           href="/"
           className={`flex items-center gap-2 p-1 pl-2 rounded-lg 
-            ${pathName === '/' ? 'bg-black text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'} text-[14.5px}`}
+            ${pathName === '/' ? 'bg-black text-white' : 'hover:bg-gray-200'} text-[14.5px}`}
         >
           Home
         </Link>
         <Link 
           href="/overview"
           className={`flex items-center gap-2 p-1 pl-2 rounded-lg 
-            ${pathName === '/overview' ? 'bg-black text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'} text-[14.5px}`}
+            ${pathName === '/overview' ? 'bg-black text-white' : 'hover:bg-gray-200'} text-[14.5px}`}
         >
           Overview
         </Link>
         <Link 
           href="/violin-plots"
           className={`flex items-center gap-2 p-1 pl-2 rounded-lg 
-            ${pathName === '/violin-plots' ? 'bg-black text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'} text-[14.5px}`}
+            ${pathName === '/violin-plots' ? 'bg-black text-white' : 'hover:bg-gray-200'} text-[14.5px}`}
         >
           Violin Plots
         </Link>
         <Link 
           href="/scatter-plots"
           className={`flex items-center gap-2 p-1 pl-2 rounded-lg 
-            ${pathName === '/scatter-plots' ? 'bg-black text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'} text-[14.5px}`}
+            ${pathName === '/scatter-plots' ? 'bg-black text-white' : 'hover:bg-gray-200'} text-[14.5px}`}
         >
           Scatter Plots
         </Link>
         <Link
           href="/correlation-heatmaps"
           className={`flex items-center gap-2 p-1 pl-2 rounded-lg 
-            ${pathName === '/correlation-heatmaps' ? 'bg-black text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'} text-[14.5px}`}
+            ${pathName === '/correlation-heatmaps' ? 'bg-black text-white' : 'hover:bg-gray-200'} text-[14.5px}`}
         >
           Correlation Heatmaps
         </Link>
         <Link
           href="/shap-summary-plots"
           className={`flex items-center gap-2 p-1 pl-2 rounded-lg 
-            ${pathName === '/shap-summary-plots' ? 'bg-black text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'} text-[14.5px}`}
+            ${pathName === '/shap-summary-plots' ? 'bg-black text-white' : 'hover:bg-gray-200'} text-[14.5px}`}
         >
           SHAP Summary Plots
         </Link>
         {/* <Link
           href="/shap-feature-effects-plots"
           className={`flex items-center gap-2 p-1 pl-2 rounded-lg 
-            ${pathName === '/shap-feature-effects-plots' ? 'bg-black text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'} text-[14.5px}`}
+            ${pathName === '/shap-feature-effects-plots' ? 'bg-black text-white' : 'hover:bg-gray-200'} text-[14.5px}`}
         >
           SHAP Feature Effects Plots
         </Link> */}
         <Link
           href="/shap-waterfall-plots"
           className={`flex items-center gap-2 p-1 pl-2 rounded-lg 
-            ${pathName === '/shap-waterfall-plots' ? 'bg-black text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'} text-[14.5px}`}
+            ${pathName === '/shap-waterfall-plots' ? 'bg-black text-white' : 'hover:bg-gray-200'} text-[14.5px}`}
         >
           SHAP Waterfall Plots
         </Link>
         <Link
           href="/molecular-design"
           className={`flex items-center gap-2 p-1 pl-2 rounded-lg 
-            ${pathName === '/molecular-design' ? 'bg-black text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'} text-[14.5px}`}
+            ${pathName === '/molecular-design' ? 'bg-black text-white' : 'hover:bg-gray-200'} text-[14.5px}`}
         >
           Molecular Design
         </Link>
         <Link
           href="/dataset-generator"
           className={`flex items-center gap-2 p-1 pl-2 rounded-lg 
-            ${pathName === '/dataset-generator' ? 'bg-black text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'} text-[14.5px}`}
+            ${pathName === '/dataset-generator' ? 'bg-black text-white' : 'hover:bg-gray-200'} text-[14.5px}`}
         >
           Dataset Generator
         </Link>

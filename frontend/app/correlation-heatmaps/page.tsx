@@ -49,7 +49,6 @@ const CorrelationHeatmapsPage = () => {
             href="./"
           >
             <Image
-              className="dark:invert"
               src="/snowflake.svg"
               alt="My snowflake logomark"
               width={20}
@@ -72,7 +71,7 @@ const CorrelationHeatmapsPage = () => {
           <select
             value={selectedHeatmapType}
             onChange={(e) => setSelectedHeatmapType(e.target.value)}
-            className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="input-input">Input-Input Correlations</option>
             <option value="input-output">Input-Output Correlations</option>

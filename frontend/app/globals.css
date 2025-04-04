@@ -7,13 +7,6 @@
   --foreground: #171717;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   color: var(--foreground);
   background: var(--background);
@@ -24,4 +17,23 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+}
+
+button {
+  background-color: #ffffff;
+  color: #171717;
+}
+
+button:hover {
+  background-color: #f0f0f0;
+}
+
+select {
+  background-color: #ffffff;
+  color: #171717;
+  border: 1px solid #ccc;
+}
+
+.snowflake-icon {
+  color: #3498db;
 }

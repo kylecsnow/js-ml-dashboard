@@ -125,7 +125,6 @@ const ShapWaterfallPlotsPage = () => {
             href="./"
           >
             <Image
-              className="dark:invert"
               src="/snowflake.svg"
               alt="My snowflake logomark"
               width={20}
