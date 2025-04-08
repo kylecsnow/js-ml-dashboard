@@ -1,4 +1,0 @@
-bokeh<4.0.0
-mol_ga
-rdkit
-umap-learn
