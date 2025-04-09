@@ -350,7 +350,9 @@ async def get_shap_summary_plot(model_name: str, body: dict = Body(...)):
 
         matplotlib.use("agg")
         plt.figure()
-        explainer = shap.Explainer(estimator)
+
+        ### TODO: need to add some code so this can auto-determine which Explainer to use based on the model type; if something is un-recognized, display an Error
+        explainer = shap.TreeExplainer(estimator)
         shap_values = explainer(dataset[inputs])
         fig = shap.summary_plot(
             shap_values,
@@ -423,7 +425,8 @@ async def get_shap_waterfall_plot(model_name: str, body: dict = Body(...)):
 
         matplotlib.use("agg")
         plt.figure()
-        explainer = shap.Explainer(estimator)
+        ### TODO: need to add some code so this can auto-determine which Explainer to use based on the model type; if something is un-recognized, display an Error
+        explainer = shap.TreeExplainer(estimator)
         shap_values = explainer(dataset[inputs])
 
         fig = shap.waterfall_plot(

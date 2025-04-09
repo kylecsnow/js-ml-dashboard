@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ml_dashboard_backend"
 version = "0.1.0"
-description = "Backend code for a dashboard for ML and data analysis"
+description = "Backend code for an ML and data analysis dashboard"
 authors = [{name = "Kyle Snow", email = "kylecsnow@gmail.com"}]
 dependencies = [
     "black>=25.0.0,<26.0.0",
@@ -24,7 +24,7 @@ dependencies = [
     "rdkit>=2024.9.5,<2025.0.0",
     "ruff==0.5.1",
     "scikit-learn>=1.6.1,<2.0.0",
-    "shap==0.43.0",
+    "shap==0.47.1",
     "torch>=2.5.0,<3.0.0",
     "uvicorn[standard]==0.32.0",
     "xgboost>=2.1.4,<3.0.0",
