@@ -11,6 +11,7 @@ from plotly.subplots import make_subplots
 import shap
 import uvicorn
 import argparse
+import logging
 
 from utils import fig2img, get_dataset_name_from_model, get_dataset, get_model_and_metadata, build_sythetic_demo_dataset
 from molecule_viz import create_plotly_molecular_space_map, process_molecular_space_map_data, smiles_to_base64
@@ -27,6 +28,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)  # Set the logging level to INFO or DEBUG
+logger = logging.getLogger(__name__)
 
 
 ### TODO: validate that this is even doing what you want it to do.....
@@ -98,7 +103,7 @@ async def get_model_overview(model_name: str):
         return model_overview_data
     
     except Exception as e:
-        print(str(e))
+        logger.error(str(e))  # Log the error
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -155,7 +160,7 @@ async def get_violin_plots(model_name: str, body: dict = Body(...)):
         return {"plot_data": plot_json}
 
     except Exception as e:
-        print(str(e))
+        logger.error(str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -227,7 +232,7 @@ async def get_correlation_heatmap(model_name: str, correlation_type: str):
         return {"plot_data": plot_json}
     
     except Exception as e:
-        print(str(e))
+        logger.error(str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -246,7 +251,7 @@ async def get_variable_options(model_name: str):
         return {"variable_options": variable_options}
     
     except Exception as e:
-        print(str(e))
+        logger.error(str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -297,7 +302,7 @@ async def get_scatter_plot(model_name: str, body: dict = Body(...)):
         return {"plot_data": plot_json}
 
     except Exception as e:
-        print(str(e))
+        logger.error(str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -314,7 +319,7 @@ async def get_output_variable_options(model_name: str):
         return {"output_variable_options": outputs}
     
     except Exception as e:
-        print(str(e))
+        logger.error(str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -368,7 +373,7 @@ async def get_shap_summary_plot(model_name: str, body: dict = Body(...)):
         return {"plot_data": plot_json}
 
     except Exception as e:
-        print(str(e))
+        logger.error(str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -384,7 +389,7 @@ async def get_sample_options(model_name: str):
         return {"sample_options": dataset_sample_index_options}
     
     except Exception as e:
-        print(str(e))
+        logger.error(str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -439,7 +444,7 @@ async def get_shap_waterfall_plot(model_name: str, body: dict = Body(...)):
         return {"plot_data": plot_json}
 
     except Exception as e:
-        print(str(e))
+        logger.error(str(e))  # Log the error with function name
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -471,7 +476,7 @@ async def get_molecular_design_results(model_name: str):
         return {"molgen_results": molgen_results}
 
     except Exception as e:
-        print(str(e))
+        logger.error(str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -487,7 +492,7 @@ async def display_molecule_image(body: dict = Body(...)):
         return {"molecule_image": img}
     
     except Exception as e:
-        print(str(e))
+        logger.error(str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -524,7 +529,7 @@ async def get_plotly_molecular_space_map(model_name: str, body: dict = Body(...)
         return {"plot_data": plot_json}
 
     except Exception as e:
-        print(str(e))
+        logger.error(str(e))
         raise HTTPException(500, detail=f"Error creating Plotly molecular space map: {str(e)}")
 
 
@@ -559,7 +564,7 @@ async def get_synthetic_demo_dataset(body: dict = Body(...)):
         )
         
     except Exception as e:
-        print(str(e))
+        logger.error(str(e))
         raise HTTPException(status_code=500, detail=str(e))
     
 
