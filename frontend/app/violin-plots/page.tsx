@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from 'next/link';
 import { PlotDataType } from '@/types/types';
 import Sidebar from '../components/Sidebar';
+import Spinner from '../components/Spinner';
 import { useState, useEffect } from 'react';
 import { useModel } from '../contexts/ModelContext';
 import { Switch } from '@headlessui/react';
@@ -17,13 +18,18 @@ const ViolinPlotsPage = () => {
   const [plotData, setPlotData] = useState<PlotDataType | null>(null);
   const [boxPlotToggle, setBoxPlotToggle] = useState<boolean>(true);
   const [dataPointsToggle, setDataPointsToggle] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   
   useEffect(() => {
     async function fetchViolinPlotData() {
-      if (!selectedModel) return;
+      if (!selectedModel) {
+        setIsLoading(false);
+        return;
+      }
       
       try {
+        setIsLoading(true);
         const response = await fetch(
           `./api/violin-plots/${selectedModel}`, {
             method: 'POST',
@@ -40,6 +46,7 @@ const ViolinPlotsPage = () => {
         setPlotData(data.plot_data);
       } catch (error) {
         console.error('Error fetching violin plot data:', error);
+        setIsLoading(false);
       }
     };
 
@@ -47,6 +54,19 @@ const ViolinPlotsPage = () => {
   }, [selectedModel, boxPlotToggle, dataPointsToggle]);
 
 
+  // Add this useEffect to handle plot rendering detection
+  useEffect(() => {
+    if (plotData) {
+      // Add a small delay to ensure the plot is fully rendered
+      const timer = setTimeout(() => {
+        setIsLoading(false);
+      }, 500); // Adjust this delay if needed
+      
+      return () => clearTimeout(timer);
+    }
+  }, [plotData]);
+
+  
   return (
     <div className="flex min-h-screen">
       <Sidebar />
@@ -118,7 +138,8 @@ const ViolinPlotsPage = () => {
             </ol>
         </div> */}
         <div className="w-full flex justify-center">
-          {plotData && (
+          {isLoading ? <Spinner /> : 
+            plotData && (
             <Plot
               data={plotData.data}
               layout={plotData.layout}
