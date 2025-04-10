@@ -115,6 +115,20 @@ const ShapWaterfallPlotsPage = () => {
   }, [selectedModel, selectedOutputVariable, selectedSample]);
 
 
+  // TODO: someday, figure out how to pull this out as a function that can be imported to any page
+  // handle plot rendering detection
+  useEffect(() => {
+    if (plotData) {
+      // Add a small delay to ensure the plot is fully rendered
+      const timer = setTimeout(() => {
+        setIsLoading(false);
+      }, 100); // Adjust this delay if needed
+      
+      return () => clearTimeout(timer);
+    }
+  }, [plotData]);
+
+
   return (
     <div className="flex min-h-screen">
       <Sidebar />
@@ -155,7 +169,7 @@ const ShapWaterfallPlotsPage = () => {
             name="selected-variables"
             classNamePrefix="select"
           />
-        <label>{"Selected a sample from the dataset:"}</label>
+        <label>{"Select a sample from the dataset:"}</label>
         <Select
             options={sampleOptions}
             onChange={(selected: { value: string; label: string } | null) => {

@@ -94,6 +94,20 @@ const ShapSummaryPlotsPage = () => {
   }, [selectedModel, selectedOutputVariable]);
 
 
+  // TODO: someday, figure out how to pull this out as a function that can be imported to any page
+  // handle plot rendering detection
+  useEffect(() => {
+    if (plotData) {
+      // Add a small delay to ensure the plot is fully rendered
+      const timer = setTimeout(() => {
+        setIsLoading(false);
+      }, 300); // Adjust this delay if needed
+      
+      return () => clearTimeout(timer);
+    }
+  }, [plotData]);
+
+
   return (
     <div className="flex min-h-screen">
       <Sidebar />

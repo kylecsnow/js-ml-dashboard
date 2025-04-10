@@ -3,8 +3,9 @@
 import dynamic from 'next/dynamic';
 import Image from "next/image";
 import Link from 'next/link';
-import Script from 'next/script';
+// import Script from 'next/script';
 import Sidebar from '@/app/components/Sidebar';
+import Spinner from '../components/Spinner';
 import { PlotDataType } from '@/types/types';
 // import SmilesDrawer from 'smiles-drawer';
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -69,6 +70,7 @@ const MolecularDesignPage = () => {
   const [selectedMoleculeImage, setSelectedMoleculeImage] = useState<string | null>(null);
   const [selectedPoint, setSelectedPoint] = useState<{x: number, y: number} | null>(null);
   const [colorProp, setColorProp] = useState<string[] | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   // const hiddenButtonsConfig = getHiddenButtonsConfig();
   const [hasError, setHasError] = useState(false);
@@ -140,7 +142,6 @@ const MolecularDesignPage = () => {
 
     fetchMolecularSpacePlotData();
   }, [molgenResults, selectedModel, colorProp]);
-
 
 
   const handlePointClick = async (pointData: any) => {
@@ -281,6 +282,20 @@ const MolecularDesignPage = () => {
   };
 
 
+  // TODO: someday, figure out how to pull this out as a function that can be imported to any page
+  // handle plot rendering detection
+  useEffect(() => {
+    if (plotData) {
+      // Add a small delay to ensure the plot is fully rendered
+      const timer = setTimeout(() => {
+        setIsLoading(false);
+      }, 500); // Adjust this delay if needed
+      
+      return () => clearTimeout(timer);
+    }
+  }, [plotData]);
+
+
   return (
     <>
       {/* TODO: try to get these 3 Scripts working */}
@@ -361,7 +376,8 @@ const MolecularDesignPage = () => {
               </div>
             </div>
             <div className="rounded-xl border bg-card text-card-foreground shadow w-full max-w-4xl">
-              {plotData && (
+            {isLoading ? <Spinner /> : 
+              plotData && (
                 <Plot
                 data={[
                   ...plotData.data,
