@@ -9,6 +9,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import shap
+from sklearn.ensemble import BaseEnsemble
 import uvicorn
 import argparse
 import logging
@@ -352,7 +353,14 @@ async def get_shap_summary_plot(model_name: str, body: dict = Body(...)):
         plt.figure()
 
         ### TODO: need to add some code so this can auto-determine which Explainer to use based on the model type; if something is un-recognized, display an Error
-        explainer = shap.TreeExplainer(estimator)
+        ### TODO: clean this line of code up; can probably do it much more elegantly than this overly verbose code...?
+        if isinstance(estimator, BaseEnsemble) or "GBRegressor" in str(type(estimator)) or "GBClassifier" in str(type(estimator)) or "BoostRegressor" in str(type(estimator) or "BoostClassifier" in str(type(estimator))):
+            explainer = shap.TreeExplainer(estimator)
+        ### TODO: write some code for handling torch Neural Networks 
+        # elif: 
+        ### SOMEDAY: write some code for handling "everything else"... if model is un-recognized, display an Error.
+        # else:
+            
         shap_values = explainer(dataset[inputs])
         fig = shap.summary_plot(
             shap_values,
@@ -425,8 +433,16 @@ async def get_shap_waterfall_plot(model_name: str, body: dict = Body(...)):
 
         matplotlib.use("agg")
         plt.figure()
+
         ### TODO: need to add some code so this can auto-determine which Explainer to use based on the model type; if something is un-recognized, display an Error
-        explainer = shap.TreeExplainer(estimator)
+        ### TODO: clean this line of code up; can probably do it much more elegantly than this overly verbose code...?
+        if isinstance(estimator, BaseEnsemble) or "GBRegressor" in str(type(estimator)) or "GBClassifier" in str(type(estimator)) or "BoostRegressor" in str(type(estimator) or "BoostClassifier" in str(type(estimator))):
+            explainer = shap.TreeExplainer(estimator)
+        ### TODO: write some code for handling torch Neural Networks 
+        # elif: 
+        ### SOMEDAY: write some code for handling "everything else"... if model is un-recognized, display an Error.
+        # else:
+        
         shap_values = explainer(dataset[inputs])
 
         fig = shap.waterfall_plot(
