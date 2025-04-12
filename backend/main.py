@@ -356,8 +356,15 @@ async def get_shap_summary_plot(model_name: str, body: dict = Body(...)):
         ### TODO: clean this line of code up; can probably do it much more elegantly than this overly verbose code...?
         if isinstance(estimator, BaseEnsemble) or "GBRegressor" in str(type(estimator)) or "GBClassifier" in str(type(estimator)) or "BoostRegressor" in str(type(estimator) or "BoostClassifier" in str(type(estimator))):
             explainer = shap.TreeExplainer(estimator)
-        ### TODO: write some code for handling torch Neural Networks 
-        # elif: 
+        ### TODO: write some code for handling torch Neural Networks (KernelExplainer) 
+        # elif:
+        # else:
+            # try:
+                # explainer = shap.KernelExplainer(predict_fn, background)
+            # except:
+
+        ### TODO: write some code for LinearExplainer... or will KernelExplainer work for linear models...?
+        # elif:
         ### SOMEDAY: write some code for handling "everything else"... if model is un-recognized, display an Error.
         # else:
             
@@ -438,8 +445,10 @@ async def get_shap_waterfall_plot(model_name: str, body: dict = Body(...)):
         ### TODO: clean this line of code up; can probably do it much more elegantly than this overly verbose code...?
         if isinstance(estimator, BaseEnsemble) or "GBRegressor" in str(type(estimator)) or "GBClassifier" in str(type(estimator)) or "BoostRegressor" in str(type(estimator) or "BoostClassifier" in str(type(estimator))):
             explainer = shap.TreeExplainer(estimator)
-        ### TODO: write some code for handling torch Neural Networks 
-        # elif: 
+        ### TODO: write some code for handling torch Neural Networks (KernelExplainer) 
+        # elif:
+        ### TODO: write some code for LinearExplainer... or will KernelExplainer work for linear models...?
+        # elif:
         ### SOMEDAY: write some code for handling "everything else"... if model is un-recognized, display an Error.
         # else:
         

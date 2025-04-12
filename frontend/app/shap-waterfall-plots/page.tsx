@@ -21,6 +21,7 @@ const ShapWaterfallPlotsPage = () => {
   const [sampleOptions, setSampleOptions] = useState<{ value: string; label: string }[]>([]);
   const [selectedSample, setSelectedSample] = useState<string[]>();
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string>("");
 
 
   useEffect(() => {
@@ -102,6 +103,19 @@ const ShapWaterfallPlotsPage = () => {
             }),
           }
         );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          if (response.status === 400) {
+            setError(errorData.detail);
+          } else if (response.status === 500) {
+            setError("An error occurred. Please double-check to make sure you're not selecting a categorical output. Also, double-check that you didn't select a Neural Network model; the SHAP pages do not yet support these. If you've verified that the prior scenarios don't apply to you, this may be an internal server error.");
+          } else {
+            setError(errorData.detail || "An unexpected error occurred");
+          }
+          return;
+        }
+
         const data = await response.json();
         setPlotData(data.plot_data);
         setIsLoading(false);
@@ -190,7 +204,12 @@ const ShapWaterfallPlotsPage = () => {
             </ol>
         </div> */}
         <div className="w-full max-w-8xl mx-auto">
-        {isLoading ? <Spinner /> : 
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              {error}
+            </div>
+          )}
+          {isLoading ? <Spinner /> : 
             plotData && (
               <Plot
                 data={plotData.data}

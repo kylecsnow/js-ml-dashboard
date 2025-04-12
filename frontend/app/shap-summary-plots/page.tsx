@@ -73,12 +73,12 @@ const ShapSummaryPlotsPage = () => {
           if (response.status === 400) {
             setError(errorData.detail);
           } else if (response.status === 500) {
-            setError("An error occurred. Please check that you are not selecting a categorical output. If you've verified that the selected output is numerical, this may be an internal server error.");
+            setError("An error occurred. Please double-check to make sure you're not selecting a categorical output. Also, double-check that you didn't select a Neural Network model; the SHAP pages do not yet support these. If you've verified that the prior scenarios don't apply to you, this may be an internal server error.");
           } else {
             setError(errorData.detail || "An unexpected error occurred");
           }
           return;
-        }  
+        }
 
         const data = await response.json();
 
@@ -86,7 +86,7 @@ const ShapSummaryPlotsPage = () => {
         setPlotData(data.plot_data);
         setIsLoading(false);
       } catch (error) {
-        console.error('Error fetching scatter plot data:', error);
+        console.error('Error fetching shap summary plot data:', error);
       } 
     };
 
