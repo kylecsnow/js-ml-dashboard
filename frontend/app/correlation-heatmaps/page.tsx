@@ -27,9 +27,34 @@ const CorrelationHeatmapsPage = () => {
             `./api/correlation-heatmap/${selectedModel}/${selectedHeatmapType}`
           );
           const data = await response.json();
-          setPlotData(data.plot_data);
+          
+          // Add defensive checks for data structure
+          if (data?.plot_data?.data?.[0]?.z) {
+            const rows = data.plot_data.data[0].z.length;
+            const cols = data.plot_data.data[0].z[0]?.length || 0;
+            const baseHeight = 600; // Base height for reference
+            const baseWidth = 800; // Base width for reference
+            
+            // Adjust dimensions proportionally
+            const height = Math.max(baseHeight, rows * 20);
+            const width = Math.max(baseWidth, cols * 20);
+            
+            // Update layout with dynamic dimensions
+            data.plot_data.layout = {
+              ...data.plot_data.layout,
+              height: height,
+              width: width,
+              margin: { l: 100, r: 50, b: 100, t: 50, pad: 4 }
+            };
+            
+            setPlotData(data.plot_data);
+          } else {
+            console.error('Invalid heatmap data structure:', data);
+            setPlotData(null);
+          }
         } catch (error) {
           console.error('Error fetching heatmap:', error);
+          setPlotData(null);
         }
       }
     };
@@ -101,12 +126,26 @@ const CorrelationHeatmapsPage = () => {
         </div> */}
         <div className="w-full flex justify-center">
             {plotData && (
-              <Plot
-                data={plotData.data}
-                layout={plotData.layout}
-                config={{ responsive: true }}
-                style={{ width: '85%', height: '600px' }}
-              />
+              <div className="w-full max-w-[90vw] h-[90vh] relative">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Plot
+                    data={plotData.data}
+                    layout={{
+                      ...plotData.layout,
+                      autosize: true,
+                      height: undefined,
+                      width: undefined
+                    }}
+                    config={{ responsive: true }}
+                    style={{ 
+                      width: '100%', 
+                      height: '100%',
+                      maxWidth: '100%',
+                      maxHeight: '100%'
+                    }}
+                  />
+                </div>
+              </div>
           )}
         </div>
       </div>
