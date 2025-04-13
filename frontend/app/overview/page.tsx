@@ -80,7 +80,7 @@ export default function Overview() {
             }
           </h2>
         </div>
-        <div className="items-center justify-items-center p-8 pb-20 gap-16 sm:p-20">
+        <div className="items-center justify-items-center p-8 pb-20 gap-16 sm:p-8">
           {/* <div>
             <h3>TODOs:</h3>
               <ol className="list-decimal ml-6">
@@ -103,13 +103,20 @@ export default function Overview() {
                   <Spinner />
                 ) : (
                   modelOverviewData.model_outputs.map(output => (
-                    <Plot
-                      key={output}
-                      data={modelOverviewData.estimators_by_output[output].parity_plot_data.data}
-                      layout={modelOverviewData.estimators_by_output[output].parity_plot_data.layout}
-                      config={{ responsive: true }}
-                      style={{ width: '100%', height: '600px' }}
-                    />
+                    <div key={output} className="flex flex-row gap-4">
+                      <Plot
+                        data={modelOverviewData.estimators_by_output[output].parity_plot_data.data}
+                        layout={modelOverviewData.estimators_by_output[output].parity_plot_data.layout}
+                        config={{ responsive: true }}
+                        style={{ width: '50%', height: '400px' }}
+                      />
+                      <Plot
+                        data={modelOverviewData.estimators_by_output[output].residual_plot_data.data}
+                        layout={modelOverviewData.estimators_by_output[output].residual_plot_data.layout}
+                        config={{ responsive: true }}
+                        style={{ width: '50%', height: '400px' }}
+                      />
+                    </div>
                   ))
                 )}
               </>

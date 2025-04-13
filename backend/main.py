@@ -72,9 +72,9 @@ async def get_model_overview(model_name: str):
         serializable_estimators = {}
         for output, data in estimators_by_output.items():
 
-            parity_plot_fig = create_parity_plot(data, title=f"Parity Plot - {output}")
+            parity_plot_fig = create_parity_plot(data, title=f"Parity Plot - {output}", width=600, height=600)
             parity_plot_json = json.loads(parity_plot_fig.to_json())
-            residual_plot_fig = create_residual_plot(data)
+            residual_plot_fig = create_residual_plot(data, width=600, height=600)
             residual_plot_json = json.loads(residual_plot_fig.to_json())
 
             serializable_estimators[output] = {

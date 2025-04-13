@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.express as px
 
 
-def create_parity_plot(model_results, title="Model Prediction Parity Plot", log_x=False, log_y=False, axis_range=None):
+def create_parity_plot(model_results, title="Model Prediction Parity Plot", log_x=False, log_y=False, axis_range=None, width=800, height=600):
     
     y_test = model_results["y_test"]
     y_pred_test = model_results["y_pred_test"]
@@ -45,7 +45,7 @@ def create_parity_plot(model_results, title="Model Prediction Parity Plot", log_
         template='plotly_white',
         opacity=0.7,
         error_y=error_y,
-        width=800, height=600,
+        width=width, height=height,
         log_x=log_x,
         log_y=log_y,
     )
@@ -88,7 +88,7 @@ def create_parity_plot(model_results, title="Model Prediction Parity Plot", log_
     return fig
 
 
-def create_residual_plot(model_results, title="Standardized Residual Plot", log_x=False, x_axis_range=None):
+def create_residual_plot(model_results, title="Standardized Residual Plot", log_x=False, x_axis_range=None, width=800, height=600):
     y_pred_test = model_results["y_pred_test"]
     y_test = model_results["y_test"]
     r2 = model_results["metrics"]["test"]["R^2"]
@@ -119,7 +119,7 @@ def create_residual_plot(model_results, title="Standardized Residual Plot", log_
         template='plotly_white',
         opacity=0.7,
         log_x=log_x,
-        width=800, height=600
+        width=width, height=height
     )
 
     fig.update_traces(marker=dict(size=10))
