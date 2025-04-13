@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { PlotDataType } from '@/types/types';
 import Sidebar from '../components/Sidebar';
 import Spinner from '../components/Spinner';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useModel } from '../contexts/ModelContext';
 import { Switch } from '@headlessui/react';
 
@@ -19,11 +19,25 @@ const ViolinPlotsPage = () => {
   const [boxPlotToggle, setBoxPlotToggle] = useState<boolean>(true);
   const [dataPointsToggle, setDataPointsToggle] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalVariables, setTotalVariables] = useState(0);
+  const [plotCache, setPlotCache] = useState<{[key: string]: PlotDataType}>({});
+  const [tempPageSize, setTempPageSize] = useState(10); // Temporary state for input
 
   
   useEffect(() => {
     async function fetchViolinPlotData() {
       if (!selectedModel) {
+        setIsLoading(false);
+        return;
+      }
+      
+      const cacheKey = `${selectedModel}-${boxPlotToggle}-${dataPointsToggle}-${currentPage}-${pageSize}`;
+      
+      // Check cache first
+      if (plotCache[cacheKey]) {
+        setPlotData(plotCache[cacheKey]);
         setIsLoading(false);
         return;
       }
@@ -39,11 +53,19 @@ const ViolinPlotsPage = () => {
             body: JSON.stringify({
               box_plot_toggle: boxPlotToggle,
               data_points_toggle: dataPointsToggle,
+              page: currentPage,
+              page_size: pageSize
             }),
           }
         );
         const data = await response.json();
         setPlotData(data.plot_data);
+        setTotalVariables(data.total_variables || 0);
+        // Update cache
+        setPlotCache(prev => ({
+          ...prev,
+          [cacheKey]: data.plot_data
+        }));
       } catch (error) {
         console.error('Error fetching violin plot data:', error);
         setIsLoading(false);
@@ -51,7 +73,7 @@ const ViolinPlotsPage = () => {
     };
 
     fetchViolinPlotData();
-  }, [selectedModel, boxPlotToggle, dataPointsToggle]);
+  }, [selectedModel, boxPlotToggle, dataPointsToggle, currentPage, pageSize]);
 
 
   // TODO: someday, figure out how to pull this out as a function that can be imported to any page
@@ -67,6 +89,35 @@ const ViolinPlotsPage = () => {
     }
   }, [plotData]);
 
+  // Update pagination controls to show total pages
+  const totalPages = Math.ceil(totalVariables / pageSize);
+
+  // Memoize the handlePageSizeChange function
+  const handlePageSizeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    
+    // Allow empty input (which will be handled when Update is clicked)
+    if (inputValue === '') {
+      setTempPageSize(0); // Use 0 as a placeholder for empty input
+      return;
+    }
+
+    const newSize = parseInt(inputValue, 10);
+    if (!isNaN(newSize) && newSize > 0 && newSize <= 50) {
+      setTempPageSize(newSize);
+    }
+  }, []);
+
+  // Memoize the handleUpdateClick function
+  const handleUpdateClick = useCallback(() => {
+    // If input is empty, use the previous page size
+    const newPageSize = tempPageSize === 0 ? pageSize : tempPageSize;
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  }, [tempPageSize, pageSize]);
+
+  // Update the input value to show empty string when tempPageSize is 0
+  const inputValue = tempPageSize === 0 ? '' : tempPageSize.toString();
 
   return (
     <div className="flex min-h-screen">
@@ -138,16 +189,63 @@ const ViolinPlotsPage = () => {
               <li></li>
             </ol>
         </div> */}
-        <div className="w-full flex justify-center">
-          {isLoading ? <Spinner /> : 
-            plotData && (
-            <Plot
-              data={plotData.data}
-              layout={plotData.layout}
-              config={{ responsive: true }}
-              style={{ width: '85%', height: '600px' }}
+        <div className="w-full flex flex-col items-center gap-4">
+          <div className="flex gap-4 items-center">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-300"
+            >
+              Previous
+            </button>
+            <span>Page {currentPage} of {totalPages}</span>
+            <button
+              onClick={() => setCurrentPage(p => p + 1)}
+              disabled={currentPage >= totalPages}
+              className="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-300"
+            >
+              Next
+            </button>
+          </div>
+          
+          {/* Page size input with update button */}
+          <div className="flex gap-2 items-center">
+            <label htmlFor="pageSize">Plots per page:</label>
+            <input
+              type="number"
+              id="pageSize"
+              min="1"
+              max="50"
+              value={inputValue}
+              onChange={handlePageSizeChange}
+              className="w-20 px-2 py-1 border rounded"
             />
-          )}
+            <button
+              onClick={handleUpdateClick}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Update
+            </button>
+          </div>
+
+          {/* Memoize the plot component */}
+          {useMemo(() => (
+            <div className="w-full flex justify-center">
+              {isLoading ? <Spinner /> : 
+                plotData && (
+                <Plot
+                  data={plotData.data}
+                  layout={plotData.layout}
+                  config={{
+                    responsive: true,
+                    displayModeBar: false,
+                    scrollZoom: false
+                  }}
+                  style={{ width: '85%', height: '600px' }}
+                />
+              )}
+            </div>
+          ), [isLoading, plotData])}
         </div>
       </div>
     </div>

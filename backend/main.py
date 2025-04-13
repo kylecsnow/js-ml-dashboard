@@ -112,10 +112,11 @@ async def get_model_overview(model_name: str):
 async def get_violin_plots(model_name: str, body: dict = Body(...)):
     box_plot_toggle = body.get("box_plot_toggle", [])
     data_points_toggle = body.get("data_points_toggle", [])
+    page = body.get("page", 1)
+    page_size = body.get("page_size", 10)  # Ensure this matches your frontend
 
     try:
         model_and_metadata = get_model_and_metadata(model_name)
-
         dataset_name = get_dataset_name_from_model(model_name)
         dataset = get_dataset(dataset_name)
 
@@ -135,14 +136,21 @@ async def get_violin_plots(model_name: str, body: dict = Body(...)):
             )
         inputs = list(all_estimator_inputs)
         # inputs_reals = inputs
+        all_variables = outputs + inputs
 
+        # Calculate which variables to show based on pagination
+        start_idx = (page - 1) * page_size
+        end_idx = start_idx + page_size
+        variables_to_show = all_variables[start_idx:end_idx]
+
+        # Create figure with only the paginated variables
         fig = go.Figure()
-        fig = make_subplots(rows=len(inputs + outputs))
+        fig = make_subplots(rows=len(variables_to_show), cols=1)
 
-        for i, item in enumerate(inputs + outputs):
+        for i, item in enumerate(variables_to_show):
             fig.add_trace(
                 go.Violin(
-                    x=dataset[item],
+                    x=dataset[item],  # Use the full dataset for the selected variable
                     box_visible=box_plot_toggle,
                     meanline_visible=True,
                     opacity=0.9,
@@ -155,10 +163,12 @@ async def get_violin_plots(model_name: str, body: dict = Body(...)):
                 col=1,
             )
 
-        fig.update_layout(height=200 * len(inputs + outputs))
-
+        fig.update_layout(height=200 * len(variables_to_show))
         plot_json = json.loads(fig.to_json())
-        return {"plot_data": plot_json}
+        return {
+            "plot_data": plot_json,
+            "total_variables": len(all_variables)  # Add total count for frontend pagination
+        }
 
     except Exception as e:
         logger.error(str(e))
