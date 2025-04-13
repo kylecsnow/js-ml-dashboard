@@ -74,7 +74,7 @@ const ViolinPlotsPage = () => {
     };
 
     fetchViolinPlotData();
-  }, [selectedModel, boxPlotToggle, dataPointsToggle, currentPage, pageSize]);
+  }, [selectedModel, boxPlotToggle, dataPointsToggle, currentPage, pageSize, totalVariables]);
 
 
   // TODO: someday, figure out how to pull this out as a function that can be imported to any page
@@ -148,6 +148,15 @@ const ViolinPlotsPage = () => {
     setTempPageNumber(currentPage);
   }, [currentPage]);
 
+  // Add effect to handle automatic page size adjustment
+  useEffect(() => {
+    if (totalVariables > 0 && totalVariables <= 15) {
+      setPageSize(15);
+      setTempPageSize(15);
+      setCurrentPage(1);
+    }
+  }, [totalVariables]);
+
   return (
     <div className="flex min-h-screen">
       <Sidebar />
@@ -218,7 +227,7 @@ const ViolinPlotsPage = () => {
               <li></li>
             </ol>
         </div> */}
-        <div className="w-full flex flex-col items-center gap-4">
+        <div className="w-full flex flex-col items-center">
           <div className="flex gap-4 items-center">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
@@ -246,12 +255,6 @@ const ViolinPlotsPage = () => {
               />
               <span>of {totalPages}</span>
             </div>
-            <button
-              onClick={handleUpdateClick}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              Update
-            </button>
             <div className="flex gap-2 items-center">
               <label htmlFor="pageSize">Plots per page:</label>
               <input
@@ -264,14 +267,17 @@ const ViolinPlotsPage = () => {
                 className="w-20 px-2 py-1 border rounded"
               />
             </div>
+            <button
+              onClick={handleUpdateClick}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Update
+            </button>
           </div>
-          
-          <div className="flex gap-4 items-center">
-          </div>
-
+        
           {/* Memoize the plot component */}
           {useMemo(() => (
-            <div className="w-full flex justify-center">
+            <div className="w-full flex justify-center mt-1">
               {isLoading ? <Spinner /> : 
                 plotData && (
                 <Plot
