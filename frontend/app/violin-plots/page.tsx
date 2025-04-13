@@ -24,6 +24,7 @@ const ViolinPlotsPage = () => {
   const [totalVariables, setTotalVariables] = useState(0);
   const [plotCache, setPlotCache] = useState<{[key: string]: PlotDataType}>({});
   const [tempPageSize, setTempPageSize] = useState(10); // Temporary state for input
+  const [tempPageNumber, setTempPageNumber] = useState(1); // Temporary state for page number input
 
   
   useEffect(() => {
@@ -108,16 +109,44 @@ const ViolinPlotsPage = () => {
     }
   }, []);
 
-  // Memoize the handleUpdateClick function
+  // Handle page number input change
+  const handlePageNumberChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    
+    // Allow empty input
+    if (inputValue === '') {
+      setTempPageNumber(0); // Use 0 as a placeholder for empty input
+      return;
+    }
+
+    const newPage = parseInt(inputValue, 10);
+    if (!isNaN(newPage) && newPage > 0) {
+      setTempPageNumber(newPage);
+    }
+  }, []);
+
+  // Update the handleUpdateClick function to handle both page size and page number changes
   const handleUpdateClick = useCallback(() => {
-    // If input is empty, use the previous page size
+    // Handle page size
     const newPageSize = tempPageSize === 0 ? pageSize : tempPageSize;
+    
+    // Handle page number
+    const newPageNumber = tempPageNumber === 0 ? currentPage : Math.min(Math.max(tempPageNumber, 1), totalPages);
+    
     setPageSize(newPageSize);
-    setCurrentPage(1);
-  }, [tempPageSize, pageSize]);
+    setCurrentPage(newPageNumber);
+  }, [tempPageSize, pageSize, tempPageNumber, currentPage, totalPages]);
 
   // Update the input value to show empty string when tempPageSize is 0
   const inputValue = tempPageSize === 0 ? '' : tempPageSize.toString();
+
+  // Update the page number input value to show empty string when tempPageNumber is 0
+  const pageNumberInputValue = tempPageNumber === 0 ? '' : tempPageNumber.toString();
+
+  // Update tempPageNumber when currentPage changes
+  useEffect(() => {
+    setTempPageNumber(currentPage);
+  }, [currentPage]);
 
   return (
     <div className="flex min-h-screen">
@@ -198,7 +227,6 @@ const ViolinPlotsPage = () => {
             >
               Previous
             </button>
-            <span>Page {currentPage} of {totalPages}</span>
             <button
               onClick={() => setCurrentPage(p => p + 1)}
               disabled={currentPage >= totalPages}
@@ -206,26 +234,39 @@ const ViolinPlotsPage = () => {
             >
               Next
             </button>
-          </div>
-          
-          {/* Page size input with update button */}
-          <div className="flex gap-2 items-center">
-            <label htmlFor="pageSize">Plots per page:</label>
-            <input
-              type="number"
-              id="pageSize"
-              min="1"
-              max="50"
-              value={inputValue}
-              onChange={handlePageSizeChange}
-              className="w-20 px-2 py-1 border rounded"
-            />
+            <div className="flex gap-2 items-center">
+              <span>Page</span>
+              <input
+                type="number"
+                min="1"
+                max={totalPages}
+                value={pageNumberInputValue}
+                onChange={handlePageNumberChange}
+                className="w-16 px-2 py-1 border rounded"
+              />
+              <span>of {totalPages}</span>
+            </div>
             <button
               onClick={handleUpdateClick}
               className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
             >
               Update
             </button>
+            <div className="flex gap-2 items-center">
+              <label htmlFor="pageSize">Plots per page:</label>
+              <input
+                type="number"
+                id="pageSize"
+                min="1"
+                max="50"
+                value={inputValue}
+                onChange={handlePageSizeChange}
+                className="w-20 px-2 py-1 border rounded"
+              />
+            </div>
+          </div>
+          
+          <div className="flex gap-4 items-center">
           </div>
 
           {/* Memoize the plot component */}
