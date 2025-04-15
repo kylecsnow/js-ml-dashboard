@@ -1,4 +1,5 @@
 # black
+catboost==1.2.7
 fastapi==0.115.4
 # jupyter
 matplotlib<4.0.0
@@ -19,8 +20,9 @@ uvicorn[standard]==0.32.0
 ### model-training only(???)
 # catboost>=1.2.7,<2.0.0
 # mordred>=1.2.0,<2.0.0
-# ngboost>=0.5.5,<0.6.0
+ngboost>=0.5.5,<0.6.0
 # torch>=2.5.0,<3.0.0
-# xgboost>=2.1.4,<3.0.0
+torch @ https://download.pytorch.org/whl/cpu-cxx11-abi/torch-2.1.1%2Bcpu.cxx11.abi-cp311-cp311-linux_x86_64.whl#sha256=1a592eed8d017038121a0fa7ef3667be3f5cb1d1c731a52a327e15661c1ec296
+xgboost>=2.1.4,<3.0.0
 
 # TODO: eventually update `pyproject.toml` by porting this stuff over there, and then git rid of this `requirements.txt` file.
