@@ -108,13 +108,13 @@ export default function Overview() {
                         data={modelOverviewData.estimators_by_output[output].parity_plot_data.data}
                         layout={modelOverviewData.estimators_by_output[output].parity_plot_data.layout}
                         config={{ responsive: true }}
-                        style={{ width: '50%', height: '400px' }}
+                        style={{ width: '100%', height: '600px' }}
                       />
                       <Plot
                         data={modelOverviewData.estimators_by_output[output].residual_plot_data.data}
                         layout={modelOverviewData.estimators_by_output[output].residual_plot_data.layout}
                         config={{ responsive: true }}
-                        style={{ width: '50%', height: '400px' }}
+                        style={{ width: '100%', height: '600px' }}
                       />
                     </div>
                   ))
