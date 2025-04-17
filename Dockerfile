@@ -41,9 +41,7 @@ COPY backend/datasets/ ./datasets/
 WORKDIR /app
 RUN python3 -m venv venv
 RUN . venv/bin/activate && pip install --no-cache-dir -r backend/requirements.txt
-RUN python3 -m pip install --no-deps .
-# RUN . venv/bin/activate && python3 -m pip install --no-deps .
-# RUN . venv/bin/activate && python3 -m pip install .
+RUN . venv/bin/activate && python3 -m pip install --no-deps .
 
 
 #############################

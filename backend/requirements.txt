@@ -1,5 +1,5 @@
 # black
-catboost==1.2.7
+# catboost==1.2.7
 fastapi==0.115.4
 # jupyter
 matplotlib<4.0.0
@@ -11,7 +11,7 @@ plotly==5.18.0
 plotly-express==0.4.1
 # PyYAML<7.0.0
 rdkit>=2024.9.5,<2025.0.0
-ruff
+# ruff
 scikit-learn<2.0.0
 shap==0.47.1
 umap-learn>=0.5.7,<1.0.0

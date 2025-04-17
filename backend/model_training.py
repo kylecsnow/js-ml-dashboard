@@ -1,6 +1,5 @@
-from catboost import CatBoostRegressor
+# from catboost import CatBoostRegressor
 import matplotlib.pyplot as plt
-from mordred import Calculator, descriptors
 from ngboost import NGBRegressor
 import numpy as np
 import pandas as pd
@@ -16,13 +15,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from xgboost import XGBRegressor
-
-
-def get_mordred_features(mol_list):
-    calc = Calculator(descriptors, ignore_3D=True)
-    mordred_results = calc.pandas(mol_list)
-    mordred_features = mordred_results.apply(pd.to_numeric, errors='coerce')
-    return mordred_features
 
 
 def is_within_uncertainty_range(y_test, y_pred_test_lower_bound, y_pred_test_upper_bound):
@@ -373,7 +365,8 @@ def get_feature_importances(model_results):
         feat_imps_df["Importance (mean)"] = estimator.feature_importances_[0]
         feat_imps_df["Importance (variance)"] = estimator.feature_importances_[1]
         feat_imps_df = feat_imps_df.sort_values(by="Importance (mean)", ascending=False)
-    elif isinstance(estimator, (RandomForestRegressor, CatBoostRegressor, XGBRegressor, NGBRegressor)):
+    # elif isinstance(estimator, (RandomForestRegressor, CatBoostRegressor, XGBRegressor, NGBRegressor)):
+    elif isinstance(estimator, (RandomForestRegressor, XGBRegressor, NGBRegressor)):
         feat_imps_df = pd.DataFrame()
         feat_imps_df["Feature"] = model_results["inputs_numerical"]
         feat_imps_df["Importance"] = estimator.feature_importances_
