@@ -80,6 +80,13 @@ export default function Sidebar() {
         >
           Dataset Generator
         </Link>
+        <Link
+          href="/object-detection"
+          className={`flex items-center gap-2 p-1 pl-2 rounded-lg 
+            ${pathName === '/object-detection' ? 'bg-black text-white' : 'hover:bg-gray-200'} text-[14.5px}`}
+        >
+          Object Detection
+        </Link>
       </nav>
     </aside>
   )

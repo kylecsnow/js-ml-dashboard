@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@gradio/client": "^1.14.2",
     "@headlessui/react": "^2.2.0",
     "@types/plotly.js": "^2.33.5",
     "next": "14.2.14",
