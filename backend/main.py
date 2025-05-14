@@ -14,7 +14,7 @@ import uvicorn
 import argparse
 import logging
 
-from utils import fig2img, get_dataset_name_from_model, get_dataset, get_model_and_metadata, build_sythetic_demo_dataset
+from utils import fig2img, get_dataset_name_from_model, get_dataset, get_model_and_metadata, build_synthetic_demo_dataset
 from molecule_viz import create_plotly_molecular_space_map, process_molecular_space_map_data, smiles_to_base64
 from modeling import create_parity_plot, create_residual_plot
 
@@ -25,6 +25,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:8777"],  # Your Next.js dev server
+    # allow_origins=["*"],  # Your Next.js dev server
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -591,7 +592,7 @@ async def get_synthetic_demo_dataset(body: dict = Body(...)):
             "formulation": formulation_inputs,
         }
 
-        synthetic_demo_data_df, synthetic_demo_coefs_df = build_sythetic_demo_dataset(inputs=inputs, outputs=outputs, num_rows=num_rows)
+        synthetic_demo_data_df, synthetic_demo_coefs_df = build_synthetic_demo_dataset(inputs=inputs, outputs=outputs, num_rows=num_rows)
         csv_string = synthetic_demo_data_df.to_csv()
         return {"csv_string": csv_string}
             

@@ -327,7 +327,7 @@ def gibbs_sample_formulation_space(
     return np.array(samples)
 
 
-def build_sythetic_demo_dataset(inputs=5, outputs=1, num_rows=10, noise=0, coefs=None, output_format="compact"):
+def build_synthetic_demo_dataset(inputs=5, outputs=1, num_rows=10, noise=0, coefs=None, output_format="compact"):
 
     ### TODO: allow user to add noise to the response functions (using the `noise` argument)
     if isinstance(inputs, int):
