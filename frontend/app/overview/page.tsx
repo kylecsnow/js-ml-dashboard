@@ -36,11 +36,6 @@ export default function Overview() {
           setIsLoading(true);
           const response = await fetch(`./api/overview/${selectedModel}`);
           const data = await response.json();
-
-
-          console.log(data)
-          
-          
           setModelOverviewData(data);
         } catch (error) {
           console.error('Error fetching model overview:', error);

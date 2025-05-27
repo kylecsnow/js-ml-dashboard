@@ -13,7 +13,6 @@ export default function Home() {
   useEffect(() => {
     async function fetchModels() {
       try {
-        // const response = await fetch('http://localhost:8000/api/models');
         const response = await fetch('./api/models');
         const data = await response.json();
         setModels(data.models);
@@ -26,7 +25,6 @@ export default function Home() {
     }
 
     fetchModels();
-  // }, []);
   }, [selectedModel, setSelectedModel]); // this is like the inputs of a callback from Plotly Dash; the effect only activates if one of these dependencies changes
 
 

@@ -9,7 +9,6 @@ import Select from 'react-select';
 import Sidebar from '../components/Sidebar';
 import { useModel } from '../contexts/ModelContext';
 
-// Dynamically import Plot from plotly.js-dist-min
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
 
@@ -27,7 +26,6 @@ const ScatterPlotsPage = () => {
       }
 
       try {
-        // First fetch the variable options
         const response = await fetch(`./api/variable-options/${selectedModel}`);
         const data = await response.json();
         const options = data.variable_options.map((option: string) => ({ value: option, label: option }));

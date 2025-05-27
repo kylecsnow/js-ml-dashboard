@@ -64,7 +64,7 @@ const ShapSummaryPlotsPage = () => {
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ selected_output: selectedOutputVariable }), // Send as JSON
+            body: JSON.stringify({ selected_output: selectedOutputVariable }),
           }
         );
 

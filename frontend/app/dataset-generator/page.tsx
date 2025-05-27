@@ -162,24 +162,6 @@ const DatasetGeneratorPage = () => {
       const data = await response.json();
 
 
-
-      // const blob = new Blob([data.csv_string], { type: 'text/csv' });
-      // const url = window.URL.createObjectURL(blob);
-
-      // const a = document.createElement('a');
-      // a.href = url;
-      // a.download = filename;
-      
-      // // Trigger download
-      // document.body.appendChild(a);
-      // a.click();
-      
-      // // Cleanup
-      // document.body.removeChild(a);
-      // window.URL.revokeObjectURL(url);
-
-
-
       // stuff to make the CSV download compatible with iframes...?
       const blob = new Blob([data.csv_string], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
