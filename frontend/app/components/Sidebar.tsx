@@ -57,7 +57,7 @@ export default function Sidebar() {
             ${pathName === '/shap-summary-plots' ? 'bg-black text-white' : 'hover:bg-gray-200'} text-[14.5px]`}
         >
           SHAP Summary Plots
-          <SidebarTooltip title="SHAP-based model interpretability plots illustrating the directional influence of each feature, highlighting global trends across the entire dataset." />
+          <SidebarTooltip title="SHAP-based model interpretability plots illustrating the directional influence of each feature on a given output, highlighting global trends across the entire dataset." />
         </Link>
         {/* <Link
           href="/shap-feature-effects-plots"
@@ -73,7 +73,7 @@ export default function Sidebar() {
             ${pathName === '/shap-waterfall-plots' ? 'bg-black text-white' : 'hover:bg-gray-200'} text-[14.5px]`}
         >
           SHAP Waterfall Plots
-          <SidebarTooltip title="SHAP-based model interpretability plots illustrating the directional influence of each feature, focusing on individual predictions given by the model." />
+          <SidebarTooltip title="SHAP-based model interpretability plots illustrating the directional influence of each feature on a given output, focusing on individual predictions given by the model." />
         </Link>
         <Link
           href="/molecular-design"
