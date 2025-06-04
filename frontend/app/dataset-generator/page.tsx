@@ -30,6 +30,7 @@ const DatasetGeneratorPage = () => {
   const [numRows, setNumRows] = useState<number | ''>(10);
   const [showCoefficientsToggle, setShowCoefficientsToggle] = useState<boolean>(false);
   const [filename, setFilename] = useState<string>("generated_dataset.csv");
+  const [noise, setNoise] = useState<number>(0.05);
   const [error, setError] = useState<string>("");
 
   const addDescriptorGroup = (category: 'general input' | 'formulation input' | 'output') => {
@@ -143,6 +144,7 @@ const DatasetGeneratorPage = () => {
             formulation_inputs: formulationInputs,
             outputs: outputs,
             num_rows: numRows,
+            noise: noise,
           }),
         }
       );
@@ -266,6 +268,18 @@ const DatasetGeneratorPage = () => {
               onChange={(e) => setNumRows(Number(e.target.value) || '')}
               onWheel={preventWheelChange}
               min="1"
+              className="w-36 p-2 border border-gray-600 rounded mr-2"
+            />
+            <label className="block text-sm font-medium mb-1 mr-2">
+              Noise
+            </label>
+            <input
+              type="number"
+              value={noise}
+              onChange={(e) => setNoise(Number(e.target.value) || 0)}
+              onWheel={preventWheelChange}
+              min="0"
+              step="0.01"
               className="w-36 p-2 border border-gray-600 rounded mr-2"
             />
             <label className="block text-sm font-medium mb-1 mr-2">
