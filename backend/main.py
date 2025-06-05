@@ -582,6 +582,7 @@ async def get_synthetic_demo_dataset(body: dict = Body(...)):
         formulation_inputs = body.get("formulation_inputs", {})
         outputs = body.get("outputs", [])
         num_rows = body.get("num_rows", [])
+        noise = body.get("noise", 0.05)
 
         ### TODO: maybe make a function for this operation, instead of explicitly repreating it a bunch of times? (for better readability?)
         general_inputs = {item["name"]: {"min": float(item["min"]), "max": float(item["max"]), "units": item["units"]} for item in general_inputs}
@@ -592,7 +593,7 @@ async def get_synthetic_demo_dataset(body: dict = Body(...)):
             "formulation": formulation_inputs,
         }
 
-        synthetic_demo_data_df, synthetic_demo_coefs_df = build_synthetic_demo_dataset(inputs=inputs, outputs=outputs, num_rows=num_rows)
+        synthetic_demo_data_df, synthetic_demo_coefs_df = build_synthetic_demo_dataset(inputs=inputs, outputs=outputs, num_rows=num_rows, noise=noise)
         csv_string = synthetic_demo_data_df.to_csv()
         return {"csv_string": csv_string}
             

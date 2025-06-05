@@ -386,7 +386,9 @@ def build_synthetic_demo_dataset(inputs=5, outputs=1, num_rows=10, noise=0, coef
 
     y = np.array(y)
 
-    
+    if noise > 0:
+        y = y + np.random.normal(0, noise, y.shape)
+
     # Create pandas DataFrame for the generated data & name the columns
     data_df = pd.DataFrame()
 
