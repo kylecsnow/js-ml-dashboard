@@ -1,8 +1,10 @@
+import argparse
 from fastapi import Body, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 import json
 import matplotlib
 import matplotlib.pyplot as plt
+import logging
 from pathlib import Path
 import pandas as pd
 import plotly.express as px
@@ -10,9 +12,8 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import shap
 from sklearn.ensemble import BaseEnsemble
+from typing import Any
 import uvicorn
-import argparse
-import logging
 
 from utils import fig2img, get_dataset_name_from_model, get_dataset, get_model_and_metadata, build_synthetic_demo_dataset
 from molecule_viz import create_plotly_molecular_space_map, process_molecular_space_map_data, smiles_to_base64
@@ -38,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 ### TODO: validate that this is even doing what you want it to do.....
 @app.get("/health", status_code=status.HTTP_200_OK)
-async def health_check():
+async def health_check() -> dict[str, str]:
     return {
         "status": "healthy",
         "service": "js-ml-dashboard"
@@ -51,14 +52,14 @@ async def health_check():
 # 3. Performance: Pickle files can be large. There's no need to include them in your frontend bundle or make them available for direct download.
 # 4. Maintainability: Your Python backend will be handling all the model loading and inference, so it makes more sense to keep the models close to the code that uses them.
 @app.get("/api/models")
-async def list_models():
+async def list_models() -> dict[str, list[str]]:
     models_dir = Path(__file__).parent / "models"  # Use relative path from main.py
     model_files = [f.name.split(".pkl")[0] for f in models_dir.glob("*.pkl")]
     return {"models": model_files}
 
 
 @app.get("/api/overview/{model_name}")
-async def get_model_overview(model_name: str):
+async def get_model_overview(model_name: str) -> dict[str, Any]:
     try:
         model_and_metadata = get_model_and_metadata(model_name)
         dataset_name = get_dataset_name_from_model(model_name)
@@ -110,7 +111,7 @@ async def get_model_overview(model_name: str):
 
 
 @app.post("/api/violin-plots/{model_name}")
-async def get_violin_plots(model_name: str, body: dict = Body(...)):
+async def get_violin_plots(model_name: str, body: dict = Body(...)) -> dict[str, Any]:
     box_plot_toggle = body.get("box_plot_toggle", [])
     data_points_toggle = body.get("data_points_toggle", [])
     page = body.get("page", 1)
@@ -177,7 +178,7 @@ async def get_violin_plots(model_name: str, body: dict = Body(...)):
 
 
 @app.get("/api/correlation-heatmap/{model_name}/{correlation_type}")
-async def get_correlation_heatmap(model_name: str, correlation_type: str):  
+async def get_correlation_heatmap(model_name: str, correlation_type: str) -> dict[str, Any]:
 
     try:
         model_and_metadata = get_model_and_metadata(model_name)
@@ -249,7 +250,7 @@ async def get_correlation_heatmap(model_name: str, correlation_type: str):
 
 
 @app.get("/api/variable-options/{model_name}")
-async def get_variable_options(model_name: str):
+async def get_variable_options(model_name: str) -> dict[str, list[str]]:
     try:
         model_and_metadata = get_model_and_metadata(model_name=model_name)
         outputs = list(model_and_metadata["estimators_by_output"].keys())
@@ -269,7 +270,7 @@ async def get_variable_options(model_name: str):
 
 ### TODO: eventually, consider breaking these page-specific functions out into some other .py files?
 @app.post("/api/scatter-plots/{model_name}")
-async def get_scatter_plot(model_name: str, body: dict = Body(...)):
+async def get_scatter_plot(model_name: str, body: dict = Body(...)) -> dict[str, Any]:
     selected_variables = body.get("selected_variables", [])
 
     try:
@@ -319,7 +320,7 @@ async def get_scatter_plot(model_name: str, body: dict = Body(...)):
 
 
 @app.get("/api/output-variable-options/{model_name}")
-async def get_output_variable_options(model_name: str):
+async def get_output_variable_options(model_name: str) -> dict[str, list[str]]:
     try:
         model_and_metadata = get_model_and_metadata(model_name=model_name)
         outputs = list(model_and_metadata["estimators_by_output"].keys())
@@ -336,7 +337,7 @@ async def get_output_variable_options(model_name: str):
 
 
 @app.post("/api/shap-summary-plots/{model_name}")
-async def get_shap_summary_plot(model_name: str, body: dict = Body(...)):
+async def get_shap_summary_plot(model_name: str, body: dict = Body(...)) -> dict[str, Any]:
     try:
         selected_output = body.get("selected_output", [])
         print("selected output is...: ", selected_output)
@@ -406,7 +407,7 @@ async def get_shap_summary_plot(model_name: str, body: dict = Body(...)):
 
 
 @app.get("/api/sample-options/{model_name}")
-async def get_sample_options(model_name: str):
+async def get_sample_options(model_name: str) -> dict[str, list[str]]:
     try:
         dataset_name = get_dataset_name_from_model(model_name)
         dataset = get_dataset(dataset_name)
@@ -422,7 +423,7 @@ async def get_sample_options(model_name: str):
 
 
 @app.post("/api/shap-waterfall-plots/{model_name}")
-async def get_shap_waterfall_plot(model_name: str, body: dict = Body(...)):
+async def get_shap_waterfall_plot(model_name: str, body: dict = Body(...)) -> dict[str, Any]:
     try:
         selected_output = body.get("selected_output", [])
         selected_sample = body.get("selected_sample", [])
@@ -489,7 +490,7 @@ async def get_shap_waterfall_plot(model_name: str, body: dict = Body(...)):
 
 ### TODO: finish this code!
 @app.post("/api/molecular-design/{model_name}")
-async def get_molecular_design_results(model_name: str):
+async def get_molecular_design_results(model_name: str) -> dict[str, Any]:
     
     print('calling backend function...')
     
@@ -521,7 +522,7 @@ async def get_molecular_design_results(model_name: str):
 
 
 @app.post("/api/display-molecule-image")
-async def display_molecule_image(body: dict = Body(...)):
+async def display_molecule_image(body: dict = Body(...)) -> dict[str, str]:
     smiles = body.get("smiles", [])
 
     print("selected point smiles...", smiles)
@@ -538,7 +539,7 @@ async def display_molecule_image(body: dict = Body(...)):
 
 ### TODO: finish this code!
 @app.post("/api/molecular-space-map/{model_name}")
-async def get_plotly_molecular_space_map(model_name: str, body: dict = Body(...)):
+async def get_plotly_molecular_space_map(model_name: str, body: dict = Body(...)) -> dict[str, Any]:
     """Create a Plotly molecular space map"""
     molgen_results_dict = body.get("molgen_results", [])
     # color_property = body.get("color_property", [])
@@ -575,7 +576,7 @@ async def get_plotly_molecular_space_map(model_name: str, body: dict = Body(...)
 
 
 @app.post("/api/dataset-generator")
-async def get_synthetic_demo_dataset(body: dict = Body(...)):
+async def get_synthetic_demo_dataset(body: dict = Body(...)) -> dict[str, Any]:
 
     try:
         general_inputs = body.get("general_inputs", [])
@@ -609,7 +610,7 @@ async def get_synthetic_demo_dataset(body: dict = Body(...)):
     
 
 # Add this function to parse command line arguments
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the FastAPI application.")
     parser.add_argument("--port", type=int, default=8000, help="Port to run the FastAPI app on.")
     return parser.parse_args()
