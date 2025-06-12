@@ -39,7 +39,7 @@ def train_and_evaluate_estimator(estimator, train_df, test_df, inputs, target, d
     elif data_transform=="boxcox":
         y, best_lambda = boxcox(train_df[target])
         y_test = boxcox(test_df[target], lmbda=best_lambda)
-    elif data_transform==None:
+    elif data_transform is None:
         y = train_df[target].to_numpy()
         y_test = test_df[target].to_numpy()
 
@@ -79,7 +79,7 @@ def train_and_evaluate_estimator(estimator, train_df, test_df, inputs, target, d
             y_pred_test_uncertainty = sigma_test * derivative  # Propagate the uncertainty via the delta method
             y_test = inv_boxcox(y_test, best_lambda)
 
-        elif data_transform==None:
+        elif data_transform is None:
             y_pred_train = y_pred_train_dist.loc
             y_pred_train_uncertainty = y_pred_train_dist.scale
             y_pred_test = y_pred_test_dist.loc
@@ -132,7 +132,7 @@ def train_and_evaluate_estimator(estimator, train_df, test_df, inputs, target, d
         },
     }
 
-    if verbose==True:
+    if verbose:
         print(f"Train R^2:  {metrics['train']['R^2']}")
         print(f"Train MAE:  {metrics['train']['MAE']}")
         print(f"Train RMSE:  {metrics['train']['RMSE']}")

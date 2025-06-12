@@ -1,4 +1,5 @@
 import io
+from pandas import DataFrame
 from matplotlib.figure import Figure
 import numpy as np
 import os
@@ -56,7 +57,7 @@ def sigmoid(input_row, coefs):
     return value
 
 
-def wide_to_compact_format(df):
+def wide_to_compact_format(df: DataFrame):
     """
     Convert formulation data from wide format to compact format.
     
@@ -350,7 +351,7 @@ def build_synthetic_demo_dataset(inputs=5, outputs=1, num_rows=10, noise=0, coef
 
 
     # Randomly set coefficients for the response function, if not set by the user   
-    if coefs==None:
+    if coefs is None:
         coefs = np.array([[np.random.uniform(-1, 1) for i in range(num_inputs)] for k in range(num_outputs)])
 
 

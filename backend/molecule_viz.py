@@ -3,7 +3,7 @@ from io import BytesIO
 import numpy as np
 from rdkit import Chem
 from rdkit.Chem import AllChem, Draw, MolFromSmiles
-import pandas as pd
+# import pandas as pd
 import plotly.graph_objects as go
 from sklearn.preprocessing import StandardScaler
 from umap import UMAP

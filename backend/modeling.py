@@ -22,7 +22,7 @@ def create_parity_plot(model_results, title="Model Prediction Parity Plot", log_
         "Uncertainty": y_pred_test_uncertainty,
     })
 
-    if axis_range==None:
+    if axis_range is None:
         min_val = min(df['Actual'].min(), df['Predicted'].min())
         max_val = max(df['Actual'].max(), df['Predicted'].max())
         padding = (max_val - min_val) * 0.05
@@ -103,7 +103,7 @@ def create_residual_plot(model_results, title="Standardized Residual Plot", log_
         "Standardized Residuals": std_residuals,
     })
 
-    if x_axis_range==None:
+    if x_axis_range is None:
         x_min_val = df['Predictions'].min()
         x_max_val = df['Predictions'].max()
         x_padding = (x_max_val - x_min_val) * 0.05
