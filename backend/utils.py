@@ -249,8 +249,7 @@ def gibbs_sample_formulation_space(
     
     Parameters:
     - n_ingredients: number of ingredients
-    - mins: minimum percentages (array of length n_ingredients)
-    - maxs: maximum percentages (array of length n_ingredients)
+    - constraints: list of (min, max) tuples for each ingredient, or None for unconstrained
     - n_samples: number of samples to generate
     - burn_in: number of initial samples to discard
     
@@ -330,7 +329,6 @@ def gibbs_sample_formulation_space(
 
 def build_synthetic_demo_dataset(inputs=5, outputs=1, num_rows=10, noise=0, coefs=None, output_format="compact"):
 
-    ### TODO: allow user to add noise to the response functions (using the `noise` argument)
     if isinstance(inputs, int):
         num_inputs = inputs
     else:
