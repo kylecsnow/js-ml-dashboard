@@ -243,6 +243,8 @@ def gibbs_sample_formulation_space(
     constraints: Optional[List[Tuple[float, float]]] = None,
     n_samples: int = 100,
     burn_in: int = 100,
+    min_ingredients_per_formulation: Optional[int] = None,
+    max_ingredients_per_formulation: Optional[int] = None,
 ):
     """
     Generate samples of ingredient formulations using Gibbs sampling.
@@ -252,6 +254,8 @@ def gibbs_sample_formulation_space(
     - constraints: list of (min, max) tuples for each ingredient, or None for unconstrained
     - n_samples: number of samples to generate
     - burn_in: number of initial samples to discard
+    - min_ingredients_per_formulation: minimum number of ingredients that must be used (non-zero quantity) in each formulation
+    - max_ingredients_per_formulation: maximum number of ingredients that can be used (non-zero quantity) in each formulation
     
     Returns:
     - samples: array of shape (n_samples, n_ingredients)
@@ -262,9 +266,29 @@ def gibbs_sample_formulation_space(
     elif len(constraints) != n_ingredients:
         raise ValueError(f"Length of formulation constraints (provided: {len(constraints)}) must equal n_ingredients (provided: {n_ingredients}).")
     
+    # Set default values for number of allowed ingredients per formulation
+    if min_ingredients_per_formulation is None:
+        min_ingredients_per_formulation = n_ingredients
+    if max_ingredients_per_formulation is None:
+        max_ingredients_per_formulation = n_ingredients
 
+    # Validate ingredient count constraints
+    if min_ingredients_per_formulation > max_ingredients_per_formulation:
+        raise ValueError(f"min_ingredients_per_formulation (provided: {min_ingredients_per_formulation}) cannot be greater than max_ingredients_per_formulation (provided: {max_ingredients_per_formulation})")
+    if min_ingredients_per_formulation < 1:
+        raise ValueError("min_ingredients_per_formulation must be at least 1.")
+    if max_ingredients_per_formulation > n_ingredients:
+        raise ValueError(f"max_ingredients_per_formulation (provided: {max_ingredients_per_formulation}) cannot exceed n_ingredients (provided: {n_ingredients}).")
+
+
+    ### TODO: finish implementing min & max ingredient count constraints
+
+    ### TODO: regardless of the mins & maxs provided by the user, these "ingredient fraction" constraints should only be applied if that ingredient is selected to be "used" in the formulation.
+    ### TODO: for now, let's treat every ingredient as "can include", not "must include".
     mins = [c[0] for c in constraints if c is not None]
     maxs = [c[1] for c in constraints if c is not None]
+
+    ### TODO: implement the ingredient count constraints!!!
     
     # Validate that a solution is possible
     if sum(mins) > 1:
