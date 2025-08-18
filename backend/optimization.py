@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from typing import List, Tuple, Callable, Optional
 
 
+### TODO: still needs thorough testing and enhancements to be robust for real-world formulations usage
 class FormulationMCMC:
     """
     MCMC optimizer for chemical formulations with sum-to-1 constraint.
@@ -35,6 +36,7 @@ class FormulationMCMC:
         # Storage for results
         self.chain = []
         self.objectives = []
+        self.predictions = []
         self.acceptance_rate = 0.0
     
 
@@ -49,7 +51,7 @@ class FormulationMCMC:
             return False
         
         # Check that ingreients fall within their bounds constraints
-        ### TODO: Add more sophisticated constraint checking here
+        ### SOMEDAY: Add more sophisticated constraint checking here
         for i, ingredient in enumerate(self.ingredient_names):
             if ingredient in self.bounds:
                 min_val, max_val = self.bounds[ingredient]
@@ -64,18 +66,28 @@ class FormulationMCMC:
         Propose new formulation using constraint-respecting moves.
         Uses a mix of different proposal types.
         """
-        ### TODO: Could make this more sophisticated with adaptive step sizes
-        move_type = np.random.choice(['pairwise_swap', 'dirichlet_noise', 'single_adjust'])
+        ### SOMEDAY: Could make this more sophisticated with adaptive step sizes
+        move_type = np.random.choice([
+            'pairwise_transfer', 'dirichlet_noise', 'single_adjust',
+            # 'add_ingredient', 'remove_ingredient', 'swap_ingredients',
+        ])
         
-        if move_type == 'pairwise_swap':
-            return self._pairwise_swap(current)
+        if move_type == 'pairwise_transfer':
+            return self._pairwise_quantity_transfer(current)
         elif move_type == 'dirichlet_noise':
             return self._dirichlet_proposal(current)
+        ### TODO: finish implementing these move types and then uncomment them from the above np.random.choice list
+        # elif move_type == 'add_ingredient':
+        #     return self._add_ingredient(current)
+        # elif move_type == 'remove_ingredient':
+        #     return self._remove_ingredient(current)
+        # elif move_type == 'swap_ingredients':
+        #     return self._swap_ingredients(current)
         else:
-            return self._single_ingredient_adjust(current)
+            return self._adjust_ingredient_and_rebalance_others(current)
     
 
-    def _pairwise_swap(self, current: np.ndarray) -> np.ndarray:
+    def _pairwise_quantity_transfer(self, current: np.ndarray) -> np.ndarray:
         """
         Transfer mass between two random ingredients. Tranfser amount is always in
         terms of amount transferred from i to j, although trasferred value can be negative.
@@ -104,12 +116,12 @@ class FormulationMCMC:
         and can change ingredients with quantities of exactly zero to have non-zero values,
         but it can never set any non-zero ingredient quantities back to exactly zero.
         """
-        ### TODO: Could make locality_factor adaptive based on acceptance rate
+        ### SOMEDAY: Could make locality_factor adaptive based on acceptance rate
         alpha = current * locality_factor + 1e-6  # Add small constant to avoid zeros
         return np.random.dirichlet(alpha)
     
     
-    def _single_ingredient_adjust(self, current: np.ndarray) -> np.ndarray:
+    def _adjust_ingredient_and_rebalance_others(self, current: np.ndarray) -> np.ndarray:
         """Adjust one ingredient and renormalize others proportionally."""
         new = current.copy()
         
@@ -135,13 +147,28 @@ class FormulationMCMC:
         return new
     
 
+    # def _add_ingredient(self, current: np.ndarray) -> np.ndarray:
+
+
+
+    # def _remove_ingredient(self, current: np.ndarray) -> np.ndarray:
+    
+    
+
+    # def _swap_ingredients(self, current: np.ndarray) -> np.ndarray:
+    
+    
+
     def _evaluate_objective(self, formulation: np.ndarray) -> float:
         """Evaluate objective function for a formulation."""
         try:
-            properties = self.surrogate_model(formulation)
-            return self.objective_function(properties)
+            ### TODO: right now, this is set up as if the surrogate model's only input variables must come from the formulation's composition 
+            ### (i.e. no other variables like temperature, pressure, etc). Eventually, need to extend support for non-compositional variables.
+            predicted_properties = self.surrogate_model(formulation)
+            objective_value = self.objective_function(predicted_properties)
+            return predicted_properties, objective_value
         except Exception as e:
-            # TODO: Add proper error handling/logging
+            ### SOMEDAY: Add proper error handling/logging...(???)
             print(f"Error evaluating formulation: {e}")
             return float('inf')  # Return very bad objective
     
@@ -186,6 +213,9 @@ class FormulationMCMC:
                         "Check if bounds constraints are feasible.")
 
 
+    ### TODO: need to thoroughly understand this `optimize` function and make sure it's working as expected
+    ### TODO: need to make sure this process returns a set of candidates are de-duplicated and sorted by objective value
+    ### TODO: needs to return set of candidates with individual predictions from the surrogate model for each candidate
     def optimize(
         self, 
         initial_formulation: Optional[np.ndarray] = None,
@@ -212,7 +242,7 @@ class FormulationMCMC:
         if not self._check_constraints(current):
             raise ValueError("Initial formulation violates constraints")
         
-        current_obj = self._evaluate_objective(current)
+        current_predictions, current_objective = self._evaluate_objective(current)
         
         # Storage
         self.chain = []
@@ -220,7 +250,7 @@ class FormulationMCMC:
         n_accepted = 0
         
         best_formulation = current.copy()
-        best_objective = current_obj
+        best_objective = current_objective
         
         # MCMC loop
         for i in range(n_iterations):
@@ -231,31 +261,34 @@ class FormulationMCMC:
             if not self._check_constraints(proposed):
                 # Reject immediately if constraints violated
                 self.chain.append(current.copy())
-                self.objectives.append(current_obj)
+                self.objectives.append(current_objective)
+                self.predictions.append(current_predictions)
                 continue
             
             # Evaluate proposed state
-            proposed_obj = self._evaluate_objective(proposed)
+            proposed_predictions, proposed_objective = self._evaluate_objective(proposed)
             
             # Metropolis-Hastings acceptance criterion
             # Accept if better, or with probability based on Boltzmann distribution
-            delta = proposed_obj - current_obj
+            delta = proposed_objective - current_objective
             accept_prob = min(1.0, np.exp(-delta / self.temperature))
             
             if np.random.random() < accept_prob:
                 # Accept
                 current = proposed
-                current_obj = proposed_obj
+                current_objective = proposed_objective
+                current_predictions = proposed_predictions
                 n_accepted += 1
                 
                 # Update best if needed
-                if current_obj < best_objective:
+                if current_objective < best_objective:
                     best_formulation = current.copy()
-                    best_objective = current_obj
+                    best_objective = current_objective
             
             # Store state (accepted or rejected)
             self.chain.append(current.copy())
-            self.objectives.append(current_obj)
+            self.objectives.append(current_objective)
+            self.predictions.append(current_predictions)
             
             # Progress reporting
             if (i + 1) % 1000 == 0:
@@ -267,11 +300,12 @@ class FormulationMCMC:
         # Calculate final acceptance rate
         self.acceptance_rate = n_accepted / n_iterations
         
-        # TODO: Could add convergence diagnostics here
+        ### SOMEDAY: Could add convergence diagnostics here
         
         return best_formulation, best_objective
     
 
+    ### TODO: thoroughly review this and understand if it's necessary here... or should this be split out into a separate function somewhere else entirely?
     def plot_results(self):
         """Plot optimization progress and formulation evolution."""
         if not self.chain:
