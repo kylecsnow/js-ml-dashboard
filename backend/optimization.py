@@ -306,31 +306,31 @@ class FormulationMCMC:
     
 
     ### TODO: thoroughly review this and understand if it's necessary here... or should this be split out into a separate function somewhere else entirely?
-    def plot_results(self):
-        """Plot optimization progress and formulation evolution."""
-        if not self.chain:
-            print("No results to plot. Run optimize() first.")
-            return
+    # def plot_results(self):
+    #     """Plot optimization progress and formulation evolution."""
+    #     if not self.chain:
+    #         print("No results to plot. Run optimize() first.")
+    #         return
         
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
+    #     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
         
-        # Plot objective function evolution
-        ax1.plot(self.objectives)
-        ax1.set_xlabel('Iteration')
-        ax1.set_ylabel('Objective Value')
-        ax1.set_title('MCMC Optimization Progress')
-        ax1.grid(True)
+    #     # Plot objective function evolution
+    #     ax1.plot(self.objectives)
+    #     ax1.set_xlabel('Iteration')
+    #     ax1.set_ylabel('Objective Value')
+    #     ax1.set_title('MCMC Optimization Progress')
+    #     ax1.grid(True)
         
-        # Plot ingredient fractions over time
-        chain_array = np.array(self.chain)
-        for i, ingredient in enumerate(self.ingredient_names[:5]):  # Show only first 5
-            ax2.plot(chain_array[:, i], label=ingredient, alpha=0.7)
+    #     # Plot ingredient fractions over time
+    #     chain_array = np.array(self.chain)
+    #     for i, ingredient in enumerate(self.ingredient_names[:5]):  # Show only first 5
+    #         ax2.plot(chain_array[:, i], label=ingredient, alpha=0.7)
         
-        ax2.set_xlabel('Iteration')
-        ax2.set_ylabel('Mass Fraction')
-        ax2.set_title('Ingredient Evolution (First 5 Ingredients)')
-        ax2.legend()
-        ax2.grid(True)
+    #     ax2.set_xlabel('Iteration')
+    #     ax2.set_ylabel('Mass Fraction')
+    #     ax2.set_title('Ingredient Evolution (First 5 Ingredients)')
+    #     ax2.legend()
+    #     ax2.grid(True)
         
-        plt.tight_layout()
-        plt.show()
+    #     plt.tight_layout()
+    #     plt.show()
