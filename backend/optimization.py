@@ -4,6 +4,7 @@ from typing import List, Tuple, Callable, Optional
 
 
 ### TODO: still needs thorough testing and enhancements to be robust for real-world formulations usage
+### TODO: investigate if/how this works for multi-objective optimization
 class FormulationMCMC:
     """
     MCMC optimizer for chemical formulations with sum-to-1 constraint.
@@ -69,7 +70,8 @@ class FormulationMCMC:
         ### SOMEDAY: Could make this more sophisticated with adaptive step sizes
         move_type = np.random.choice([
             'pairwise_transfer', 'dirichlet_noise', 'single_adjust',
-            # 'add_ingredient', 'remove_ingredient', 'swap_ingredients',
+            'add_ingredient', 
+            # 'remove_ingredient', 'swap_ingredients',
         ])
         
         if move_type == 'pairwise_transfer':
@@ -77,13 +79,13 @@ class FormulationMCMC:
         elif move_type == 'dirichlet_noise':
             return self._dirichlet_proposal(current)
         ### TODO: finish implementing these move types and then uncomment them from the above np.random.choice list
-        # elif move_type == 'add_ingredient':
-        #     return self._add_ingredient(current)
+        elif move_type == 'add_ingredient':
+            return self._add_ingredient(current)
         # elif move_type == 'remove_ingredient':
         #     return self._remove_ingredient(current)
         # elif move_type == 'swap_ingredients':
         #     return self._swap_ingredients(current)
-        else:
+        elif move_type == 'single_adjust':
             return self._adjust_ingredient_and_rebalance_others(current)
     
 
@@ -147,7 +149,72 @@ class FormulationMCMC:
         return new
     
 
-    # def _add_ingredient(self, current: np.ndarray) -> np.ndarray:
+    def _add_ingredient(self, current: np.ndarray) -> np.ndarray:
+        """
+        Add a new ingredient to the formulation by:
+        1. Finding ingredients currently at 0 (not in formulation)
+        2. Randomly selecting one to add with a small positive value
+        3. Rebalancing all existing ingredients proportionally to maintain sum=1
+        4. Checking that all constraints are still satisfied
+        """
+        new = current.copy()
+        
+        # Find ingredients that are currently exactly zero
+        zero_indices = np.where(current < 1e-8)[0]  # Using small epsilon to account for numerical precision
+        
+        if len(zero_indices) == 0:
+            # No ingredients to add (all are already in use)
+            return current  # Return unchanged
+        
+        # Randomly select one zero ingredient to add
+        ingredient_to_add = np.random.choice(zero_indices)
+        
+        # Determine the amount of the new ingredient to add (small fraction, respecting bounds)
+        min_add_amount = 0.0001  # Minimum meaningful amount to add
+        max_add_amount = 0.2   # Maximum to avoid too dramatic changes
+        
+        # Check if this ingredient has bounds constraints
+        ingredient_name = self.ingredient_names[ingredient_to_add]
+        if ingredient_name in self.bounds:
+            min_bound, max_bound = self.bounds[ingredient_name]
+            min_add_amount = max(min_add_amount, min_bound)
+            max_add_amount = min(max_add_amount, max_bound)
+        
+        # Make sure we don't exceed what's available to redistribute
+        current_sum = np.sum(current)
+        available_to_redistribute = min(max_add_amount, current_sum * 0.3)  # Don't take more than 30% from existing
+        
+        if available_to_redistribute < min_add_amount:
+            # Can't add meaningful amount while respecting constraints
+            return current
+        
+        # Choose amount to add
+        add_amount = np.random.uniform(min_add_amount, available_to_redistribute)
+        
+        # Add the new ingredient
+        new[ingredient_to_add] = add_amount
+        
+        # Calculate how much we need to scale down existing ingredients
+        remaining_sum = 1.0 - add_amount
+        current_existing_sum = current_sum  # Should be 1.0, but let's be safe
+        
+        if current_existing_sum > 1e-8:  # Avoid division by zero
+            scale_factor = remaining_sum / current_existing_sum
+            
+            # Scale down all existing (non-zero) ingredients proportionally
+            for i in range(self.n_ingredients):
+                if i != ingredient_to_add and current[i] > 1e-8:
+                    new[i] = current[i] * scale_factor
+        
+        # Verify constraints are still satisfied for all ingredients
+        for i, ingredient in enumerate(self.ingredient_names):
+            if ingredient in self.bounds:
+                min_val, max_val = self.bounds[ingredient]
+                if new[i] < min_val or new[i] > max_val:
+                    # Constraint violation - return unchanged formulation
+                    return current
+        
+        return new
 
 
 
@@ -306,31 +373,33 @@ class FormulationMCMC:
     
 
     ### TODO: thoroughly review this and understand if it's necessary here... or should this be split out into a separate function somewhere else entirely?
-    # def plot_results(self):
-    #     """Plot optimization progress and formulation evolution."""
-    #     if not self.chain:
-    #         print("No results to plot. Run optimize() first.")
-    #         return
+    ### (currently, yes, it is needed if you want to run the notebook code that tests the FormulationMCMC class by plotting the results, bc the plotting depends on this function)
+    ### (but long-term, this code should probably go somewhere else, and we should change how things are evaluated in that other notebook)
+    def plot_results(self):
+        """Plot optimization progress and formulation evolution."""
+        if not self.chain:
+            print("No results to plot. Run optimize() first.")
+            return
         
-    #     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
         
-    #     # Plot objective function evolution
-    #     ax1.plot(self.objectives)
-    #     ax1.set_xlabel('Iteration')
-    #     ax1.set_ylabel('Objective Value')
-    #     ax1.set_title('MCMC Optimization Progress')
-    #     ax1.grid(True)
+        # Plot objective function evolution
+        ax1.plot(self.objectives)
+        ax1.set_xlabel('Iteration')
+        ax1.set_ylabel('Objective Value')
+        ax1.set_title('MCMC Optimization Progress')
+        ax1.grid(True)
         
-    #     # Plot ingredient fractions over time
-    #     chain_array = np.array(self.chain)
-    #     for i, ingredient in enumerate(self.ingredient_names[:5]):  # Show only first 5
-    #         ax2.plot(chain_array[:, i], label=ingredient, alpha=0.7)
+        # Plot ingredient fractions over time
+        chain_array = np.array(self.chain)
+        for i, ingredient in enumerate(self.ingredient_names[:5]):  # Show only first 5
+            ax2.plot(chain_array[:, i], label=ingredient, alpha=0.7)
         
-    #     ax2.set_xlabel('Iteration')
-    #     ax2.set_ylabel('Mass Fraction')
-    #     ax2.set_title('Ingredient Evolution (First 5 Ingredients)')
-    #     ax2.legend()
-    #     ax2.grid(True)
+        ax2.set_xlabel('Iteration')
+        ax2.set_ylabel('Mass Fraction')
+        ax2.set_title('Ingredient Evolution (First 5 Ingredients)')
+        ax2.legend()
+        ax2.grid(True)
         
-    #     plt.tight_layout()
-    #     plt.show()
+        plt.tight_layout()
+        plt.show()
