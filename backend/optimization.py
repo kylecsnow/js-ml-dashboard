@@ -71,7 +71,8 @@ class FormulationMCMC:
         move_type = np.random.choice([
             'pairwise_transfer', 'dirichlet_noise', 'single_adjust',
             'add_ingredient', 
-            # 'remove_ingredient', 'swap_ingredients',
+            'remove_ingredient',
+            # 'swap_ingredients',
         ])
         
         if move_type == 'pairwise_transfer':
@@ -81,8 +82,8 @@ class FormulationMCMC:
         ### TODO: finish implementing these move types and then uncomment them from the above np.random.choice list
         elif move_type == 'add_ingredient':
             return self._add_ingredient(current)
-        # elif move_type == 'remove_ingredient':
-        #     return self._remove_ingredient(current)
+        elif move_type == 'remove_ingredient':
+            return self._remove_ingredient(current)
         # elif move_type == 'swap_ingredients':
         #     return self._swap_ingredients(current)
         elif move_type == 'single_adjust':
@@ -169,6 +170,7 @@ class FormulationMCMC:
         # Randomly select one zero ingredient to add
         ingredient_to_add = np.random.choice(zero_indices)
         
+        ### SOMEDAY: stop hard-coding these min and max values...?
         # Determine the amount of the new ingredient to add (small fraction, respecting bounds)
         min_add_amount = 0.0001  # Minimum meaningful amount to add
         max_add_amount = 0.2   # Maximum to avoid too dramatic changes
@@ -182,6 +184,7 @@ class FormulationMCMC:
         
         # Make sure we don't exceed what's available to redistribute
         current_sum = np.sum(current)
+        ### SOMEDAY: stop hard-coding the factor of 0.3...?
         available_to_redistribute = min(max_add_amount, current_sum * 0.3)  # Don't take more than 30% from existing
         
         if available_to_redistribute < min_add_amount:
@@ -218,7 +221,76 @@ class FormulationMCMC:
 
 
 
-    # def _remove_ingredient(self, current: np.ndarray) -> np.ndarray:
+    def _remove_ingredient(self, current: np.ndarray) -> np.ndarray:
+        """
+        Remove an existing ingredient from the formulation by:
+        1. Finding ingredients currently > 0 (in the formulation)
+        2. Checking which ones can be removed without violating constraints
+        3. Randomly selecting one to remove (set to 0)
+        4. Rebalancing all remaining ingredients proportionally to maintain sum=1
+        5. Checking that all constraints are still satisfied
+        """
+        new = current.copy()
+        
+        # Find ingredients that are currently non-zero (can potentially be removed)
+        nonzero_indices = np.where(current > 1e-8)[0]  # Using small epsilon for numerical precision
+        
+        if len(nonzero_indices) <= 1:
+            # Need at least 2 ingredients to remove one (can't have empty formulation)
+            return current  # Return unchanged
+        
+        # Check which ingredients can actually be removed given bounds constraints
+        removable_indices = []
+        for idx in nonzero_indices:
+            ingredient_name = self.ingredient_names[idx]
+            
+            # Check if this ingredient has a minimum bound constraint
+            can_remove = True
+            if ingredient_name in self.bounds:
+                min_bound, max_bound = self.bounds[ingredient_name]
+                if min_bound > 1e-8:  # If minimum bound is > 0, can't remove this ingredient
+                    can_remove = False
+            
+            if can_remove:
+                removable_indices.append(idx)
+        
+        if len(removable_indices) == 0:
+            # No ingredients can be removed without violating constraints
+            return current
+        
+        # Randomly select one removable ingredient
+        ingredient_to_remove = np.random.choice(removable_indices)
+        
+        # Store the amount being removed
+        removed_amount = current[ingredient_to_remove]
+        
+        # Remove the ingredient (set to 0)
+        new[ingredient_to_remove] = 0.0
+        
+        # Calculate current sum of remaining ingredients
+        remaining_sum = np.sum(new)  # This should be 1.0 - removed_amount
+        
+        if remaining_sum > 1e-8:  # Avoid division by zero
+            # Scale up all remaining ingredients proportionally to maintain sum=1
+            scale_factor = 1.0 / remaining_sum
+            
+            for i in range(self.n_ingredients):
+                if i != ingredient_to_remove and current[i] > 1e-8:
+                    new[i] = new[i] * scale_factor
+        else:
+            # Edge case: removing the last ingredient would leave empty formulation
+            # This shouldn't happen due to our check above, but just in case
+            return current
+        
+        # Verify constraints are still satisfied for all ingredients
+        for i, ingredient in enumerate(self.ingredient_names):
+            if ingredient in self.bounds:
+                min_val, max_val = self.bounds[ingredient]
+                if new[i] < min_val or new[i] > max_val:
+                    # Constraint violation - return unchanged formulation
+                    return current
+        
+        return new
     
     
 
@@ -280,8 +352,8 @@ class FormulationMCMC:
                         "Check if bounds constraints are feasible.")
 
 
+    ### TODO: (DO THIS ONE!!!) need to make sure this process returns a set of candidates are de-duplicated and sorted by objective value
     ### TODO: need to thoroughly understand this `optimize` function and make sure it's working as expected
-    ### TODO: need to make sure this process returns a set of candidates are de-duplicated and sorted by objective value
     ### TODO: needs to return set of candidates with individual predictions from the surrogate model for each candidate
     def optimize(
         self, 
