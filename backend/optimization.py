@@ -72,7 +72,7 @@ class FormulationMCMC:
             'pairwise_transfer', 'dirichlet_noise', 'single_adjust',
             'add_ingredient', 
             'remove_ingredient',
-            # 'swap_ingredients',
+            'swap_ingredients',
         ])
         
         if move_type == 'pairwise_transfer':
@@ -84,8 +84,8 @@ class FormulationMCMC:
             return self._add_ingredient(current)
         elif move_type == 'remove_ingredient':
             return self._remove_ingredient(current)
-        # elif move_type == 'swap_ingredients':
-        #     return self._swap_ingredients(current)
+        elif move_type == 'swap_ingredients':
+            return self._swap_ingredients(current)
         elif move_type == 'single_adjust':
             return self._adjust_ingredient_and_rebalance_others(current)
     
@@ -294,7 +294,93 @@ class FormulationMCMC:
     
     
 
-    # def _swap_ingredients(self, current: np.ndarray) -> np.ndarray:
+    def _swap_ingredients(self, current: np.ndarray) -> np.ndarray:
+        """
+        Swap one ingredient for another by:
+        1. Finding ingredients currently in the formulation (> 0)
+        2. Finding ingredients not in the formulation (= 0) that can be added
+        3. Randomly selecting one to remove and one to add
+        4. Transferring the exact quantity from removed ingredient to new ingredient
+        5. Checking that all constraints are still satisfied
+        
+        This preserves all other ingredient quantities exactly.
+        """
+        new = current.copy()
+        
+        # Find ingredients currently in the formulation (can be swapped out)
+        active_indices = np.where(current > 1e-8)[0]
+        
+        # Find ingredients not in the formulation (can be swapped in)
+        inactive_indices = np.where(current < 1e-8)[0]
+        
+        if len(active_indices) == 0 or len(inactive_indices) == 0:
+            # Need at least one active and one inactive ingredient to swap
+            return current
+        
+        # Check which inactive ingredients can actually be swapped in given bounds constraints
+        swappable_in_indices = []
+        for idx in inactive_indices:
+            ingredient_name = self.ingredient_names[idx]
+            
+            # Check if this ingredient can be added (no minimum bound violations)
+            can_swap_in = True
+            if ingredient_name in self.bounds:
+                min_bound, max_bound = self.bounds[ingredient_name]
+                # We'll need to check if the quantity we're swapping in fits bounds
+                # For now, just check if the ingredient can have non-zero values
+                if min_bound < 0:  # Invalid bound
+                    can_swap_in = False
+            
+            if can_swap_in:
+                swappable_in_indices.append(idx)
+        
+        if len(swappable_in_indices) == 0:
+            # No ingredients can be swapped in without violating constraints
+            return current
+        
+        # Check which active ingredients can actually be swapped out given bounds constraints
+        swappable_out_indices = []
+        for idx in active_indices:
+            ingredient_name = self.ingredient_names[idx]
+            
+            # Check if this ingredient can be removed (no minimum bound > 0)
+            can_swap_out = True
+            if ingredient_name in self.bounds:
+                min_bound, max_bound = self.bounds[ingredient_name]
+                if min_bound > 1e-8:  # If minimum bound is > 0, can't remove this ingredient
+                    can_swap_out = False
+            
+            if can_swap_out:
+                swappable_out_indices.append(idx)
+        
+        if len(swappable_out_indices) == 0:
+            # No ingredients can be swapped out without violating constraints
+            return current
+        
+        # Randomly select ingredients to swap
+        ingredient_to_remove = np.random.choice(swappable_out_indices)
+        ingredient_to_add = np.random.choice(swappable_in_indices)
+        
+        # Get the quantity to transfer
+        quantity_to_transfer = current[ingredient_to_remove]
+        
+        # Check if the new ingredient can accept this quantity given its bounds
+        ingredient_to_add_name = self.ingredient_names[ingredient_to_add]
+        if ingredient_to_add_name in self.bounds:
+            min_bound, max_bound = self.bounds[ingredient_to_add_name]
+            if quantity_to_transfer < min_bound or quantity_to_transfer > max_bound:
+                # The quantity to transfer would violate bounds for the new ingredient
+                return current
+        
+        # Perform the swap
+        new[ingredient_to_remove] = 0.0
+        new[ingredient_to_add] = quantity_to_transfer
+        
+        # Final constraint verification (should pass, but let's be safe)
+        if not self._check_constraints(new):
+            return current
+        
+        return new
     
     
 
