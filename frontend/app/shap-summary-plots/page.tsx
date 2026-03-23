@@ -87,7 +87,8 @@ const ShapSummaryPlotsPage = () => {
         setIsLoading(false);
       } catch (error) {
         console.error('Error fetching shap summary plot data:', error);
-      } 
+        setIsLoading(false);
+      }
     };
 
     fetchShapSummaryPlotData();

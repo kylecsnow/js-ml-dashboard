@@ -36,6 +36,11 @@ app.add_middleware(
 logging.basicConfig(level=logging.INFO)  # Set the logging level to INFO or DEBUG
 logger = logging.getLogger(__name__)
 
+# SHAP TreeExplainer cost scales with n_samples; Next.js dev rewrites default to a ~30s proxy timeout,
+# so large training sets otherwise cause ECONNRESET. Summary plots do not need every row. We've changed
+# the timeout limit in `next.config.mjs`, but still helpful to limit # of samples here to be safe.
+MAX_SHAP_SUMMARY_SAMPLES = 400
+
 
 ### TODO: validate that this is even doing what you want it to do.....
 @app.get("/health", status_code=status.HTTP_200_OK)
@@ -366,7 +371,14 @@ async def get_shap_summary_plot(model_name: str, body: dict = Body(...)) -> dict
 
         ### TODO: need to add some code so this can auto-determine which Explainer to use based on the model type; if something is un-recognized, display an Error
         ### TODO: clean this line of code up; can probably do it much more elegantly than this overly verbose code...?
-        if isinstance(estimator, BaseEnsemble) or "GBRegressor" in str(type(estimator)) or "GBClassifier" in str(type(estimator)) or "BoostRegressor" in str(type(estimator) or "BoostClassifier" in str(type(estimator))):
+        est_type = str(type(estimator))
+        if (
+            isinstance(estimator, BaseEnsemble)
+            or "GBRegressor" in est_type
+            or "GBClassifier" in est_type
+            or "BoostRegressor" in est_type
+            or "BoostClassifier" in est_type
+        ):
             explainer = shap.TreeExplainer(estimator)
         ### TODO: write some code for handling torch Neural Networks (KernelExplainer) 
         # elif:
@@ -378,12 +390,19 @@ async def get_shap_summary_plot(model_name: str, body: dict = Body(...)) -> dict
         ### TODO: write some code for LinearExplainer... or will KernelExplainer work for linear models...?
         # elif:
         ### SOMEDAY: write some code for handling "everything else"... if model is un-recognized, display an Error.
-        # else:
-            
-        shap_values = explainer(dataset[inputs])
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Unsupported model type for SHAP summary plots (TreeExplainer).",
+            )
+
+        X = dataset[inputs]
+        if len(X) > MAX_SHAP_SUMMARY_SAMPLES:
+            X = X.sample(n=MAX_SHAP_SUMMARY_SAMPLES, random_state=42)
+        shap_values = explainer(X)
         fig = shap.summary_plot(
             shap_values,
-            features=dataset[inputs],
+            features=X,
             feature_names=inputs,
             plot_size=(12, 8),
             show=False,
@@ -455,7 +474,14 @@ async def get_shap_waterfall_plot(model_name: str, body: dict = Body(...)) -> di
 
         ### TODO: need to add some code so this can auto-determine which Explainer to use based on the model type; if something is un-recognized, display an Error
         ### TODO: clean this line of code up; can probably do it much more elegantly than this overly verbose code...?
-        if isinstance(estimator, BaseEnsemble) or "GBRegressor" in str(type(estimator)) or "GBClassifier" in str(type(estimator)) or "BoostRegressor" in str(type(estimator) or "BoostClassifier" in str(type(estimator))):
+        est_type = str(type(estimator))
+        if (
+            isinstance(estimator, BaseEnsemble)
+            or "GBRegressor" in est_type
+            or "GBClassifier" in est_type
+            or "BoostRegressor" in est_type
+            or "BoostClassifier" in est_type
+        ):
             explainer = shap.TreeExplainer(estimator)
         ### TODO: write some code for handling torch Neural Networks (KernelExplainer) 
         # elif:
@@ -464,10 +490,19 @@ async def get_shap_waterfall_plot(model_name: str, body: dict = Body(...)) -> di
         ### SOMEDAY: write some code for handling "everything else"... if model is un-recognized, display an Error.
         # else:
         
-        shap_values = explainer(dataset[inputs])
+
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Unsupported model type for SHAP waterfall plots (TreeExplainer).",
+            )
+
+        X_one = dataset[inputs].iloc[[selected_sample]]
+        shap_values = explainer(X_one)
+
 
         fig = shap.waterfall_plot(
-            shap_values[selected_sample],
+            shap_values[0],
         )
         fig = plt.gcf()
 

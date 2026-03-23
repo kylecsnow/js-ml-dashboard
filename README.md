@@ -35,3 +35,9 @@ This will run on port 8000 by default.
 With both the frontend and backend running, open [http://localhost:8777](http://localhost:8777) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+
+
+
+## Adding Datasets & Models
+
+NOTE: Dataset filenames **must** be in the format `{dataset-name}_dataset.pkl`, where `{dataset-name}` CANNOT contain underscores!
