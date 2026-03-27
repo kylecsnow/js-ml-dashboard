@@ -32,6 +32,8 @@ const DatasetGeneratorPage = () => {
   const [filename, setFilename] = useState<string>("generated_dataset.csv");
   const [noise, setNoise] = useState<number>(0.05);
   const [error, setError] = useState<string>("");
+  const [minIngredientsPerFormulation, setMinIngredientsPerFormulation] = useState<string>("");  // TODO: do we really want to lalow these to be strings....???
+  const [maxIngredientsPerFormulation, setMaxIngredientsPerFormulation] = useState<string>("");  // TODO: do we really want to lalow these to be strings....???
 
   const addDescriptorGroup = (category: 'general input' | 'formulation input' | 'output') => {
     const newGroup = {
@@ -128,6 +130,47 @@ const DatasetGeneratorPage = () => {
       }
     }
 
+
+    // Validate user selections for MinIngredientsPerFormulation and MaxIngredientsPerFormulation are allowable
+    let resolvedMinIngredientsPerFormulation: number | null = null;
+    let resolvedMaxIngredientsPerFormulation: number | null = null;
+
+    if (formulationInputs.length > 0) {
+      const nIngredients = formulationInputs.length;
+
+      resolvedMinIngredientsPerFormulation =
+        minIngredientsPerFormulation.trim() === ""
+          ? nIngredients
+          : Number(minIngredientsPerFormulation);
+      resolvedMaxIngredientsPerFormulation =
+        maxIngredientsPerFormulation.trim() === ""
+          ? nIngredients
+          : Number(maxIngredientsPerFormulation);
+
+      if (
+        !Number.isInteger(resolvedMinIngredientsPerFormulation) ||
+        !Number.isInteger(resolvedMaxIngredientsPerFormulation)
+      ) {
+        setError("Min/Max ingredients per formulation must be integers.");
+        return;
+      }
+
+      if (resolvedMinIngredientsPerFormulation < 1) {
+        setError("Min ingredients per formulation must be at least 1.");
+        return;
+      }
+
+      if (resolvedMinIngredientsPerFormulation > resolvedMaxIngredientsPerFormulation) {
+        setError("Min ingredients per formulation cannot exceed max ingredients per formulation.");
+        return;
+      }
+
+      if (resolvedMaxIngredientsPerFormulation > nIngredients) {
+        setError("Max ingredients per formulation cannot exceed the number of formulation inputs.");
+        return;
+      }
+    }
+
     // Clear any existing error
     setError("");
 
@@ -145,6 +188,8 @@ const DatasetGeneratorPage = () => {
             outputs: outputs,
             num_rows: numRows,
             noise: noise,
+            min_ingredients_per_formulation: resolvedMinIngredientsPerFormulation,
+            max_ingredients_per_formulation: resolvedMaxIngredientsPerFormulation,
           }),
         }
       );
@@ -376,6 +421,38 @@ const DatasetGeneratorPage = () => {
               Note: Lower and upper bounds must be between 0 and 1, representing percentages that will sum to 100%.
               Ex: 0.25 represents 25%.
             </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Min ingredients per formulation (optional)
+                </label>
+                <input
+                  type="number"
+                  value={minIngredientsPerFormulation}
+                  onChange={(e) => setMinIngredientsPerFormulation(e.target.value)}
+                  onWheel={preventWheelChange}
+                  min="1"
+                  step="1"
+                  placeholder={`Defaults to ${formulationInputs.length || "n_ingredients"}`}
+                  className="w-full p-2 border border-gray-600 rounded"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Max ingredients per formulation (optional)
+                </label>
+                <input
+                  type="number"
+                  value={maxIngredientsPerFormulation}
+                  onChange={(e) => setMaxIngredientsPerFormulation(e.target.value)}
+                  onWheel={preventWheelChange}
+                  min="1"
+                  step="1"
+                  placeholder={`Defaults to ${formulationInputs.length || "n_ingredients"}`}
+                  className="w-full p-2 border border-gray-600 rounded"
+                />
+              </div>
+            </div>
             <button
               onClick={() => addDescriptorGroup('formulation input')}
               className="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"

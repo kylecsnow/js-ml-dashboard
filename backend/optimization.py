@@ -293,7 +293,6 @@ class FormulationMCMC:
         return new
     
     
-
     def _swap_ingredients(self, current: np.ndarray) -> np.ndarray:
         """
         Swap one ingredient for another by:
@@ -415,6 +414,7 @@ class FormulationMCMC:
         initial_formulation: Optional[np.ndarray] = None,
         n_iterations: int = 10000,
         burn_in: int = 1000,
+        verbose=False,
     ) -> Tuple[np.ndarray, float]:
         """
         Run MCMC optimization.
@@ -525,7 +525,7 @@ class FormulationMCMC:
         ax2.set_xlabel('Iteration')
         ax2.set_ylabel('Mass Fraction')
         ax2.set_title('Ingredient Evolution (First 5 Ingredients)')
-        ax2.legend()
+        ax2.legend(loc='upper right')
         ax2.grid(True)
         
         plt.tight_layout()

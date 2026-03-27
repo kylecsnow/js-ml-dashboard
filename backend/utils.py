@@ -281,68 +281,197 @@ def gibbs_sample_formulation_space(
         raise ValueError(f"max_ingredients_per_formulation (provided: {max_ingredients_per_formulation}) cannot exceed n_ingredients (provided: {n_ingredients}).")
 
 
-    ### TODO: finish implementing min & max ingredient count constraints
-
-    ### TODO: regardless of the mins & maxs provided by the user, these "ingredient fraction" constraints should only be applied if that ingredient is selected to be "used" in the formulation.
-    ### TODO: for now, let's treat every ingredient as "can include", not "must include".
-    mins = [c[0] for c in constraints if c is not None]
-    maxs = [c[1] for c in constraints if c is not None]
-
-    ### TODO: implement the ingredient count constraints!!!
+    ### TODO: [IN-PROGRESS] - trying to update the synthetic demo generator (reason: ...)
+    # Extract mins and maxs, treating None constraints as (0, 1)
+    mins = []
+    maxs = []
     
-    # Validate that a solution is possible
-    if sum(mins) > 1:
-        raise ValueError("Sum of formulation lower bounds exceeds 1; these constraints don't allow for a solution that sums to 1.")
-    elif sum(maxs) < 1:
-        raise ValueError("Sum of formulation upper bounds is less than 1; these constraints don't allow for a solution that sums to 1.")
+    for constraint in constraints:
+        if constraint is not None:
+            min_val, max_val = constraint
+            mins.append(min_val)
+            maxs.append(max_val)
+        else:
+            mins.append(0.0)
+            maxs.append(1.0)
+    
+    mins = np.array(mins)
+    maxs = np.array(maxs)
+    
+    # Validate that max ingredient count allows for a feasible solution
+    # Check if we can satisfy the minimum number of ingredients
+    min_possible_sum = sum(sorted(mins)[:min_ingredients_per_formulation])
+    if min_possible_sum > 1:
+        raise ValueError(f"Cannot satisfy min_ingredients_per_formulation={min_ingredients_per_formulation}: minimum sum of {min_ingredients_per_formulation} smallest min constraints ({min_possible_sum:.3f}) exceeds 1.0")
     
     # Initialize with a valid starting point
-    current = np.array(mins, dtype=float)
-    remaining = 1 - sum(current)
+    def initialize_formulation():
+        current = np.zeros(n_ingredients)
+        
+        # Randomly select how many ingredients to use
+        n_active = np.random.randint(min_ingredients_per_formulation, max_ingredients_per_formulation + 1)
+        
+        # Randomly select which ingredients to activate
+        active_indices = np.random.choice(n_ingredients, size=n_active, replace=False)
+        
+        # Set active ingredients to their minimum values
+        for i in active_indices:
+            current[i] = mins[i]
+        
+        # Calculate remaining amount to distribute
+        remaining = 1.0 - np.sum(current)
+        
+        # Distribute remaining amount among active ingredients within their constraints
+        if remaining > 1e-12:
+            max_attempts = 1000
+            for attempt in range(max_attempts):
+                # Calculate room for more for each active ingredient
+                room = np.array([maxs[i] - current[i] for i in active_indices])
+                total_room = np.sum(room)
+                
+                if total_room <= 1e-12:
+                    # No room to add more, try different ingredient selection
+                    if attempt < max_attempts - 1:
+                        current = np.zeros(n_ingredients)
+                        active_indices = np.random.choice(n_ingredients, size=n_active, replace=False)
+                        for i in active_indices:
+                            current[i] = mins[i]
+                        remaining = 1.0 - np.sum(current)
+                        continue
+                    else:
+                        raise ValueError("Could not find valid initial formulation")
+                
+                # Distribute proportionally to available room, but don't exceed remaining
+                if total_room >= remaining:
+                    # We have enough room, distribute proportionally
+                    weights = room / total_room
+                    for idx, i in enumerate(active_indices):
+                        add_amount = weights[idx] * remaining
+                        current[i] += add_amount
+                    break
+                else:
+                    # Fill up all available room and try again with different selection
+                    for idx, i in enumerate(active_indices):
+                        current[i] = maxs[i]
+                    if attempt < max_attempts - 1:
+                        current = np.zeros(n_ingredients)
+                        active_indices = np.random.choice(n_ingredients, size=n_active, replace=False)
+                        for i in active_indices:
+                            current[i] = mins[i]
+                        remaining = 1.0 - np.sum(current)
+                        continue
+                    else:
+                        raise ValueError("Could not find valid initial formulation")
+        
+        return current
     
-    # Distribute remaining amount within constraints
-    room_for_more = np.array([max_val - min_val for min_val, max_val in zip(mins, maxs)])
-    if sum(room_for_more) > 0:  # Avoid division by zero
-        distribution = room_for_more / sum(room_for_more) * remaining
-        # Ensure we don't exceed max values
-        for i in range(n_ingredients):
-            add_amount = min(distribution[i], maxs[i] - current[i])
-            current[i] += add_amount
-            remaining -= add_amount
+    current = initialize_formulation()
     
-    # If there's still remaining percentage, distribute it to ingredients that have room
-    while remaining > 1e-12:
-        can_increase = [i for i in range(n_ingredients) if current[i] < maxs[i]]
-        if not can_increase:
-            break
-        idx = np.random.choice(can_increase)
-        add_amount = min(remaining, maxs[idx] - current[idx])
-        current[idx] += add_amount
-        remaining -= add_amount
-    
-    # Verify sum is 1 (or 100%)
-    ### TODO: is this assertion statement accurate??? Is it the initial point, or some other point?
-    assert abs(sum(current) - 1) < 1e-12, f"Ingredient quantities of initial point don't sum to 1: {sum(current)}" 
+    # Verify initial formulation is valid
+    assert abs(np.sum(current) - 1) < 1e-10, f"Initial formulation doesn't sum to 1: {np.sum(current)}" 
     
     # Collect samples
     samples = []
     for t in range(n_samples + burn_in):
         # Perform several Gibbs steps per iteration for better mixing
-        for _ in range(n_ingredients):
-            # Select two random ingredients to adjust
-            i, j = np.random.choice(n_ingredients, 2, replace=False)
+        for _ in range(n_ingredients * 2):  # More steps for better mixing with activation/deactivation
             
-            # Calculate valid range for transfer
-            delta_min = max(mins[i] - current[i], current[j] - maxs[j])
-            delta_max = min(maxs[i] - current[i], current[j] - mins[j])
+            # Randomly choose between different types of moves
+            move_type = np.random.choice(['transfer', 'activate', 'deactivate'], p=[0.6, 0.2, 0.2])
             
-            if delta_max > delta_min:
-                # Sample transfer amount
-                delta = np.random.uniform(delta_min, delta_max)
+            active_ingredients = [i for i in range(n_ingredients) if current[i] > 1e-12]
+            inactive_ingredients = [i for i in range(n_ingredients) if current[i] <= 1e-12]
+            
+            if move_type == 'transfer' and len(active_ingredients) >= 2:
+                # Transfer between two active ingredients
+                i, j = np.random.choice(active_ingredients, 2, replace=False)
                 
-                # Update formulation
-                current[i] += delta
-                current[j] -= delta
+                # For active ingredients, they must stay within [min, max] or go to 0
+                # Calculate valid range for transfer
+                delta_min = max(mins[i] - current[i], current[j] - maxs[j])
+                delta_max = min(maxs[i] - current[i], current[j] - mins[j])
+                
+                # Also consider the option of deactivating ingredient j completely
+                if current[j] - mins[j] > delta_max:
+                    delta_max = current[j]  # Can transfer all of j to i (deactivating j)
+                
+                if delta_max > delta_min:
+                    delta = np.random.uniform(delta_min, delta_max)
+                    
+                    # Update formulation
+                    current[i] += delta
+                    current[j] -= delta
+                    
+                    # If j went below its minimum, set it to 0 (deactivate)
+                    if current[j] < mins[j] + 1e-12:
+                        current[i] += current[j]  # Transfer remainder to i
+                        current[j] = 0.0
+            
+            elif move_type == 'activate' and len(inactive_ingredients) > 0 and len(active_ingredients) < max_ingredients_per_formulation:
+                # Activate an inactive ingredient
+                i = np.random.choice(inactive_ingredients)
+                
+                # Find active ingredients to take from
+                candidates = [j for j in active_ingredients if current[j] > mins[j] + 1e-12]
+                if candidates:
+                    j = np.random.choice(candidates)
+                    
+                    # Calculate how much we need to activate ingredient i
+                    min_to_activate = mins[i]
+                    max_available_from_j = current[j] - mins[j]
+                    
+                    if max_available_from_j >= min_to_activate:
+                        # We can activate ingredient i
+                        # Take the minimum required plus some random additional amount
+                        max_additional = min(maxs[i] - mins[i], max_available_from_j - min_to_activate)
+                        additional = np.random.uniform(0, max_additional) if max_additional > 0 else 0
+                        transfer_amount = min_to_activate + additional
+                        
+                        current[i] = transfer_amount
+                        current[j] -= transfer_amount
+                        
+                        # If j went below its minimum, deactivate it
+                        if current[j] < mins[j] + 1e-12:
+                            current[i] += current[j]
+                            current[j] = 0.0
+            
+            elif move_type == 'deactivate' and len(active_ingredients) > min_ingredients_per_formulation:
+                # Deactivate an active ingredient
+                i = np.random.choice(active_ingredients)
+                
+                # Transfer all of this ingredient's amount to other active ingredients
+                amount_to_redistribute = current[i]
+                other_active = [j for j in active_ingredients if j != i]
+                
+                if other_active and amount_to_redistribute > 1e-12:
+                    # Calculate room available in other active ingredients
+                    room = np.array([maxs[j] - current[j] for j in other_active])
+                    total_room = np.sum(room)
+                    
+                    if total_room >= amount_to_redistribute:
+                        # Distribute proportionally among ingredients with room
+                        if total_room > 0:
+                            weights = room / total_room
+                            for idx, j in enumerate(other_active):
+                                add_amount = weights[idx] * amount_to_redistribute
+                                current[j] += add_amount
+                        current[i] = 0.0
+                    else:
+                        # Not enough room in current active ingredients
+                        # Try to activate a new ingredient to take the excess
+                        if len(inactive_ingredients) > 0:
+                            k = np.random.choice(inactive_ingredients)
+                            if maxs[k] >= mins[k] + amount_to_redistribute - total_room:
+                                # Fill up existing active ingredients
+                                for idx, j in enumerate(other_active):
+                                    current[j] = maxs[j]
+                                # Put remainder in new ingredient
+                                remaining = amount_to_redistribute - total_room
+                                current[k] = mins[k] + remaining
+                                current[i] = 0.0
+        
+        # Normalize to ensure sum is exactly 1 (handle floating point errors)
+        current = current / np.sum(current)
         
         # Only keep samples after burn-in
         if t >= burn_in:
@@ -351,7 +480,16 @@ def gibbs_sample_formulation_space(
     return np.array(samples)
 
 
-def build_synthetic_demo_dataset(inputs=5, outputs=1, num_rows=10, noise=0, coefs=None, output_format="compact"):
+def build_synthetic_demo_dataset(
+    inputs=5,
+    outputs=1,
+    num_rows=10,
+    noise=0,
+    coefs=None,
+    output_format="compact",  # SOMEDAY: let's give users the option (with a toggle?) whether they want to export in compact or wide table format.
+    min_ingredients_per_formulation: Optional[int] = None,
+    max_ingredients_per_formulation: Optional[int] = None,
+):
 
     if isinstance(inputs, int):
         num_inputs = inputs
@@ -394,7 +532,13 @@ def build_synthetic_demo_dataset(inputs=5, outputs=1, num_rows=10, noise=0, coef
     else:
         X_general = np.array([[np.random.uniform(-2, 2) for i in range(num_general_inputs)] for j in range(num_rows)])
         if inputs["formulation"]:
-            X_formulation = gibbs_sample_formulation_space(n_ingredients=num_formulation_inputs, constraints=formulation_constraints, n_samples=num_rows)
+            X_formulation = gibbs_sample_formulation_space(
+                n_ingredients=num_formulation_inputs,
+                constraints=formulation_constraints,
+                n_samples=num_rows,
+                min_ingredients_per_formulation=min_ingredients_per_formulation,
+                max_ingredients_per_formulation=max_ingredients_per_formulation,
+            )
             X = np.concatenate((X_general, X_formulation), axis=1)
         else:
             X = X_general
@@ -443,7 +587,6 @@ def build_synthetic_demo_dataset(inputs=5, outputs=1, num_rows=10, noise=0, coef
             df_scaled[col] = scaled_col
 
         all_columns = dict()
-        # all_columns.update(all_inputs)
         all_columns.update(general_inputs)
         all_columns.update(formulation_inputs)
         all_columns.update(outputs)

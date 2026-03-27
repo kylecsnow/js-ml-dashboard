@@ -619,6 +619,8 @@ async def get_synthetic_demo_dataset(body: dict = Body(...)) -> dict[str, Any]:
         outputs = body.get("outputs", [])
         num_rows = body.get("num_rows", [])
         noise = body.get("noise", 0.05)
+        min_ingredients_per_formulation = body.get("min_ingredients_per_formulation")
+        max_ingredients_per_formulation = body.get("max_ingredients_per_formulation")
 
         ### TODO: maybe make a function for this operation, instead of explicitly repreating it a bunch of times? (for better readability?)
         general_inputs = {item["name"]: {"min": float(item["min"]), "max": float(item["max"]), "units": item["units"]} for item in general_inputs}
@@ -629,7 +631,42 @@ async def get_synthetic_demo_dataset(body: dict = Body(...)) -> dict[str, Any]:
             "formulation": formulation_inputs,
         }
 
-        synthetic_demo_data_df, synthetic_demo_coefs_df = build_synthetic_demo_dataset(inputs=inputs, outputs=outputs, num_rows=num_rows, noise=noise)
+        if formulation_inputs:
+            n_ingredients = len(formulation_inputs)
+
+            min_ingredients_per_formulation = (
+                int(min_ingredients_per_formulation)
+                if min_ingredients_per_formulation not in (None, "")
+                else n_ingredients
+            )
+            max_ingredients_per_formulation = (
+                int(max_ingredients_per_formulation)
+                if max_ingredients_per_formulation not in (None, "")
+                else n_ingredients
+            )
+
+            if min_ingredients_per_formulation < 1:
+                raise ValueError("min_ingredients_per_formulation must be at least 1.")
+            if min_ingredients_per_formulation > max_ingredients_per_formulation:
+                raise ValueError(
+                    f"min_ingredients_per_formulation (provided: {min_ingredients_per_formulation}) cannot be greater than max_ingredients_per_formulation (provided: {max_ingredients_per_formulation})."
+                )
+            if max_ingredients_per_formulation > n_ingredients:
+                raise ValueError(
+                    f"max_ingredients_per_formulation (provided: {max_ingredients_per_formulation}) cannot exceed n_ingredients (provided: {n_ingredients})."
+                )
+        else:
+            min_ingredients_per_formulation = None
+            max_ingredients_per_formulation = None
+
+        synthetic_demo_data_df, synthetic_demo_coefs_df = build_synthetic_demo_dataset(
+            inputs=inputs,
+            outputs=outputs,
+            num_rows=num_rows,
+            noise=noise,
+            min_ingredients_per_formulation=min_ingredients_per_formulation,
+            max_ingredients_per_formulation=max_ingredients_per_formulation,
+        )
         csv_string = synthetic_demo_data_df.to_csv()
         return {"csv_string": csv_string}
             
