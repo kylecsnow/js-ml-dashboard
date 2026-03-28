@@ -392,7 +392,8 @@ def gibbs_sample_formulation_space(
                 delta_max = min(maxs[i] - current[i], current[j] - mins[j])
                 
                 # Also consider the option of deactivating ingredient j completely
-                if current[j] - mins[j] > delta_max:
+                can_deactivate_j = len(active_ingredients) > min_ingredients_per_formulation
+                if can_deactivate_j and current[j] - mins[j] > delta_max:
                     delta_max = current[j]  # Can transfer all of j to i (deactivating j)
                 
                 if delta_max > delta_min:
@@ -402,10 +403,16 @@ def gibbs_sample_formulation_space(
                     current[i] += delta
                     current[j] -= delta
                     
-                    # If j went below its minimum, set it to 0 (deactivate)
+                    # If j went below its minimum, either deactivate it (if allowed)
+                    # or clamp to its minimum to preserve min active ingredient count.
                     if current[j] < mins[j] + 1e-12:
-                        current[i] += current[j]  # Transfer remainder to i
-                        current[j] = 0.0
+                        if can_deactivate_j:
+                            current[i] += current[j]  # Transfer remainder to i
+                            current[j] = 0.0
+                        else:
+                            deficit = mins[j] - current[j]
+                            current[j] = mins[j]
+                            current[i] -= deficit
             
             elif move_type == 'activate' and len(inactive_ingredients) > 0 and len(active_ingredients) < max_ingredients_per_formulation:
                 # Activate an inactive ingredient
@@ -430,10 +437,17 @@ def gibbs_sample_formulation_space(
                         current[i] = transfer_amount
                         current[j] -= transfer_amount
                         
-                        # If j went below its minimum, deactivate it
+                        # If j went below its minimum, either deactivate it (if allowed)
+                        # or clamp to its minimum to preserve min active ingredient count.
                         if current[j] < mins[j] + 1e-12:
-                            current[i] += current[j]
-                            current[j] = 0.0
+                            can_deactivate_j = len(active_ingredients) > min_ingredients_per_formulation
+                            if can_deactivate_j:
+                                current[i] += current[j]
+                                current[j] = 0.0
+                            else:
+                                deficit = mins[j] - current[j]
+                                current[j] = mins[j]
+                                current[i] -= deficit
             
             elif move_type == 'deactivate' and len(active_ingredients) > min_ingredients_per_formulation:
                 # Deactivate an active ingredient
@@ -470,8 +484,33 @@ def gibbs_sample_formulation_space(
                                 current[k] = mins[k] + remaining
                                 current[i] = 0.0
         
-        # Normalize to ensure sum is exactly 1 (handle floating point errors)
-        current = current / np.sum(current)
+        # Correct tiny floating-point drift without globally scaling all ingredients.
+        # Global normalization can violate lower/upper ingredient bounds.
+        total = np.sum(current)
+        if abs(total - 1.0) > 1e-10:
+            diff = 1.0 - total
+
+            if diff > 0:
+                candidates = [i for i in range(n_ingredients) if current[i] > 1e-12 and current[i] < maxs[i] - 1e-12]
+                if candidates:
+                    i = max(candidates, key=lambda idx: maxs[idx] - current[idx])
+                    current[i] += diff
+            else:
+                candidates = [i for i in range(n_ingredients) if current[i] > mins[i] + 1e-12]
+                if candidates:
+                    i = max(candidates, key=lambda idx: current[idx] - mins[idx])
+                    current[i] += diff
+
+        # Final cleanup for numerical noise
+        current[np.abs(current) < 1e-14] = 0.0
+
+        # Enforce active ingredient count rules before storing sample.
+        active_count = np.sum(current > 1e-12)
+        if active_count < min_ingredients_per_formulation or active_count > max_ingredients_per_formulation:
+            raise ValueError(
+                "Sampling violated ingredient-count constraints. "
+                "Please retry or adjust formulation bounds."
+            )
         
         # Only keep samples after burn-in
         if t >= burn_in:
