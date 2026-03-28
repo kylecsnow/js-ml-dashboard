@@ -27,10 +27,10 @@ const DatasetGeneratorPage = () => {
   const [generalInputs, setGeneralInputs] = useState<DescriptorGroup[]>([]);
   const [formulationInputs, setFormulationInputs] = useState<DescriptorGroup[]>([]);
   const [outputs, setOutputs] = useState<DescriptorGroup[]>([]);
-  const [numRows, setNumRows] = useState<number | ''>(10);
+  const [numRows, setNumRows] = useState<number | ''>(50);
   const [showCoefficientsToggle, setShowCoefficientsToggle] = useState<boolean>(false);
   const [filename, setFilename] = useState<string>("generated_dataset.csv");
-  const [noise, setNoise] = useState<number>(0.05);
+  const [noise, setNoise] = useState<number>(0.025);
   const [error, setError] = useState<string>("");
   const [minIngredientsPerFormulation, setMinIngredientsPerFormulation] = useState<string>("");  // TODO: do we really want to lalow these to be strings....???
   const [maxIngredientsPerFormulation, setMaxIngredientsPerFormulation] = useState<string>("");  // TODO: do we really want to lalow these to be strings....???

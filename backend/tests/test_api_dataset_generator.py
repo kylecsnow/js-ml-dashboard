@@ -1,3 +1,9 @@
+import csv
+
+### TODO: will we need to remove this import (only needed for the `test_dataset_generator_enforces_ingredient_count_bounds_wide` function) once the the UI supports users exporting in wide format vs. compact format?
+from utils import build_synthetic_demo_dataset
+
+
 def test_dataset_generator_returns_csv_string(client):
     body = {
         "general_inputs": [
@@ -19,7 +25,7 @@ def test_dataset_generator_returns_csv_string(client):
     assert data["csv_string"].count("\n") >= 13
 
 
-def test_dataset_generator_enforces_formulation_ingredient_count_bounds(client):
+def test_dataset_generator_enforces_ingredient_count_bounds_compact_format(client):
     body = {
         "general_inputs": [],
         "formulation_inputs": [
@@ -41,18 +47,64 @@ def test_dataset_generator_enforces_formulation_ingredient_count_bounds(client):
     response = client.post("/api/dataset-generator", json=body)
     assert response.status_code == 200
     data = response.json()
-    csv_rows = [row for row in data["csv_string"].splitlines() if row.strip()]
 
-    # Header + at least one data row
-    assert len(csv_rows) > 1
+    # build_synthetic_demo_dataset uses compact formulation columns (component-k_amount), not wide ingredient names
+    reader = csv.reader(data["csv_string"].splitlines())
+    rows = [r for r in reader if any(cell.strip() for cell in r)]
+    assert len(rows) > 1
 
-    header = csv_rows[0].split(",")
-    ingredient_columns = {"UDMA", "IBOA", "HDDA", "GCMA", "Irganox819"}
-    ingredient_indices = [idx for idx, col in enumerate(header) if col in ingredient_columns]
-    assert len(ingredient_indices) == 5
+    header = rows[0]
+    amount_col_names = tuple(f"component-{k}_amount" for k in range(1, 6))
+    for name in amount_col_names:
+        assert name in header
+    amount_col_indices = [header.index(name) for name in amount_col_names]
 
-    for row in csv_rows[1:]:
-        fields = row.split(",")
-        active_count = sum(float(fields[idx]) > 0.0 for idx in ingredient_indices)
+    for row in rows[1:]:
+        active_count = 0
+        for idx in amount_col_indices:
+            if idx >= len(row):
+                continue
+            cell = row[idx].strip()
+            if not cell:
+                continue
+            if float(cell) > 0.0:
+                active_count += 1
         assert active_count >= 3
         assert active_count <= 5
+
+
+### TODO: will we need to update this test once the the UI supports users exporting in wide format vs. compact format?
+def test_dataset_generator_enforces_ingredient_count_bounds_wide_format():
+    inputs = {
+        "general": {},
+        "formulation": {
+            "UDMA": {"min": 0.1, "max": 0.6, "units": ""},
+            "IBOA": {"min": 0.05, "max": 0.8, "units": ""},
+            "HDDA": {"min": 0.05, "max": 0.8, "units": ""},
+            "GCMA": {"min": 0.05, "max": 0.8, "units": ""},
+            "Irganox819": {"min": 0.0005, "max": 0.02, "units": ""},
+        },
+    }
+    outputs = {
+        "modulus": {"min": 100.0, "max": 10000.0, "units": "MPa"},
+    }
+    ingredient_names = list(inputs["formulation"].keys())
+
+    data_df, _ = build_synthetic_demo_dataset(
+        inputs=inputs,
+        outputs=outputs,
+        num_rows=75,
+        noise=0.01,
+        output_format="wide",
+        min_ingredients_per_formulation=3,
+        max_ingredients_per_formulation=5,
+    )
+
+    for _, row in data_df.iterrows():
+        active_count = sum(row[name] > 0.0 for name in ingredient_names)
+        assert active_count >= 3, (
+            f"Row has {active_count} active ingredients (min allowed: 3)"
+        )
+        assert active_count <= 5, (
+            f"Row has {active_count} active ingredients (max allowed: 5)"
+        )
