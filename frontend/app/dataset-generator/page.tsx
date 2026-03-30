@@ -32,8 +32,8 @@ const DatasetGeneratorPage = () => {
   const [filename, setFilename] = useState<string>("generated_dataset.csv");
   const [noise, setNoise] = useState<number>(0.025);
   const [error, setError] = useState<string>("");
-  const [minIngredientsPerFormulation, setMinIngredientsPerFormulation] = useState<string>("");  // TODO: do we really want to lalow these to be strings....???
-  const [maxIngredientsPerFormulation, setMaxIngredientsPerFormulation] = useState<string>("");  // TODO: do we really want to lalow these to be strings....???
+  const [minIngredientsPerFormulation, setMinIngredientsPerFormulation] = useState<string>("");  // TODO: do we really want to allow these to be strings....???
+  const [maxIngredientsPerFormulation, setMaxIngredientsPerFormulation] = useState<string>("");  // TODO: do we really want to allow these to be strings....???
 
   const addDescriptorGroup = (category: 'general input' | 'formulation input' | 'output') => {
     const newGroup = {

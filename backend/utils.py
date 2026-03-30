@@ -143,99 +143,99 @@ def compact_to_wide_format(df):
 
 
 ### TODO: get rid of this function someday?
-def sample_from_constrained_simplex(
-    n_dimensions: int,
-    constraints: Optional[List[Tuple[float, float]]] = None,
-    max_attempts: int = 1000
-):
-    """
-    Generate a random point from an N-dimensional simplex with optional element-wise constraints.
+# def sample_from_constrained_simplex(
+#     n_dimensions: int,
+#     constraints: Optional[List[Tuple[float, float]]] = None,
+#     max_attempts: int = 1000
+# ):
+#     """
+#     Generate a random point from an N-dimensional simplex with optional element-wise constraints.
     
-    Parameters:
-        n_dimensions (int): Number of dimensions for the simplex
-        constraints (List[Tuple[float, float]], optional): List of (min, max) constraints for each dimension.
-            Use None for unconstrained dimensions. Example: [(0.2, 0.4), None, (0, 0.5)]
-        max_attempts (int): Maximum number of attempts to find a valid solution
+#     Parameters:
+#         n_dimensions (int): Number of dimensions for the simplex
+#         constraints (List[Tuple[float, float]], optional): List of (min, max) constraints for each dimension.
+#             Use None for unconstrained dimensions. Example: [(0.2, 0.4), None, (0, 0.5)]
+#         max_attempts (int): Maximum number of attempts to find a valid solution
         
-    Returns:
-        numpy.ndarray: Array of N numbers between 0 and 1 that sum to 1 and satisfy constraints
+#     Returns:
+#         numpy.ndarray: Array of N numbers between 0 and 1 that sum to 1 and satisfy constraints
         
-    Raises:
-        ValueError: If constraints are impossible to satisfy or if max_attempts is reached
-    """
+#     Raises:
+#         ValueError: If constraints are impossible to satisfy or if max_attempts is reached
+#     """
 
-    if n_dimensions==0:
-        sample = np.array([])
-        return sample
+#     if n_dimensions==0:
+#         sample = np.array([])
+#         return sample
 
-    # Initialize constraints if not provided
-    if constraints is None:
-        constraints = [None] * n_dimensions
-    elif len(constraints) != n_dimensions:
-        raise ValueError("Length of constraints must match n_dimensions.")
+#     # Initialize constraints if not provided
+#     if constraints is None:
+#         constraints = [None] * n_dimensions
+#     elif len(constraints) != n_dimensions:
+#         raise ValueError("Length of constraints must match n_dimensions.")
     
-    # Validate constraints
-    total_min = sum(c[0] for c in constraints if c is not None)
-    if total_min > 1:
-        raise ValueError("Sum of formulation lower bounds exceeds 1.")
+#     # Validate constraints
+#     total_min = sum(c[0] for c in constraints if c is not None)
+#     if total_min > 1:
+#         raise ValueError("Sum of formulation lower bounds exceeds 1.")
     
-    for attempt in range(max_attempts):
-        try:
-            # Generate initial random sample
-            sample = np.random.random(n_dimensions)
-            sample = sample / np.sum(sample)  # Normalize to sum to 1
+#     for attempt in range(max_attempts):
+#         try:
+#             # Generate initial random sample
+#             sample = np.random.random(n_dimensions)
+#             sample = sample / np.sum(sample)  # Normalize to sum to 1
             
-            # Apply constraints iteratively
-            for _ in range(n_dimensions * 2):  # Allow multiple passes for adjustment
-                modified = False
+#             # Apply constraints iteratively
+#             for _ in range(n_dimensions * 2):  # Allow multiple passes for adjustment
+#                 modified = False
                 
-                # Adjust values to meet constraints
-                for i, constraint in enumerate(constraints):
-                    if constraint is not None:
-                        min_val, max_val = constraint
-                        if sample[i] < min_val:
-                            deficit = min_val - sample[i]
-                            # Take deficit proportionally from unconstrained elements
-                            free_indices = [j for j, c in enumerate(constraints) 
-                                         if c is None or (j != i and sample[j] > c[0])]
-                            if not free_indices:
-                                raise ValueError("Cannot satisfy minimum constraint.")
-                            weights = np.array([sample[j] for j in free_indices])
-                            weights = weights / weights.sum()
-                            for j, w in zip(free_indices, weights):
-                                sample[j] -= deficit * w
-                            sample[i] = min_val
-                            modified = True
-                        elif sample[i] > max_val:
-                            excess = sample[i] - max_val
-                            # Distribute excess proportionally to unconstrained elements
-                            free_indices = [j for j, c in enumerate(constraints) 
-                                         if c is None or (j != i and sample[j] < c[1])]
-                            if not free_indices:
-                                raise ValueError("Cannot satisfy maximum constraint.")
-                            sample[free_indices] += excess / len(free_indices)
-                            sample[i] = max_val
-                            modified = True
+#                 # Adjust values to meet constraints
+#                 for i, constraint in enumerate(constraints):
+#                     if constraint is not None:
+#                         min_val, max_val = constraint
+#                         if sample[i] < min_val:
+#                             deficit = min_val - sample[i]
+#                             # Take deficit proportionally from unconstrained elements
+#                             free_indices = [j for j, c in enumerate(constraints) 
+#                                          if c is None or (j != i and sample[j] > c[0])]
+#                             if not free_indices:
+#                                 raise ValueError("Cannot satisfy minimum constraint.")
+#                             weights = np.array([sample[j] for j in free_indices])
+#                             weights = weights / weights.sum()
+#                             for j, w in zip(free_indices, weights):
+#                                 sample[j] -= deficit * w
+#                             sample[i] = min_val
+#                             modified = True
+#                         elif sample[i] > max_val:
+#                             excess = sample[i] - max_val
+#                             # Distribute excess proportionally to unconstrained elements
+#                             free_indices = [j for j, c in enumerate(constraints) 
+#                                          if c is None or (j != i and sample[j] < c[1])]
+#                             if not free_indices:
+#                                 raise ValueError("Cannot satisfy maximum constraint.")
+#                             sample[free_indices] += excess / len(free_indices)
+#                             sample[i] = max_val
+#                             modified = True
                 
-                # Normalize to sum to 1
-                sample = sample / np.sum(sample)
+#                 # Normalize to sum to 1
+#                 sample = sample / np.sum(sample)
                 
-                # Check if all constraints are satisfied
-                constraints_satisfied = all(
-                    c is None or (c[0] <= v <= c[1])
-                    for c, v in zip(constraints, sample)
-                )
+#                 # Check if all constraints are satisfied
+#                 constraints_satisfied = all(
+#                     c is None or (c[0] <= v <= c[1])
+#                     for c, v in zip(constraints, sample)
+#                 )
                 
-                if constraints_satisfied and abs(sum(sample) - 1.0) < 1e-10:
-                    return sample
+#                 if constraints_satisfied and abs(sum(sample) - 1.0) < 1e-10:
+#                     return sample
                 
-                if not modified:
-                    break
+#                 if not modified:
+#                     break
                     
-        except ValueError:
-            continue
+#         except ValueError:
+#             continue
             
-    raise ValueError(f"Could not find any valid formulation after {max_attempts} attempts. Please check that your formulations are not over-constrained. (Your lower & upper bounds might make it impossible to find a formulation where the ingredient quantities sum to 100%)")
+#     raise ValueError(f"Could not find any valid formulation after {max_attempts} attempts. Please check that your formulations are not over-constrained. (Your lower & upper bounds might make it impossible to find a formulation where the ingredient quantities sum to 100%)")
 
 
 def gibbs_sample_formulation_space(
