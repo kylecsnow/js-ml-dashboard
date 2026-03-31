@@ -18,9 +18,11 @@ import uvicorn
 from utils import fig2img, get_dataset_name_from_model, get_dataset, get_model_and_metadata, build_synthetic_demo_dataset
 from molecule_viz import create_plotly_molecular_space_map, process_molecular_space_map_data, smiles_to_base64
 from modeling import create_parity_plot, create_residual_plot
+from chat import router as chat_router
 
 
 app = FastAPI()
+app.include_router(chat_router)
 
 # Add CORS middleware to allow requests from your Next.js frontend
 app.add_middleware(

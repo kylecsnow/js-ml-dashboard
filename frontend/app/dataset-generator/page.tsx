@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from 'next/link';
 import Sidebar from '../components/Sidebar';
+import ChatDrawer from '../components/ChatDrawer';
 import { Switch } from '@headlessui/react';
 import { useState } from 'react';
 
@@ -15,7 +16,7 @@ import { useState } from 'react';
 // import Paper from '@mui/material/Paper';
 // import { TableVirtuoso, TableComponents } from 'react-virtuoso';
 
-interface DescriptorGroup {
+export interface DescriptorGroup {
   id: string;
   name: string;
   min: string;
@@ -564,6 +565,25 @@ const DatasetGeneratorPage = () => {
           </div>
         </div>
       </div>
+
+      <ChatDrawer
+        generalInputs={generalInputs}
+        formulationInputs={formulationInputs}
+        outputs={outputs}
+        numRows={numRows}
+        noise={noise}
+        filename={filename}
+        minIngredientsPerFormulation={minIngredientsPerFormulation}
+        maxIngredientsPerFormulation={maxIngredientsPerFormulation}
+        setGeneralInputs={setGeneralInputs}
+        setFormulationInputs={setFormulationInputs}
+        setOutputs={setOutputs}
+        setNumRows={setNumRows}
+        setNoise={setNoise}
+        setFilename={setFilename}
+        setMinIngredientsPerFormulation={setMinIngredientsPerFormulation}
+        setMaxIngredientsPerFormulation={setMaxIngredientsPerFormulation}
+      />
     </div>
   );
 };
