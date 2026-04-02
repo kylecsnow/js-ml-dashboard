@@ -131,36 +131,34 @@ export default function ChatDrawer({
       parts.push(`${items.length} output${items.length !== 1 ? 's' : ''}`);
     }
 
-    if (updates.num_rows !== undefined) {
+    if (updates.num_rows !== undefined && updates.num_rows !== numRows) {
       setNumRows(updates.num_rows);
       parts.push('num_rows');
     }
-    if (updates.noise !== undefined) {
+    if (updates.noise !== undefined && updates.noise !== noise) {
       setNoise(updates.noise);
       parts.push('noise');
     }
-    if (updates.filename !== undefined) {
+    if (updates.filename !== undefined && updates.filename !== filename) {
       setFilename(updates.filename);
       parts.push('filename');
     }
-    if (updates.min_ingredients_per_formulation !== undefined) {
-      setMinIngredientsPerFormulation(
-        updates.min_ingredients_per_formulation != null
-          ? String(updates.min_ingredients_per_formulation)
-          : ''
-      );
+    const newMin = updates.min_ingredients_per_formulation != null
+      ? String(updates.min_ingredients_per_formulation)
+      : '';
+    if (updates.min_ingredients_per_formulation !== undefined && newMin !== minIngredientsPerFormulation) {
+      setMinIngredientsPerFormulation(newMin);
       parts.push('min ingredients/formulation');
     }
-    if (updates.max_ingredients_per_formulation !== undefined) {
-      setMaxIngredientsPerFormulation(
-        updates.max_ingredients_per_formulation != null
-          ? String(updates.max_ingredients_per_formulation)
-          : ''
-      );
+    const newMax = updates.max_ingredients_per_formulation != null
+      ? String(updates.max_ingredients_per_formulation)
+      : '';
+    if (updates.max_ingredients_per_formulation !== undefined && newMax !== maxIngredientsPerFormulation) {
+      setMaxIngredientsPerFormulation(newMax);
       parts.push('max ingredients/formulation');
     }
 
-    return parts.length > 0 ? `Updated: ${parts.join(', ')}` : '';
+    return parts.length > 0 ? parts.join('\n') : '';
   }
 
 
@@ -272,7 +270,7 @@ export default function ChatDrawer({
               <p className="mb-2 font-medium text-gray-500">How can I help?</p>
               <p>Describe the type of formulation problem you want to model, and I&apos;ll populate the form for you.</p>
               <p className="mt-4 text-xs text-gray-400">
-                Example: &quot;Set up a dataset for DLP 3D printing resins with UDMA, IBOA, HDDA, GCMA, and Irg819 as ingredients.&quot; {/* TODO: Change this to a better example */}
+                Example: &quot;Set up a dataset for DLP 3D printing resins with UDMA, IBOA, HDDA, GCMA, and Irganox 819 as ingredients.&quot; {/* TODO: Change this to a better example */}
               </p>
             </div>
           )}
@@ -291,7 +289,12 @@ export default function ChatDrawer({
                 {msg.content}
                 {msg.formUpdateSummary && (
                   <div className="mt-2 pt-2 border-t border-gray-200 text-xs text-green-700 font-medium">
-                    {msg.formUpdateSummary}
+                    <div className="mb-0.5">Updated:</div>
+                    <ul className="list-disc list-inside space-y-0.5">
+                      {msg.formUpdateSummary.split('\n').map((item, j) => (
+                        <li key={j}>{item}</li>
+                      ))}
+                    </ul>
                   </div>
                 )}
               </div>
