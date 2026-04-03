@@ -86,7 +86,7 @@ const DatasetGeneratorPage = () => {
   };
 
 
-  async function generateData() {
+  async function generateData(outputFormat: 'compact' | 'wide') {
     // Validate filename
     if (!filename.trim()) {
       setError("Filename is required.");
@@ -190,6 +190,7 @@ const DatasetGeneratorPage = () => {
             outputs: outputs,
             num_rows: numRows,
             noise: noise,
+            output_format: outputFormat,
             min_ingredients_per_formulation: resolvedMinIngredientsPerFormulation,
             max_ingredients_per_formulation: resolvedMaxIngredientsPerFormulation,
           }),
@@ -318,7 +319,7 @@ const DatasetGeneratorPage = () => {
               onChange={(e) => setNumRows(Number(e.target.value) || '')}
               onWheel={preventWheelChange}
               min="1"
-              className="w-36 p-2 border border-gray-600 rounded mr-2"
+              className="w-20 p-2 border border-gray-600 rounded mr-2"
             />
             <label className="block text-sm font-medium mb-1 mr-2">
               Noise
@@ -330,7 +331,7 @@ const DatasetGeneratorPage = () => {
               onWheel={preventWheelChange}
               min="0"
               step="0.01"
-              className="w-36 p-2 border border-gray-600 rounded mr-2"
+              className="w-20 p-2 border border-gray-600 rounded mr-2"
             />
             <label className="block text-sm font-medium mb-1 mr-2">
               Filename
@@ -344,18 +345,19 @@ const DatasetGeneratorPage = () => {
               className="w-full p-2 border border-gray-600 rounded mr-2"
             />
             <button
-              onClick={generateData}
-              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 mr-2"
+              onClick={() => generateData('compact')}
+              className="flex flex-col items-center px-5 py-1 bg-green-500 text-white rounded hover:bg-green-600 mr-2"
             >
-              Download CSV
-              {/* Generate data & preview */}
+              <span className="whitespace-nowrap">Export CSV</span>
+              <span className="text-xs whitespace-nowrap">(Compact Format)</span>
             </button>
-            {/* <button
-              // onClick={downloadCSV}
-              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+            <button
+              onClick={() => generateData('wide')}
+              className="flex flex-col items-center px-5 py-1 bg-green-500 text-white rounded hover:bg-green-600"
             >
-              Download CSV
-            </button> */}
+              <span className="whitespace-nowrap">Export CSV</span>
+              <span className="text-xs whitespace-nowrap">(Wide Format)</span>
+            </button>
           </div>
 
           {/* General Inputs Section */}

@@ -621,6 +621,7 @@ async def get_synthetic_demo_dataset(body: dict = Body(...)) -> dict[str, Any]:
         outputs = body.get("outputs", [])
         num_rows = body.get("num_rows", [])
         noise = body.get("noise", 0.05)
+        output_format = body.get("output_format", "compact")
         min_ingredients_per_formulation = body.get("min_ingredients_per_formulation")
         max_ingredients_per_formulation = body.get("max_ingredients_per_formulation")
 
@@ -661,11 +662,15 @@ async def get_synthetic_demo_dataset(body: dict = Body(...)) -> dict[str, Any]:
             min_ingredients_per_formulation = None
             max_ingredients_per_formulation = None
 
+        if output_format not in ("compact", "wide"):
+            raise ValueError("output_format must be either 'compact' or 'wide'.")
+
         synthetic_demo_data_df, synthetic_demo_coefs_df = build_synthetic_demo_dataset(
             inputs=inputs,
             outputs=outputs,
             num_rows=num_rows,
             noise=noise,
+            output_format=output_format,
             min_ingredients_per_formulation=min_ingredients_per_formulation,
             max_ingredients_per_formulation=max_ingredients_per_formulation,
         )
