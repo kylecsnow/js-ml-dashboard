@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from 'next/link';
 import Sidebar from '../components/Sidebar';
-import ChatDrawer from '../components/ChatDrawer';
+import ChatSidebar from '../components/ChatSidebar';
 import { Switch } from '@headlessui/react';
 import { useState } from 'react';
 
@@ -35,6 +35,7 @@ const DatasetGeneratorPage = () => {
   const [error, setError] = useState<string>("");
   const [minIngredientsPerFormulation, setMinIngredientsPerFormulation] = useState<string>("");  // TODO: do we really want to allow these to be strings....???
   const [maxIngredientsPerFormulation, setMaxIngredientsPerFormulation] = useState<string>("");  // TODO: do we really want to allow these to be strings....???
+  const [chatOpen, setChatOpen] = useState(false);
 
   const addDescriptorGroup = (category: 'general input' | 'formulation input' | 'output') => {
     const newGroup = {
@@ -248,7 +249,10 @@ const DatasetGeneratorPage = () => {
     <div className="flex min-h-screen">
       <Sidebar />
       
-      <div className="flex-1 flex flex-col items-center p-8 gap-4">
+      <div
+        className="flex-1 flex flex-col items-center p-8 gap-4 transition-[margin] duration-300 ease-in-out"
+        style={{ marginRight: chatOpen ? 420 : 0 }}
+      >
         <div className="flex gap-4 items-center flex-col sm:flex-row">
           <Link
             className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
@@ -566,7 +570,9 @@ const DatasetGeneratorPage = () => {
         </div>
       </div>
 
-      <ChatDrawer
+      <ChatSidebar
+        open={chatOpen}
+        onOpenChange={setChatOpen}
         generalInputs={generalInputs}
         formulationInputs={formulationInputs}
         outputs={outputs}

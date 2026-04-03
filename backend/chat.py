@@ -53,8 +53,8 @@ has the following sections:
   commonly-used real chemical examples in the related field, like "TPO" or "TPO-L", but since the user has given \
   fairly specific examples, don't include something *more generic* such as "Photoinitor" which is an ambiguous \
   name for an ingredient; it could mean *any* photoinitiator. On the other hand, if a user has provided generic \
-  names in their prompt like "Surfactant A", you can feel free to add 'incremented' forms of that name to some \
-  extent, such as "Surfactant B", "Surfactant C", and so on. Again, in summary, try to match the level of \ 
+  names in their prompt like "Monomer A", you can feel free to add 'incremented' forms of that name to some \
+  extent, such as "Monomer B", "Monomer C", and so on. Again, in summary, try to match the level of \ 
   granularity provided by the user, if any examples have been provided. If no examples have been provided, \
   assume the user is looking for specific chemical names or specific product names commonly used in the \
   field of interest.
@@ -68,9 +68,39 @@ has the following sections:
   the user responds in a way that makes their requested changes more clear.
 
 **Variable names and units:**
-- Variable name fields should contain ONLY the name (e.g. "Curing Temperature"). \
-  NEVER put units inside the name field (e.g. do NOT write "Curing Temperature (degC)"). \
-  Units go exclusively in the separate "units" field.
+- Variable name fields must contain ONLY a clean name. No parenthetical content of \
+  any kind is allowed in names. Specifically:
+  - BAD: "Defoamer (Polyglycol)" — contains parenthetical
+  - BAD: "Fluid Loss Additive (e.g. Polyanionic Cellulose)" — contains parenthetical
+  - BAD: "Curing Temperature (degC)" — contains units in name
+  - GOOD: "Polyglycol Defoamer" or just "Defoamer"
+  - GOOD: "Polyanionic Cellulose" or just "Fluid Loss Additive"
+  - GOOD: "Curing Temperature" (with "degC" in the separate units field)
+- Pick ONE level of specificity per ingredient: either a specific chemical/product \
+  name OR a generic role name. Never combine both in the same field.
+- Units go exclusively in the separate "units" field.
+
+**Ingredient selection and diversity:**
+- ONLY include ingredients that are genuinely used in the specific application domain \
+  the user described. Do not add ingredient types that are uncommon or irrelevant to \
+  that domain. For example, surfactants are common in detergent formulations but are \
+  NOT typically used in DLP 3D printing resins — do not add them there.
+- For each ingredient role/function, consider how many commonly-used alternatives \
+  exist in practice for that role in the given domain.
+- If there are many viable alternatives that formulators routinely choose between, \
+  include 2-3 specific examples as separate formulation inputs.
+- If there is one dominant choice with few practical alternatives, a single ingredient \
+  for that role is fine.
+- Keep the overall ingredient count manageable — this is for generating educational \
+  synthetic datasets to demo ML, not for exhaustively listing every possible ingredient. \
+  Aim for a representative set that captures the key formulation decisions a scientist \
+  would face. Unless the user continues asking for more & more example ingredients, \
+  keep a "soft" upper limit of 20 total ingredients. But if you can make a simple \
+  example dataset with less total ingredients, then that is preferable. Don't overly \
+  squeeze it down to ~5 ingredients either; if it is too simplified, the synthetic \
+  dataset won't be useful. Around ~10 total ingredients is a good starting point to \
+  use (as a very loose guide, not a strict rule); then if the user follows up asking \
+  for more or less, follow their guidance.
 
 **Formulation input bounds:**
 - Formulation input min and max values MUST be between 0 and 1. They represent \
@@ -97,8 +127,10 @@ has the following sections:
   while UV exposure time in seconds might be 5-120.
 
 **General behavior:**
-- If the user is just asking a question or for advice (not requesting form changes), \
-  respond conversationally and do NOT include form_updates.
+- If the user is asking a question, requesting information, or seeking advice — and \
+  is NOT requesting changes to the form — respond conversationally. Questions like \
+  "tell me more about X", "what does Y do?", "is this reasonable?", "explain Z" are \
+  purely informational and must NOT trigger form changes.
 - Use your chemistry/materials science knowledge to suggest realistic variable names, \
   ranges, and units.
 - Be concise but informative in your message.
@@ -107,7 +139,8 @@ has the following sections:
 You MUST respond with valid JSON matching this schema exactly:
 {
   "message": "<your conversational reply to the user>",
-  "form_updates": {                // OPTIONAL — omit entirely if no form changes
+  "form_changes_intended": true or false,
+  "form_updates": {                // only meaningful when form_changes_intended is true
     "general_inputs": [            // optional
       {"name": "...", "min": "...", "max": "...", "units": "..."}
     ],
@@ -125,10 +158,83 @@ You MUST respond with valid JSON matching this schema exactly:
   }
 }
 
+"form_changes_intended" is REQUIRED in every response:
+- Set to **true** ONLY when the user explicitly asked you to add, remove, modify, \
+  or set up form variables. In this case, include the form_updates object.
+- Set to **false** for ANY informational, conversational, or clarifying response — \
+  even if you include a form_updates object, it will be IGNORED when this is false.
+
 All min/max values in the arrays MUST be strings (they are displayed in text inputs). \
 num_rows, noise, min_ingredients_per_formulation, and max_ingredients_per_formulation \
 should be numbers (or null).
+
+### Before you respond, verify:
+1. Does every variable name contain ZERO parentheses? If any name has "(" or ")", fix it.
+2. Are ALL formulation input min/max values between 0 and 1?
+3. Is every ingredient actually used in this specific domain/application?
+4. Does each output have a unique, realistic range (not copy-pasted defaults)?
+5. Are units in the "units" field, NOT embedded in the name?
+6. Did the user ask you to change the form? If not, set form_changes_intended to false.
 """
+
+
+def _normalize_num(val: Any) -> str:
+    """Normalize a numeric value so '0', '0.0', and 0 all compare equal."""
+    try:
+        return str(float(val))
+    except (ValueError, TypeError):
+        return str(val)
+
+
+def _normalize_descriptors(
+    items: list[dict],
+) -> list[tuple[str, str, str, str]]:
+    """Convert descriptor dicts to canonical tuples for comparison."""
+    return [
+        (
+            d.get("name", ""),
+            _normalize_num(d.get("min", "")),
+            _normalize_num(d.get("max", "")),
+            d.get("units", ""),
+        )
+        for d in items
+    ]
+
+
+def _strip_unchanged_updates(
+    form_state: dict, form_updates: dict
+) -> dict | None:
+    """Remove form_updates keys whose values match form_state.
+
+    Returns the pruned dict, or None if nothing actually changed.
+    """
+    if not form_updates:
+        return None
+
+    cleaned: dict[str, Any] = {}
+
+    for key in ("general_inputs", "formulation_inputs", "outputs"):
+        if key in form_updates:
+            current = form_state.get(key, [])
+            incoming = form_updates[key]
+            if _normalize_descriptors(current) != _normalize_descriptors(incoming):
+                cleaned[key] = incoming
+
+    for key in ("num_rows", "noise", "filename"):
+        if key in form_updates:
+            if _normalize_num(form_updates[key]) != _normalize_num(form_state.get(key)):
+                cleaned[key] = form_updates[key]
+
+    for key in ("min_ingredients_per_formulation", "max_ingredients_per_formulation"):
+        if key in form_updates:
+            incoming_val = form_updates[key]
+            current_val = form_state.get(key)
+            inc_norm = "" if incoming_val is None else _normalize_num(incoming_val)
+            cur_norm = "" if current_val is None else _normalize_num(current_val)
+            if inc_norm != cur_norm:
+                cleaned[key] = incoming_val
+
+    return cleaned if cleaned else None
 
 
 @router.post("/api/chat/dataset-generator")
@@ -167,18 +273,28 @@ async def chat_dataset_generator(body: dict = Body(...)) -> dict[str, Any]:
         client = Groq(api_key=api_key)
         completion = client.chat.completions.create(
             # model="llama-3.1-8b-instant",
-            model="llama-3.3-70b-versatile",
+            # model="llama-3.3-70b-versatile",
+            # model="qwen/qwen3-32b",
             # model="gpt-4o",
+            # model="openai/gpt-oss-20b"
+            model="openai/gpt-oss-120b",
             messages=messages,
             response_format={"type": "json_object"},
-            temperature=0.4,
+            temperature=0.2,
         )
 
         raw = completion.choices[0].message.content
         parsed = json.loads(raw)
 
         response_message = parsed.get("message", "")
+        form_changes_intended = parsed.get("form_changes_intended", False)
         form_updates = parsed.get("form_updates", None)
+
+        if not form_changes_intended:
+            form_updates = None
+
+        if form_updates is not None:
+            form_updates = _strip_unchanged_updates(form_state, form_updates)
 
         result: dict[str, Any] = {"message": response_message}
         if form_updates is not None:

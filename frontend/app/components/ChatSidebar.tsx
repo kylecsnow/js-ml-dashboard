@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import Drawer from '@mui/material/Drawer';
 import IconButton from '@mui/material/IconButton';
 import ChatIcon from '@mui/icons-material/Chat';
 import CloseIcon from '@mui/icons-material/Close';
@@ -16,7 +15,9 @@ export interface DescriptorGroup {
   units: string;
 }
 
-interface ChatDrawerProps {
+interface ChatSidebarProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   generalInputs: DescriptorGroup[];
   formulationInputs: DescriptorGroup[];
   outputs: DescriptorGroup[];
@@ -53,7 +54,9 @@ interface LLMFormUpdates {
 }
 
 
-export default function ChatDrawer({
+export default function ChatSidebar({
+  open,
+  onOpenChange,
   generalInputs,
   formulationInputs,
   outputs,
@@ -70,16 +73,37 @@ export default function ChatDrawer({
   setFilename,
   setMinIngredientsPerFormulation,
   setMaxIngredientsPerFormulation,
-}: ChatDrawerProps) {
-  const [open, setOpen] = useState(false);
+}: ChatSidebarProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [textareaHeight, setTextareaHeight] = useState(154);
+  const dragRef = useRef<{ startY: number; startHeight: number } | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  useEffect(() => {
+    function onMove(e: MouseEvent | TouchEvent) {
+      if (!dragRef.current) return;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      const delta = dragRef.current.startY - clientY;
+      setTextareaHeight(Math.min(300, Math.max(60, dragRef.current.startHeight + delta)));
+    }
+    function onUp() { dragRef.current = null; }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchmove', onMove);
+    window.addEventListener('touchend', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', onUp);
+    };
+  }, []);
 
   const buildFormContext = useCallback(() => ({
     general_inputs: generalInputs.map(g => ({ name: g.name, min: g.min, max: g.max, units: g.units })),
@@ -92,10 +116,30 @@ export default function ChatDrawer({
     max_ingredients_per_formulation: maxIngredientsPerFormulation || null,
   }), [generalInputs, formulationInputs, outputs, numRows, noise, filename, minIngredientsPerFormulation, maxIngredientsPerFormulation]);
 
+  function numEq(a: string | number, b: string | number): boolean {
+    const na = Number(a);
+    const nb = Number(b);
+    if (!isNaN(na) && !isNaN(nb)) return na === nb;
+    return String(a) === String(b);
+  }
+
+  function descriptorsChanged(
+    current: DescriptorGroup[],
+    incoming: { name: string; min: string; max: string; units?: string }[],
+  ): boolean {
+    if (current.length !== incoming.length) return true;
+    return incoming.some((g, i) =>
+      g.name !== current[i].name ||
+      !numEq(g.min, current[i].min) ||
+      !numEq(g.max, current[i].max) ||
+      (g.units ?? '') !== current[i].units
+    );
+  }
+
   function applyFormUpdates(updates: LLMFormUpdates): string {
     const parts: string[] = [];
 
-    if (updates.general_inputs !== undefined) {
+    if (updates.general_inputs !== undefined && descriptorsChanged(generalInputs, updates.general_inputs)) {
       const items = updates.general_inputs.map(g => ({
         id: crypto.randomUUID(),
         name: g.name,
@@ -107,7 +151,7 @@ export default function ChatDrawer({
       parts.push(`${items.length} general input${items.length !== 1 ? 's' : ''}`);
     }
 
-    if (updates.formulation_inputs !== undefined) {
+    if (updates.formulation_inputs !== undefined && descriptorsChanged(formulationInputs, updates.formulation_inputs)) {
       const items = updates.formulation_inputs.map(g => ({
         id: crypto.randomUUID(),
         name: g.name,
@@ -119,7 +163,7 @@ export default function ChatDrawer({
       parts.push(`${items.length} formulation input${items.length !== 1 ? 's' : ''}`);
     }
 
-    if (updates.outputs !== undefined) {
+    if (updates.outputs !== undefined && descriptorsChanged(outputs, updates.outputs)) {
       const items = updates.outputs.map(g => ({
         id: crypto.randomUUID(),
         name: g.name,
@@ -229,7 +273,7 @@ export default function ChatDrawer({
     <>
       {!open && (
         <IconButton
-          onClick={() => setOpen(true)}
+          onClick={() => onOpenChange(true)}
           sx={{
             position: 'fixed',
             bottom: 24,
@@ -247,18 +291,15 @@ export default function ChatDrawer({
         </IconButton>
       )}
 
-      <Drawer
-        anchor="right"
-        open={open}
-        onClose={() => setOpen(false)}
-        PaperProps={{
-          sx: { width: 420, maxWidth: '100vw', display: 'flex', flexDirection: 'column' },
-        }}
+      <div
+        className={`fixed top-0 right-0 h-full w-[420px] max-w-full flex flex-col bg-white border-l-2 border-gray-300 shadow-xl z-[1200] transition-transform duration-300 ease-in-out ${
+          open ? 'translate-x-0' : 'translate-x-full'
+        }`}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white">
-          <h2 className="text-base font-semibold">Dataset Generator Assistant</h2>
-          <IconButton size="small" onClick={() => setOpen(false)}>
+          <h2 className="text-base font-semibold">Dataset Generator AI Assistant</h2>
+          <IconButton size="small" onClick={() => onOpenChange(false)}>
             <CloseIcon fontSize="small" />
           </IconButton>
         </div>
@@ -312,14 +353,26 @@ export default function ChatDrawer({
         </div>
 
         {/* Input */}
-        <div className="border-t border-gray-200 p-3 bg-white">
-          <div className="flex items-end gap-2">
+        <div className="border-t border-gray-200 bg-white">
+          <div
+            className="flex justify-center cursor-ns-resize select-none py-1"
+            onMouseDown={e => {
+              dragRef.current = { startY: e.clientY, startHeight: textareaHeight };
+              e.preventDefault();
+            }}
+            onTouchStart={e => {
+              dragRef.current = { startY: e.touches[0].clientY, startHeight: textareaHeight };
+            }}
+          >
+            <div className="w-10 h-1 rounded-full bg-gray-300" />
+          </div>
+          <div className="flex items-end gap-2 px-3 pb-3">
             <textarea
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Describe your formulation problem..."
-              rows={2}
+              placeholder="Describe a synthetic dataset you want to generate..."
+              style={{ height: textareaHeight }}
               className="flex-1 resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
             <IconButton
@@ -336,7 +389,7 @@ export default function ChatDrawer({
             </IconButton>
           </div>
         </div>
-      </Drawer>
+      </div>
     </>
   );
 }
