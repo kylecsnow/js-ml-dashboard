@@ -25,6 +25,7 @@ dependencies = [
     "rdkit>=2024.9.5,<2025.0.0",
     "ruff==0.5.1",
     "scikit-learn>=1.6.1,<2.0.0",
+    "sqlalchemy>=2.0.0,<3.0.0",
     "shap==0.47.1",
     "torch==2.2.1",
     "umap-learn==0.5.7",

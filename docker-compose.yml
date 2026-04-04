@@ -12,3 +12,4 @@ services:
     volumes:
       - ./backend/models:/app/backend/models
       - ./backend/datasets:/app/backend/datasets
+      - ./backend/schemas.db:/app/backend/schemas.db

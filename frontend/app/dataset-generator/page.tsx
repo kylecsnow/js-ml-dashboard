@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Sidebar from '../components/Sidebar';
 import ChatSidebar from '../components/ChatSidebar';
 import { Switch } from '@headlessui/react';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 // import Table from '@mui/material/Table';
 // import TableBody from '@mui/material/TableBody';
@@ -24,6 +24,24 @@ export interface DescriptorGroup {
   units: string;
 }
 
+interface SchemaConfig {
+  generalInputs: Omit<DescriptorGroup, 'id'>[];
+  formulationInputs: Omit<DescriptorGroup, 'id'>[];
+  outputs: Omit<DescriptorGroup, 'id'>[];
+  numRows: number | '';
+  noise: number;
+  filename: string;
+  minIngredientsPerFormulation: string;
+  maxIngredientsPerFormulation: string;
+}
+
+interface SavedSchemaEntry {
+  id: number;
+  name: string;
+  config: SchemaConfig;
+  created_at: string | null;
+}
+
 const DatasetGeneratorPage = () => {
   const [generalInputs, setGeneralInputs] = useState<DescriptorGroup[]>([]);
   const [formulationInputs, setFormulationInputs] = useState<DescriptorGroup[]>([]);
@@ -36,6 +54,92 @@ const DatasetGeneratorPage = () => {
   const [minIngredientsPerFormulation, setMinIngredientsPerFormulation] = useState<string>("");  // TODO: do we really want to allow these to be strings....???
   const [maxIngredientsPerFormulation, setMaxIngredientsPerFormulation] = useState<string>("");  // TODO: do we really want to allow these to be strings....???
   const [chatOpen, setChatOpen] = useState(false);
+
+  const [savedSchemas, setSavedSchemas] = useState<SavedSchemaEntry[]>([]);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [schemaNameInput, setSchemaNameInput] = useState("");
+  const [schemaDropdownOpen, setSchemaDropdownOpen] = useState(false);
+
+  const fetchSchemas = useCallback(async () => {
+    try {
+      const response = await fetch('./api/schemas');
+      if (response.ok) {
+        const data = await response.json();
+        setSavedSchemas(data.schemas);
+      }
+    } catch (err) {
+      console.error('Failed to fetch saved schemas:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSchemas();
+  }, [fetchSchemas]);
+
+  const saveSchema = async () => {
+    if (!schemaNameInput.trim()) {
+      setError("Schema name is required.");
+      return;
+    }
+
+    const config: SchemaConfig = {
+      generalInputs: generalInputs.map(({ name, min, max, units }) => ({ name, min, max, units })),
+      formulationInputs: formulationInputs.map(({ name, min, max, units }) => ({ name, min, max, units })),
+      outputs: outputs.map(({ name, min, max, units }) => ({ name, min, max, units })),
+      numRows,
+      noise,
+      filename,
+      minIngredientsPerFormulation,
+      maxIngredientsPerFormulation,
+    };
+
+    try {
+      const response = await fetch('./api/schemas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: schemaNameInput, config }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        setError(errorData.detail || "Failed to save schema.");
+        return;
+      }
+
+      setSchemaNameInput("");
+      setShowSaveModal(false);
+      setError("");
+      fetchSchemas();
+    } catch (err) {
+      console.error('Failed to save schema:', err);
+      setError("Failed to save schema.");
+    }
+  };
+
+  const deleteSchema = async (schemaId: number) => {
+    try {
+      const response = await fetch(`./api/schemas/${schemaId}`, { method: 'DELETE' });
+      if (response.ok) {
+        fetchSchemas();
+      }
+    } catch (err) {
+      console.error('Failed to delete schema:', err);
+    }
+  };
+
+  const loadSchema = (schema: SavedSchemaEntry) => {
+    const c = schema.config;
+    setGeneralInputs(c.generalInputs.map(g => ({ ...g, id: crypto.randomUUID() })));
+    setFormulationInputs(c.formulationInputs.map(g => ({ ...g, id: crypto.randomUUID() })));
+    setOutputs(c.outputs.map(g => ({ ...g, id: crypto.randomUUID() })));
+    setNumRows(c.numRows);
+    setNoise(c.noise);
+    setFilename(c.filename);
+    setMinIngredientsPerFormulation(c.minIngredientsPerFormulation);
+    setMaxIngredientsPerFormulation(c.maxIngredientsPerFormulation);
+    setSchemaDropdownOpen(false);
+    setError("");
+  };
 
   const addDescriptorGroup = (category: 'general input' | 'formulation input' | 'output') => {
     const newGroup = {
@@ -309,6 +413,88 @@ const DatasetGeneratorPage = () => {
               {error}
             </div>
           )}
+
+          {/* Save / Load Schema controls */}
+          <div className="mb-4 flex items-center gap-2">
+            <button
+              onClick={() => setShowSaveModal(true)}
+              className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
+            >
+              Save Schema
+            </button>
+
+            <div className="relative">
+              <button
+                onClick={() => setSchemaDropdownOpen(!schemaDropdownOpen)}
+                className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+              >
+                Load Schema {savedSchemas.length > 0 && `(${savedSchemas.length})`}
+              </button>
+              {schemaDropdownOpen && (
+                <div className="absolute z-10 mt-1 w-72 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-lg max-h-64 overflow-y-auto">
+                  {savedSchemas.length === 0 ? (
+                    <div className="p-3 text-sm text-gray-500">No saved schemas yet.</div>
+                  ) : (
+                    savedSchemas.map(schema => (
+                      <div
+                        key={schema.id}
+                        className="flex items-center justify-between p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                      >
+                        <button
+                          onClick={() => loadSchema(schema)}
+                          className="flex-1 text-left text-sm truncate"
+                        >
+                          {schema.name}
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteSchema(schema.id);
+                          }}
+                          className="ml-2 text-red-500 hover:text-red-700 text-sm flex-shrink-0"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Save Schema modal */}
+          {showSaveModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 shadow-xl">
+                <h3 className="text-lg font-bold mb-4">Save Schema</h3>
+                <input
+                  type="text"
+                  value={schemaNameInput}
+                  onChange={(e) => setSchemaNameInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') saveSchema(); }}
+                  placeholder="Enter a name for this schema"
+                  className="w-full p-2 border border-gray-600 rounded mb-4"
+                  autoFocus
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => { setShowSaveModal(false); setSchemaNameInput(""); }}
+                    className="px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded hover:bg-gray-400 dark:hover:bg-gray-500"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={saveSchema}
+                    className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="mb-6 flex items-center">
             <label className="block text-sm font-medium mb-1 mr-2">
               Number of Rows
