@@ -54,6 +54,9 @@ const DatasetGeneratorPage = () => {
   const [minIngredientsPerFormulation, setMinIngredientsPerFormulation] = useState<string>("");  // TODO: do we really want to allow these to be strings....???
   const [maxIngredientsPerFormulation, setMaxIngredientsPerFormulation] = useState<string>("");  // TODO: do we really want to allow these to be strings....???
   const [chatOpen, setChatOpen] = useState(false);
+  const [isGeneralInputsOpen, setIsGeneralInputsOpen] = useState(true);
+  const [isFormulationInputsOpen, setIsFormulationInputsOpen] = useState(true);
+  const [isOutputsOpen, setIsOutputsOpen] = useState(true);
 
   const [savedSchemas, setSavedSchemas] = useState<SavedSchemaEntry[]>([]);
   const [showSaveModal, setShowSaveModal] = useState(false);
@@ -188,6 +191,26 @@ const DatasetGeneratorPage = () => {
   const preventWheelChange = (e: React.WheelEvent<HTMLInputElement>) => {
     e.currentTarget.blur();
   };
+
+  const renderCollapseIcon = (isOpen: boolean) => (
+    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-slate-700 shadow-sm">
+      <svg
+        className="h-4 w-4"
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden="true"
+      >
+        <path
+          d={isOpen ? "M6 14L12 8L18 14" : "M6 10L12 16L18 10"}
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
+  );
 
 
   async function generateData(outputFormat: 'compact' | 'wide') {
@@ -548,212 +571,245 @@ const DatasetGeneratorPage = () => {
 
           {/* General Inputs Section */}
           <div className="mb-6 p-4 border-2 border-gray-400 rounded-lg">
-            <h2 className="text-lg font-bold mb-2">General Inputs</h2>
             <button
-              onClick={() => addDescriptorGroup('general input')}
-              className="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              type="button"
+              onClick={() => setIsGeneralInputsOpen((prev) => !prev)}
+              className="mb-2 w-full flex items-center gap-4 text-left"
             >
-              Add General Input
+              {renderCollapseIcon(isGeneralInputsOpen)}
+              <h2 className="text-lg font-bold">General Inputs</h2>
             </button>
-            {generalInputs.map(group => (
-              <div key={group.id} className="mb-6 p-4 border rounded-lg relative">
+            {isGeneralInputsOpen && (
+              <>
                 <button
-                  onClick={() => removeDescriptorGroup('general input', group.id)}
-                  className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+                  onClick={() => addDescriptorGroup('general input')}
+                  className="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                 >
-                  ✕
+                  Add General Input
                 </button>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Variable name</label>
-                    <input
-                      type="text"
-                      value={group.name}
-                      onChange={(e) => updateDescriptorGroup('general input', group.id, 'name', e.target.value)}
-                      className="w-full p-2 border border-gray-600 rounded"
-                    />
+                {generalInputs.map(group => (
+                  <div key={group.id} className="mb-6 p-4 border rounded-lg relative">
+                    <button
+                      onClick={() => removeDescriptorGroup('general input', group.id)}
+                      className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+                    >
+                      ✕
+                    </button>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Variable name</label>
+                        <input
+                          type="text"
+                          value={group.name}
+                          onChange={(e) => updateDescriptorGroup('general input', group.id, 'name', e.target.value)}
+                          className="w-full p-2 border border-gray-600 rounded"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Lower bound</label>
+                        <input
+                          type="number"
+                          value={group.min}
+                          onChange={(e) => updateDescriptorGroup('general input', group.id, 'min', e.target.value)}
+                          onWheel={preventWheelChange}
+                          className="w-full p-2 border border-gray-600 rounded"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Upper bound</label>
+                        <input
+                          type="number"
+                          value={group.max}
+                          onChange={(e) => updateDescriptorGroup('general input', group.id, 'max', e.target.value)}
+                          onWheel={preventWheelChange}
+                          className="w-full p-2 border border-gray-600 rounded"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Units (optional)</label>
+                        <input
+                          type="text"
+                          value={group.units}
+                          onChange={(e) => updateDescriptorGroup('general input', group.id, 'units', e.target.value)}
+                          className="w-full p-2 border border-gray-600 rounded"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Lower bound</label>
-                    <input
-                      type="number"
-                      value={group.min}
-                      onChange={(e) => updateDescriptorGroup('general input', group.id, 'min', e.target.value)}
-                      onWheel={preventWheelChange}
-                      className="w-full p-2 border border-gray-600 rounded"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Upper bound</label>
-                    <input
-                      type="number"
-                      value={group.max}
-                      onChange={(e) => updateDescriptorGroup('general input', group.id, 'max', e.target.value)}
-                      onWheel={preventWheelChange}
-                      className="w-full p-2 border border-gray-600 rounded"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Units (optional)</label>
-                    <input
-                      type="text"
-                      value={group.units}
-                      onChange={(e) => updateDescriptorGroup('general input', group.id, 'units', e.target.value)}
-                      className="w-full p-2 border border-gray-600 rounded"
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
+                ))}
+              </>
+            )}
           </div>
 
           {/* Formulation Inputs Section */}
           <div className="mb-6 p-4 border-2 border-gray-400 rounded-lg">
-            <h2 className="text-lg font-bold mb-2">Formulation Inputs</h2>
-            <p className="mb-4 text-sm text-gray-600">
-              Note: Lower and upper bounds must be between 0 and 1, representing percentages that will sum to 100%.
-              Ex: 0.25 represents 25%.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Min ingredients per formulation (optional)
-                </label>
-                <input
-                  type="number"
-                  value={minIngredientsPerFormulation}
-                  onChange={(e) => setMinIngredientsPerFormulation(e.target.value)}
-                  onWheel={preventWheelChange}
-                  min="1"
-                  step="1"
-                  placeholder={`Defaults to ${formulationInputs.length || "n_ingredients"}`}
-                  className="w-full p-2 border border-gray-600 rounded"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Max ingredients per formulation (optional)
-                </label>
-                <input
-                  type="number"
-                  value={maxIngredientsPerFormulation}
-                  onChange={(e) => setMaxIngredientsPerFormulation(e.target.value)}
-                  onWheel={preventWheelChange}
-                  min="1"
-                  step="1"
-                  placeholder={`Defaults to ${formulationInputs.length || "n_ingredients"}`}
-                  className="w-full p-2 border border-gray-600 rounded"
-                />
-              </div>
-            </div>
             <button
-              onClick={() => addDescriptorGroup('formulation input')}
-              className="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              type="button"
+              onClick={() => setIsFormulationInputsOpen((prev) => !prev)}
+              className="mb-2 w-full flex items-center gap-4 text-left"
             >
-              Add Formulation Input
+              {renderCollapseIcon(isFormulationInputsOpen)}
+              <h2 className="text-lg font-bold">Formulation Inputs</h2>
             </button>
-            {formulationInputs.map(group => (
-              <div key={group.id} className="mb-6 p-4 border rounded-lg relative">
-                <button
-                  onClick={() => removeDescriptorGroup('formulation input', group.id)}
-                  className="absolute top-2 right-2 text-red-500 hover:text-red-700"
-                >
-                  ✕
-                </button>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {isFormulationInputsOpen && (
+              <>
+                <p className="mb-4 text-sm text-gray-600">
+                  Note: Lower and upper bounds must be between 0 and 1, representing percentages that will sum to 100%.
+                  Ex: 0.25 represents 25%.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Variable name</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Min ingredients per formulation (optional)
+                    </label>
                     <input
-                      type="text"
-                      value={group.name}
-                      onChange={(e) => updateDescriptorGroup('formulation input', group.id, 'name', e.target.value)}
+                      type="number"
+                      value={minIngredientsPerFormulation}
+                      onChange={(e) => setMinIngredientsPerFormulation(e.target.value)}
+                      onWheel={preventWheelChange}
+                      min="1"
+                      step="1"
+                      placeholder={`Defaults to ${formulationInputs.length || "n_ingredients"}`}
                       className="w-full p-2 border border-gray-600 rounded"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Lower bound</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Max ingredients per formulation (optional)
+                    </label>
                     <input
                       type="number"
-                      value={group.min}
-                      onChange={(e) => updateDescriptorGroup('formulation input', group.id, 'min', e.target.value)}
+                      value={maxIngredientsPerFormulation}
+                      onChange={(e) => setMaxIngredientsPerFormulation(e.target.value)}
                       onWheel={preventWheelChange}
-                      className="w-full p-2 border border-gray-600 rounded"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Upper bound</label>
-                    <input
-                      type="number"
-                      value={group.max}
-                      onChange={(e) => updateDescriptorGroup('formulation input', group.id, 'max', e.target.value)}
-                      onWheel={preventWheelChange}
+                      min="1"
+                      step="1"
+                      placeholder={`Defaults to ${formulationInputs.length || "n_ingredients"}`}
                       className="w-full p-2 border border-gray-600 rounded"
                     />
                   </div>
                 </div>
-              </div>
-            ))}
+                <button
+                  onClick={() => addDescriptorGroup('formulation input')}
+                  className="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                >
+                  Add Formulation Input
+                </button>
+                {formulationInputs.map(group => (
+                  <div key={group.id} className="mb-6 p-4 border rounded-lg relative">
+                    <button
+                      onClick={() => removeDescriptorGroup('formulation input', group.id)}
+                      className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+                    >
+                      ✕
+                    </button>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Variable name</label>
+                        <input
+                          type="text"
+                          value={group.name}
+                          onChange={(e) => updateDescriptorGroup('formulation input', group.id, 'name', e.target.value)}
+                          className="w-full p-2 border border-gray-600 rounded"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Lower bound</label>
+                        <input
+                          type="number"
+                          value={group.min}
+                          onChange={(e) => updateDescriptorGroup('formulation input', group.id, 'min', e.target.value)}
+                          onWheel={preventWheelChange}
+                          className="w-full p-2 border border-gray-600 rounded"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Upper bound</label>
+                        <input
+                          type="number"
+                          value={group.max}
+                          onChange={(e) => updateDescriptorGroup('formulation input', group.id, 'max', e.target.value)}
+                          onWheel={preventWheelChange}
+                          className="w-full p-2 border border-gray-600 rounded"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
 
           {/* Outputs Section */}
           <div className="mb-6 p-4 border-2 border-gray-400 rounded-lg">
-            <h2 className="text-lg font-bold mb-2">Outputs</h2>
             <button
-              onClick={() => addDescriptorGroup('output')}
-              className="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              type="button"
+              onClick={() => setIsOutputsOpen((prev) => !prev)}
+              className="mb-2 w-full flex items-center gap-4 text-left"
             >
-              Add Output
+              {renderCollapseIcon(isOutputsOpen)}
+              <h2 className="text-lg font-bold">Outputs</h2>
             </button>
-            {outputs.map(group => (
-              <div key={group.id} className="mb-6 p-4 border rounded-lg relative">
+            {isOutputsOpen && (
+              <>
                 <button
-                  onClick={() => removeDescriptorGroup('output', group.id)}
-                  className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+                  onClick={() => addDescriptorGroup('output')}
+                  className="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                 >
-                  ✕
+                  Add Output
                 </button>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Variable name</label>
-                    <input
-                      type="text"
-                      value={group.name}
-                      onChange={(e) => updateDescriptorGroup('output', group.id, 'name', e.target.value)}
-                      className="w-full p-2 border border-gray-600 rounded"
-                    />
+                {outputs.map(group => (
+                  <div key={group.id} className="mb-6 p-4 border rounded-lg relative">
+                    <button
+                      onClick={() => removeDescriptorGroup('output', group.id)}
+                      className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+                    >
+                      ✕
+                    </button>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Variable name</label>
+                        <input
+                          type="text"
+                          value={group.name}
+                          onChange={(e) => updateDescriptorGroup('output', group.id, 'name', e.target.value)}
+                          className="w-full p-2 border border-gray-600 rounded"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Lower bound</label>
+                        <input
+                          type="number"
+                          value={group.min}
+                          onChange={(e) => updateDescriptorGroup('output', group.id, 'min', e.target.value)}
+                          onWheel={preventWheelChange}
+                          className="w-full p-2 border border-gray-600 rounded"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Upper bound</label>
+                        <input
+                          type="number"
+                          value={group.max}
+                          onChange={(e) => updateDescriptorGroup('output', group.id, 'max', e.target.value)}
+                          onWheel={preventWheelChange}
+                          className="w-full p-2 border border-gray-600 rounded"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Units (optional)</label>
+                        <input
+                          type="text"
+                          value={group.units}
+                          onChange={(e) => updateDescriptorGroup('output', group.id, 'units', e.target.value)}
+                          className="w-full p-2 border border-gray-600 rounded"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Lower bound</label>
-                    <input
-                      type="number"
-                      value={group.min}
-                      onChange={(e) => updateDescriptorGroup('output', group.id, 'min', e.target.value)}
-                      onWheel={preventWheelChange}
-                      className="w-full p-2 border border-gray-600 rounded"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Upper bound</label>
-                    <input
-                      type="number"
-                      value={group.max}
-                      onChange={(e) => updateDescriptorGroup('output', group.id, 'max', e.target.value)}
-                      onWheel={preventWheelChange}
-                      className="w-full p-2 border border-gray-600 rounded"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Units (optional)</label>
-                    <input
-                      type="text"
-                      value={group.units}
-                      onChange={(e) => updateDescriptorGroup('output', group.id, 'units', e.target.value)}
-                      className="w-full p-2 border border-gray-600 rounded"
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
+                ))}
+              </>
+            )}
           </div>
         </div>
       </div>

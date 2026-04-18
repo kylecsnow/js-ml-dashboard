@@ -675,7 +675,12 @@ async def get_synthetic_demo_dataset(body: dict = Body(...)) -> dict[str, Any]:
             min_ingredients_per_formulation=min_ingredients_per_formulation,
             max_ingredients_per_formulation=max_ingredients_per_formulation,
         )
-        csv_string = synthetic_demo_data_df.to_csv()
+        synthetic_demo_data_df["Formulation_ID"] = synthetic_demo_data_df.index + 1
+        ordered_columns = ["Formulation_ID"] + [
+            col for col in synthetic_demo_data_df.columns if col != "Formulation_ID"
+        ]
+        synthetic_demo_data_df = synthetic_demo_data_df[ordered_columns]
+        csv_string = synthetic_demo_data_df.to_csv(index=None)
         return {"csv_string": csv_string}
             
     except ValueError as e:

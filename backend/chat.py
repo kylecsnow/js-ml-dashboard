@@ -153,8 +153,8 @@ You MUST respond with valid JSON matching this schema exactly:
     "num_rows": 50,                // optional (integer)
     "noise": 0.025,                // optional (float)
     "filename": "my_dataset.csv",  // optional (string)
-    "min_ingredients_per_formulation": 3,  // optional (integer or null)
-    "max_ingredients_per_formulation": 4   // optional (integer or null)
+    "min_ingredients_per_formulation": 4,  // optional (integer or null)
+    "max_ingredients_per_formulation": 8   // optional (integer or null)
   }
 }
 
