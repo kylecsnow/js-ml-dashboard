@@ -73,6 +73,33 @@ def test_dataset_generator_enforces_ingredient_count_bounds_compact_format(clien
         assert active_count <= 5
 
 
+def test_dataset_generator_returns_components_csv_when_present(client):
+    body = {
+        "general_inputs": [],
+        "formulation_inputs": [
+            {"name": "UDMA", "min": 0.1, "max": 0.6, "units": ""},
+            {"name": "IBOA", "min": 0.05, "max": 0.8, "units": ""},
+        ],
+        "outputs": [
+            {"name": "yield_", "min": 0.0, "max": 1.0, "units": ""},
+        ],
+        "num_rows": 12,
+        "noise": 0.01,
+    }
+    response = client.post("/api/dataset-generator", json=body)
+    assert response.status_code == 200
+    data = response.json()
+
+    assert "components_csv_string" in data
+
+    reader = csv.reader(data["components_csv_string"].splitlines())
+    rows = list(reader)
+
+    assert rows[0] == ["id", "Group", "SMILES"]
+    assert rows[1] == ["UDMA", "", ""]
+    assert rows[2] == ["IBOA", "", ""]
+
+
 ### TODO: will we need to update this test once the the UI supports users exporting in wide format vs. compact format?
 def test_dataset_generator_enforces_ingredient_count_bounds_wide_format():
     inputs = {

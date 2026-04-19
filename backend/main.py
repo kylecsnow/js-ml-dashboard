@@ -681,7 +681,21 @@ async def get_synthetic_demo_dataset(body: dict = Body(...)) -> dict[str, Any]:
         ]
         synthetic_demo_data_df = synthetic_demo_data_df[ordered_columns]
         csv_string = synthetic_demo_data_df.to_csv(index=None)
-        return {"csv_string": csv_string}
+        response_payload: dict[str, Any] = {"csv_string": csv_string}
+
+        if formulation_inputs:
+            components_df = pd.DataFrame(
+                {
+                    "id": list(formulation_inputs.keys()),
+                    "Group": [""] * len(formulation_inputs),
+                    "SMILES": [""] * len(formulation_inputs),
+                }
+            )
+            response_payload["components_csv_string"] = (
+                components_df.to_csv(index=None)
+            )
+
+        return response_payload
             
     except ValueError as e:
         raise HTTPException(

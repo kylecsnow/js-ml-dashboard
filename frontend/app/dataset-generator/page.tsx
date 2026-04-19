@@ -48,7 +48,7 @@ const DatasetGeneratorPage = () => {
   const [outputs, setOutputs] = useState<DescriptorGroup[]>([]);
   const [numRows, setNumRows] = useState<number | ''>(50);
   const [showCoefficientsToggle, setShowCoefficientsToggle] = useState<boolean>(false);
-  const [filename, setFilename] = useState<string>("generated_dataset.csv");
+  const [filename, setFilename] = useState<string>("generated_dataset");
   const [noise, setNoise] = useState<number>(0.025);
   const [error, setError] = useState<string>("");
   const [minIngredientsPerFormulation, setMinIngredientsPerFormulation] = useState<string>("");  // TODO: do we really want to allow these to be strings....???
@@ -338,32 +338,51 @@ const DatasetGeneratorPage = () => {
 
       const data = await response.json();
 
-
-      // stuff to make the CSV download compatible with iframes...?
-      const blob = new Blob([data.csv_string], { type: 'text/csv;charset=utf-8;' });
-      const url = window.URL.createObjectURL(blob);
-      
-      // Create hidden iframe for download
-      const iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
-      document.body.appendChild(iframe);
-      
-      try {
-        // Write download link to iframe and click it
-        const iframeDoc = iframe.contentWindow?.document;
-        if (iframeDoc) {
-          iframeDoc.open();
-          iframeDoc.write(`<a href="${url}" download="${filename}"></a>`);
-          iframeDoc.close();
-          const downloadLink = iframeDoc.querySelector('a');
-          downloadLink?.click();
+      const triggerCsvDownload = (csvContent: string, downloadFilename: string) => {
+        // stuff to make the CSV download compatible with iframes
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = window.URL.createObjectURL(blob);
+        
+        // Create hidden iframe for download
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+        
+        try {
+          // Write download link to iframe and click it
+          const iframeDoc = iframe.contentWindow?.document;
+          if (iframeDoc) {
+            iframeDoc.open();
+            iframeDoc.write(`<a href="${url}" download="${downloadFilename}"></a>`);
+            iframeDoc.close();
+            const downloadLink = iframeDoc.querySelector('a');
+            downloadLink?.click();
+          }
+        } finally {
+          // Cleanup
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+            window.URL.revokeObjectURL(url);
+          }, 100);
         }
-      } finally {
-        // Cleanup
-        setTimeout(() => {
-          document.body.removeChild(iframe);
-          window.URL.revokeObjectURL(url);
-        }, 100);
+      };
+
+      const getDatasetBaseName = (rawName: string) => rawName.trim() || "generated_dataset";
+
+      const datasetBaseName = getDatasetBaseName(filename);
+      const hasFormulationInputs = formulationInputs.length > 0;
+      const formulationsFilename = hasFormulationInputs
+        ? `${datasetBaseName}_formulations.csv`
+        : `${datasetBaseName}.csv`;
+      const componentsFilename = `${datasetBaseName}_components.csv`;
+
+      triggerCsvDownload(data.csv_string, formulationsFilename);
+
+      if (hasFormulationInputs && data.components_csv_string) {
+        triggerCsvDownload(
+          data.components_csv_string,
+          componentsFilename
+        );
       }
 
     } catch (error) {
@@ -543,12 +562,12 @@ const DatasetGeneratorPage = () => {
               className="w-20 p-2 border border-gray-600 rounded mr-2"
             />
             <label className="block text-sm font-medium mb-1 mr-2">
-              Filename
+              Dataset Name
             </label>
             <input
               type="text"
               value={filename}
-              placeholder="generated_dataset.csv"
+              placeholder="generated_dataset"
               onChange={(e) => setFilename(e.target.value)}
               min="1"
               className="w-full p-2 border border-gray-600 rounded mr-2"
