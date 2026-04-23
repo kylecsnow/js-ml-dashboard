@@ -1,6 +1,7 @@
 import csv
 
 ### TODO: will we need to remove this import (only needed for the `test_dataset_generator_enforces_ingredient_count_bounds_wide` function) once the the UI supports users exporting in wide format vs. compact format?
+import numpy as np
 from utils import build_synthetic_demo_dataset
 
 
@@ -135,3 +136,43 @@ def test_dataset_generator_enforces_ingredient_count_bounds_wide_format():
         assert active_count <= 5, (
             f"Row has {active_count} active ingredients (max allowed: 5)"
         )
+
+
+def test_dataset_generator_enforces_per_ingredient_bounds_wide_format():
+    np.random.seed(0)
+    inputs = {
+        "general": {},
+        "formulation": {
+            "Ice Cream Base": {"min": 0.5, "max": 0.9, "units": ""},
+            "Mono Diglycerides": {"min": 0.005, "max": 0.03, "units": ""},
+            "Polysorbate 80": {"min": 0.001, "max": 0.015, "units": ""},
+            "PGPR": {"min": 0.001, "max": 0.02, "units": ""},
+            "DATEM": {"min": 0.001, "max": 0.015, "units": ""},
+            "Polyglycerol Esters": {"min": 0.001, "max": 0.02, "units": ""},
+            "Acetylated Monoglycerides": {"min": 0.001, "max": 0.015, "units": ""},
+            "Stearoyl Lactylate": {"min": 0.001, "max": 0.02, "units": ""},
+            "Sorbitan Monostearate": {"min": 0.001, "max": 0.015, "units": ""},
+            "Soy Lecithin": {"min": 0.001, "max": 0.02, "units": ""},
+        },
+    }
+    outputs = {
+        "Overrun": {"min": 20.0, "max": 120.0, "units": "percent"},
+    }
+
+    data_df, _ = build_synthetic_demo_dataset(
+        inputs=inputs,
+        outputs=outputs,
+        num_rows=200,
+        noise=0.01,
+        output_format="wide",
+        min_ingredients_per_formulation=4,
+        max_ingredients_per_formulation=7,
+    )
+
+    for ingredient, bounds in inputs["formulation"].items():
+        min_val = bounds["min"]
+        max_val = bounds["max"]
+        for value in data_df[ingredient]:
+            assert value <= max_val + 1e-12
+            if value > 0.0:
+                assert value >= min_val - 1e-12

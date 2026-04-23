@@ -323,7 +323,7 @@ def gibbs_sample_formulation_space(
         
         # Distribute remaining amount among active ingredients within their constraints
         if remaining > 1e-12:
-            max_attempts = 1000
+            max_attempts = 10000
             for attempt in range(max_attempts):
                 # Calculate room for more for each active ingredient
                 room = np.array([maxs[i] - current[i] for i in active_indices])
@@ -391,11 +391,6 @@ def gibbs_sample_formulation_space(
                 delta_min = max(mins[i] - current[i], current[j] - maxs[j])
                 delta_max = min(maxs[i] - current[i], current[j] - mins[j])
                 
-                # Also consider the option of deactivating ingredient j completely
-                can_deactivate_j = len(active_ingredients) > min_ingredients_per_formulation
-                if can_deactivate_j and current[j] - mins[j] > delta_max:
-                    delta_max = current[j]  # Can transfer all of j to i (deactivating j)
-                
                 if delta_max > delta_min:
                     delta = np.random.uniform(delta_min, delta_max)
                     
@@ -403,16 +398,12 @@ def gibbs_sample_formulation_space(
                     current[i] += delta
                     current[j] -= delta
                     
-                    # If j went below its minimum, either deactivate it (if allowed)
-                    # or clamp to its minimum to preserve min active ingredient count.
+                    # Keep ingredient bounds valid during transfer; dedicated
+                    # "deactivate" moves handle dropping ingredients to zero.
                     if current[j] < mins[j] + 1e-12:
-                        if can_deactivate_j:
-                            current[i] += current[j]  # Transfer remainder to i
-                            current[j] = 0.0
-                        else:
-                            deficit = mins[j] - current[j]
-                            current[j] = mins[j]
-                            current[i] -= deficit
+                        deficit = mins[j] - current[j]
+                        current[j] = mins[j]
+                        current[i] -= deficit
             
             elif move_type == 'activate' and len(inactive_ingredients) > 0 and len(active_ingredients) < max_ingredients_per_formulation:
                 # Activate an inactive ingredient
@@ -437,17 +428,11 @@ def gibbs_sample_formulation_space(
                         current[i] = transfer_amount
                         current[j] -= transfer_amount
                         
-                        # If j went below its minimum, either deactivate it (if allowed)
-                        # or clamp to its minimum to preserve min active ingredient count.
+                        # Keep ingredient bounds valid during activation transfer.
                         if current[j] < mins[j] + 1e-12:
-                            can_deactivate_j = len(active_ingredients) > min_ingredients_per_formulation
-                            if can_deactivate_j:
-                                current[i] += current[j]
-                                current[j] = 0.0
-                            else:
-                                deficit = mins[j] - current[j]
-                                current[j] = mins[j]
-                                current[i] -= deficit
+                            deficit = mins[j] - current[j]
+                            current[j] = mins[j]
+                            current[i] -= deficit
             
             elif move_type == 'deactivate' and len(active_ingredients) > min_ingredients_per_formulation:
                 # Deactivate an active ingredient
@@ -503,6 +488,15 @@ def gibbs_sample_formulation_space(
 
         # Final cleanup for numerical noise
         current[np.abs(current) < 1e-14] = 0.0
+
+        # Enforce per-ingredient bounds before storing sample.
+        if np.any(current < -1e-12):
+            raise ValueError("Sampling produced a negative ingredient quantity.")
+        if np.any(current > maxs + 1e-12):
+            raise ValueError("Sampling produced an ingredient above its max bound.")
+        in_between_zero_and_min = (current > 1e-12) & (current < mins - 1e-12)
+        if np.any(in_between_zero_and_min):
+            raise ValueError("Sampling produced an ingredient below its min bound.")
 
         # Enforce active ingredient count rules before storing sample.
         active_count = np.sum(current > 1e-12)
