@@ -592,17 +592,17 @@ def build_synthetic_demo_dataset(
     # Create pandas DataFrame for the generated data & name the columns
     data_df = pd.DataFrame()
 
-    for i in range(num_inputs):
-        if isinstance(inputs, int):
-            data_df[f"x_{i+1}"] = X[:, i]
-        else:
-            data_df[all_inputs[i]] = X[:, i]
-    
     for k in range(num_outputs):
         if isinstance(outputs, int):
             data_df[f"y_{k+1}"] = y[k]
         else:
             data_df[list(outputs)[k]] = y[k]
+
+    for i in range(num_inputs):
+        if isinstance(inputs, int):
+            data_df[f"x_{i+1}"] = X[:, i]
+        else:
+            data_df[all_inputs[i]] = X[:, i]
 
 
     ### TODO: clean this section up
