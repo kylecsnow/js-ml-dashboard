@@ -339,7 +339,7 @@ def gibbs_sample_formulation_space(
                         remaining = 1.0 - np.sum(current)
                         continue
                     else:
-                        raise ValueError("Could not find valid initial formulation")
+                        raise ValueError("Could not find valid initial formulation. Please re-try; this sometimes occurs due to the randomness involved in searching for a 'valid' formulation in a complex, high-dimensional space. This often gets more difficult when certain ingredients have very narrow upper and lower bound ranges. If re-trying many times does not resolve the issue, you may need to expand ranges for some ingredients and try again.")
                 
                 # Distribute proportionally to available room, but don't exceed remaining
                 if total_room >= remaining:
@@ -361,7 +361,7 @@ def gibbs_sample_formulation_space(
                         remaining = 1.0 - np.sum(current)
                         continue
                     else:
-                        raise ValueError("Could not find valid initial formulation")
+                        raise ValueError("Could not find valid initial formulation. Please re-try; this sometimes occurs due to the randomness involved in searching for a 'valid' formulation in a complex, high-dimensional space. This often gets more difficult when certain ingredients have very narrow upper and lower bound ranges. If re-trying many times does not resolve the issue, you may need to expand ranges for some ingredients and try again.")
         
         return current
     
@@ -496,7 +496,7 @@ def gibbs_sample_formulation_space(
             raise ValueError("Sampling produced an ingredient above its max bound.")
         in_between_zero_and_min = (current > 1e-12) & (current < mins - 1e-12)
         if np.any(in_between_zero_and_min):
-            raise ValueError("Sampling produced an ingredient below its min bound.")
+            raise ValueError("Sampling produced an ingredient below its min bound. Please re-try; this sometimes occurs due to the randomness involved in searching for a 'valid' formulation in a complex, high-dimensional space. This can get more difficult with more complex, higher-dimensional spaces. If re-trying many times does not resolve the issue, you may need to expand the upper & lower bound ranges on some of your ingredients and/or raise the max # of ingredients allowed per formulation, then try again.")
 
         # Enforce active ingredient count rules before storing sample.
         active_count = np.sum(current > 1e-12)
