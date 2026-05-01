@@ -1,11 +1,16 @@
 import argparse
+from pathlib import Path
+from dotenv import load_dotenv
+
+_backend_dir = Path(__file__).resolve().parent
+load_dotenv(_backend_dir.parent / ".env")
+
 from fastapi import Body, Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 import json
 import matplotlib
 import matplotlib.pyplot as plt
 import logging
-from pathlib import Path
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
