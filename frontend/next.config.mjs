@@ -8,8 +8,8 @@ const nextConfig = {
       return [
         {
           source: '/api/:path*',
-          destination: 'http://127.0.0.1:8000/api/:path*' // Redirect to backend  -->  needs to be `127.0.0.1` for macOS instead of `localhost`...?
-          // destination: 'http://localhost:8000/api/:path*' // Redirect to backend  -->  needs to be `127.0.0.1` for macOS instead of `localhost`...?
+          destination: 'http://127.0.0.1:8000/api/:path*' // Redirect to backend  -->  needs to be `127.0.0.1` for macOS instead of `localhost`...? ("Using 127.0.0.1 avoids macOS resolving localhost to IPv6 (::1) while other services sometimes listen on IPv4 only.")
+          // destination: 'http://localhost:8000/api/:path*' // Redirect to backend  -->  needs to be `127.0.0.1` for macOS instead of `localhost`...? ("Using 127.0.0.1 avoids macOS resolving localhost to IPv6 (::1) while other services sometimes listen on IPv4 only.")
         }
       ]
     },
