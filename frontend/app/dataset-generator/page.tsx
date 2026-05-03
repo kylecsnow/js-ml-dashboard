@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Sidebar from '../components/Sidebar';
 import ChatSidebar from '../components/ChatSidebar';
 import { Switch } from '@headlessui/react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 // import Table from '@mui/material/Table';
 // import TableBody from '@mui/material/TableBody';
@@ -62,6 +62,21 @@ const DatasetGeneratorPage = () => {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [schemaNameInput, setSchemaNameInput] = useState("");
   const [schemaDropdownOpen, setSchemaDropdownOpen] = useState(false);
+  const schemaDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!schemaDropdownOpen) return;
+
+    const onPointerDown = (e: PointerEvent) => {
+      const root = schemaDropdownRef.current;
+      if (root && !root.contains(e.target as Node)) {
+        setSchemaDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [schemaDropdownOpen]);
 
   const fetchSchemas = useCallback(async () => {
     try {
@@ -465,7 +480,7 @@ const DatasetGeneratorPage = () => {
               Save Schema
             </button>
 
-            <div className="relative">
+            <div className="relative" ref={schemaDropdownRef}>
               <button
                 onClick={() => setSchemaDropdownOpen(!schemaDropdownOpen)}
                 className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
