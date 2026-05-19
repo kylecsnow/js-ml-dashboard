@@ -15,11 +15,15 @@ export interface DescriptorGroup {
   units: string;
 }
 
+export interface FormulationDescriptorGroup extends DescriptorGroup {
+  required: boolean;
+}
+
 interface ChatSidebarProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   generalInputs: DescriptorGroup[];
-  formulationInputs: DescriptorGroup[];
+  formulationInputs: FormulationDescriptorGroup[];
   outputs: DescriptorGroup[];
   numRows: number | '';
   noise: number;
@@ -27,7 +31,7 @@ interface ChatSidebarProps {
   minIngredientsPerFormulation: string;
   maxIngredientsPerFormulation: string;
   setGeneralInputs: (inputs: DescriptorGroup[]) => void;
-  setFormulationInputs: (inputs: DescriptorGroup[]) => void;
+  setFormulationInputs: (inputs: FormulationDescriptorGroup[]) => void;
   setOutputs: (outputs: DescriptorGroup[]) => void;
   setNumRows: (n: number | '') => void;
   setNoise: (n: number) => void;
@@ -44,7 +48,7 @@ interface ChatMessage {
 
 interface LLMFormUpdates {
   general_inputs?: { name: string; min: string; max: string; units?: string }[];
-  formulation_inputs?: { name: string; min: string; max: string }[];
+  formulation_inputs?: { name: string; min: string; max: string; required?: boolean }[];
   outputs?: { name: string; min: string; max: string; units?: string }[];
   num_rows?: number;
   noise?: number;
@@ -107,7 +111,7 @@ export default function ChatSidebar({
 
   const buildFormContext = useCallback(() => ({
     general_inputs: generalInputs.map(g => ({ name: g.name, min: g.min, max: g.max, units: g.units })),
-    formulation_inputs: formulationInputs.map(g => ({ name: g.name, min: g.min, max: g.max })),
+    formulation_inputs: formulationInputs.map(g => ({ name: g.name, min: g.min, max: g.max, required: g.required })),
     outputs: outputs.map(g => ({ name: g.name, min: g.min, max: g.max, units: g.units })),
     num_rows: numRows,
     noise,
@@ -125,14 +129,15 @@ export default function ChatSidebar({
 
   function descriptorsChanged(
     current: DescriptorGroup[],
-    incoming: { name: string; min: string; max: string; units?: string }[],
+    incoming: { name: string; min: string; max: string; units?: string; required?: boolean }[],
   ): boolean {
     if (current.length !== incoming.length) return true;
     return incoming.some((g, i) =>
       g.name !== current[i].name ||
       !numEq(g.min, current[i].min) ||
       !numEq(g.max, current[i].max) ||
-      (g.units ?? '') !== current[i].units
+      (g.units ?? '') !== (current[i] as { units?: string }).units ||
+      (g.required ?? false) !== ((current[i] as { required?: boolean }).required ?? false)
     );
   }
 
@@ -158,6 +163,7 @@ export default function ChatSidebar({
         min: String(g.min),
         max: String(g.max),
         units: '',
+        required: g.required ?? false,
       }));
       setFormulationInputs(items);
       parts.push(`${items.length} formulation input${items.length !== 1 ? 's' : ''}`);

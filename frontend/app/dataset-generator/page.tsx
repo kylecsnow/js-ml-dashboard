@@ -24,9 +24,13 @@ export interface DescriptorGroup {
   units: string;
 }
 
+export interface FormulationDescriptorGroup extends DescriptorGroup {
+  required: boolean;
+}
+
 interface SchemaConfig {
   generalInputs: Omit<DescriptorGroup, 'id'>[];
-  formulationInputs: Omit<DescriptorGroup, 'id'>[];
+  formulationInputs: Omit<FormulationDescriptorGroup, 'id'>[];
   outputs: Omit<DescriptorGroup, 'id'>[];
   numRows: number | '';
   noise: number;
@@ -44,7 +48,7 @@ interface SavedSchemaEntry {
 
 const DatasetGeneratorPage = () => {
   const [generalInputs, setGeneralInputs] = useState<DescriptorGroup[]>([]);
-  const [formulationInputs, setFormulationInputs] = useState<DescriptorGroup[]>([]);
+  const [formulationInputs, setFormulationInputs] = useState<FormulationDescriptorGroup[]>([]);
   const [outputs, setOutputs] = useState<DescriptorGroup[]>([]);
   const [numRows, setNumRows] = useState<number | ''>(50);
   const [showCoefficientsToggle, setShowCoefficientsToggle] = useState<boolean>(false);
@@ -102,7 +106,7 @@ const DatasetGeneratorPage = () => {
 
     const config: SchemaConfig = {
       generalInputs: generalInputs.map(({ name, min, max, units }) => ({ name, min, max, units })),
-      formulationInputs: formulationInputs.map(({ name, min, max, units }) => ({ name, min, max, units })),
+      formulationInputs: formulationInputs.map(({ name, min, max, units, required }) => ({ name, min, max, units, required })),
       outputs: outputs.map(({ name, min, max, units }) => ({ name, min, max, units })),
       numRows,
       noise,
@@ -148,7 +152,7 @@ const DatasetGeneratorPage = () => {
   const loadSchema = (schema: SavedSchemaEntry) => {
     const c = schema.config;
     setGeneralInputs(c.generalInputs.map(g => ({ ...g, id: crypto.randomUUID() })));
-    setFormulationInputs(c.formulationInputs.map(g => ({ ...g, id: crypto.randomUUID() })));
+    setFormulationInputs(c.formulationInputs.map(g => ({ ...g, required: g.required ?? false, id: crypto.randomUUID() })));
     setOutputs(c.outputs.map(g => ({ ...g, id: crypto.randomUUID() })));
     setNumRows(c.numRows);
     setNoise(c.noise);
@@ -171,7 +175,7 @@ const DatasetGeneratorPage = () => {
     if (category === 'general input') {
       setGeneralInputs([...generalInputs, newGroup]);
     } else if (category === 'formulation input') {
-      setFormulationInputs([...formulationInputs, newGroup]);
+      setFormulationInputs([...formulationInputs, { ...newGroup, required: false }]);
     } else if (category === 'output') {
       setOutputs([...outputs, newGroup]);
     }
@@ -201,6 +205,12 @@ const DatasetGeneratorPage = () => {
         group.id === id ? { ...group, [field]: value } : group
       ));
     }
+  };
+
+  const updateFormulationRequired = (id: string, required: boolean) => {
+    setFormulationInputs(formulationInputs.map(group =>
+      group.id === id ? { ...group, required } : group
+    ));
   };
 
   const preventWheelChange = (e: React.WheelEvent<HTMLInputElement>) => {
@@ -272,7 +282,13 @@ const DatasetGeneratorPage = () => {
         setError("Formulation Input bounds must all have values between 0 and 1.");
         return;
       }
+      if (group.required && min <= 0) {
+        setError(`Required ingredient "${group.name || '(unnamed)'}" must have a lower bound greater than 0.`);
+        return;
+      }
     }
+
+    const requiredIngredientCount = formulationInputs.filter(g => g.required).length;
 
 
     // Validate user selections for MinIngredientsPerFormulation and MaxIngredientsPerFormulation are allowable
@@ -312,6 +328,15 @@ const DatasetGeneratorPage = () => {
       if (resolvedMaxIngredientsPerFormulation > nIngredients) {
         setError("Max ingredients per formulation cannot exceed the number of formulation inputs.");
         return;
+      }
+
+      if (requiredIngredientCount > resolvedMaxIngredientsPerFormulation) {
+        setError("The number of required ingredients cannot exceed max ingredients per formulation.");
+        return;
+      }
+
+      if (resolvedMinIngredientsPerFormulation < requiredIngredientCount) {
+        resolvedMinIngredientsPerFormulation = requiredIngredientCount;
       }
     }
 
@@ -689,7 +714,9 @@ const DatasetGeneratorPage = () => {
               <>
                 <p className="mb-4 text-sm text-gray-600">
                   Note: Lower and upper bounds must be between 0 and 1, representing percentages that will sum to 100%.
-                  Ex: 0.25 represents 25%.
+                  Ex: 0.25 represents 25%. By default, ingredients are optional: a positive lower bound applies only when
+                  that ingredient is included (0 is also allowed). Mark an ingredient as required to force it into every
+                  formulation within its min/max bounds.
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
@@ -737,7 +764,7 @@ const DatasetGeneratorPage = () => {
                     >
                       ✕
                     </button>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                       <div>
                         <label className="block text-sm font-medium mb-1">Variable name</label>
                         <input
@@ -766,6 +793,39 @@ const DatasetGeneratorPage = () => {
                           onWheel={preventWheelChange}
                           className="w-full p-2 border border-gray-600 rounded"
                         />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Inclusion</label>
+                        <div
+                          className="inline-flex w-full rounded-lg border border-gray-600 p-0.5"
+                          role="group"
+                          aria-label="Ingredient inclusion"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => updateFormulationRequired(group.id, false)}
+                            aria-pressed={!group.required}
+                            className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
+                              !group.required
+                                ? 'bg-blue-500 text-white hover:bg-blue-600'
+                                : 'bg-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
+                            }`}
+                          >
+                            Optional
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updateFormulationRequired(group.id, true)}
+                            aria-pressed={group.required}
+                            className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
+                              group.required
+                                ? 'bg-blue-500 text-white hover:bg-blue-600'
+                                : 'bg-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
+                            }`}
+                          >
+                            Required
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>

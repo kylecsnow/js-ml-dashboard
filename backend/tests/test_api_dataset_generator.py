@@ -138,6 +138,48 @@ def test_dataset_generator_enforces_ingredient_count_bounds_wide_format():
         )
 
 
+def test_dataset_generator_enforces_required_ingredients_wide_format():
+    np.random.seed(0)
+    inputs = {
+        "general": {},
+        "formulation": {
+            "Ice Cream Base": {"min": 0.5, "max": 0.9, "units": "", "required": True},
+            "Mono Diglycerides": {"min": 0.005, "max": 0.03, "units": "", "required": False},
+            "Polysorbate 80": {"min": 0.001, "max": 0.015, "units": "", "required": False},
+            "PGPR": {"min": 0.001, "max": 0.02, "units": "", "required": False},
+            "DATEM": {"min": 0.001, "max": 0.015, "units": "", "required": False},
+            "Polyglycerol Esters": {"min": 0.001, "max": 0.02, "units": "", "required": False},
+            "Acetylated Monoglycerides": {"min": 0.001, "max": 0.015, "units": "", "required": False},
+            "Stearoyl Lactylate": {"min": 0.001, "max": 0.02, "units": "", "required": False},
+            "Sorbitan Monostearate": {"min": 0.001, "max": 0.015, "units": "", "required": False},
+            "Soy Lecithin": {"min": 0.001, "max": 0.02, "units": "", "required": False},
+        },
+    }
+    outputs = {
+        "Overrun": {"min": 20.0, "max": 120.0, "units": "percent"},
+    }
+
+    data_df, _ = build_synthetic_demo_dataset(
+        inputs=inputs,
+        outputs=outputs,
+        num_rows=100,
+        noise=0.01,
+        output_format="wide",
+        min_ingredients_per_formulation=4,
+        max_ingredients_per_formulation=7,
+    )
+
+    base_min = inputs["formulation"]["Ice Cream Base"]["min"]
+    base_max = inputs["formulation"]["Ice Cream Base"]["max"]
+    for value in data_df["Ice Cream Base"]:
+        assert value > 0.0
+        assert value >= base_min - 1e-12
+        assert value <= base_max + 1e-12
+
+    # Optional ingredients may still be omitted
+    assert (data_df["Mono Diglycerides"] == 0.0).any()
+
+
 def test_dataset_generator_enforces_per_ingredient_bounds_wide_format():
     np.random.seed(0)
     inputs = {

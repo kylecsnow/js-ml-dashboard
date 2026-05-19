@@ -245,6 +245,7 @@ def gibbs_sample_formulation_space(
     burn_in: int = 100,
     min_ingredients_per_formulation: Optional[int] = None,
     max_ingredients_per_formulation: Optional[int] = None,
+    required: Optional[List[bool]] = None,
 ):
     """
     Generate samples of ingredient formulations using Gibbs sampling.
@@ -256,6 +257,9 @@ def gibbs_sample_formulation_space(
     - burn_in: number of initial samples to discard
     - min_ingredients_per_formulation: minimum number of ingredients that must be used (non-zero quantity) in each formulation
     - max_ingredients_per_formulation: maximum number of ingredients that can be used (non-zero quantity) in each formulation
+    - required: per-ingredient flags; when True, the ingredient must be present in every formulation
+      and its amount must stay within [min, max] (cannot be zero). When False (default), an
+      ingredient may be omitted (zero) even if it has a positive lower bound.
     
     Returns:
     - samples: array of shape (n_samples, n_ingredients)
@@ -265,12 +269,31 @@ def gibbs_sample_formulation_space(
         constraints = [None] * n_ingredients
     elif len(constraints) != n_ingredients:
         raise ValueError(f"Length of formulation constraints (provided: {len(constraints)}) must equal n_ingredients (provided: {n_ingredients}).")
-    
+
+    if required is None:
+        required = [False] * n_ingredients
+    elif len(required) != n_ingredients:
+        raise ValueError(
+            f"Length of required flags (provided: {len(required)}) must equal n_ingredients (provided: {n_ingredients})."
+        )
+
+    required = np.array(required, dtype=bool)
+    required_indices = np.where(required)[0]
+    n_required = len(required_indices)
+
     # Set default values for number of allowed ingredients per formulation
     if min_ingredients_per_formulation is None:
         min_ingredients_per_formulation = n_ingredients
     if max_ingredients_per_formulation is None:
         max_ingredients_per_formulation = n_ingredients
+
+    if n_required > max_ingredients_per_formulation:
+        raise ValueError(
+            f"Number of required ingredients ({n_required}) cannot exceed "
+            f"max_ingredients_per_formulation ({max_ingredients_per_formulation})."
+        )
+    if min_ingredients_per_formulation < n_required:
+        min_ingredients_per_formulation = n_required
 
     # Validate ingredient count constraints
     if min_ingredients_per_formulation > max_ingredients_per_formulation:
@@ -297,6 +320,17 @@ def gibbs_sample_formulation_space(
     
     mins = np.array(mins)
     maxs = np.array(maxs)
+
+    if n_required > 0:
+        required_min_sum = float(np.sum(mins[required_indices]))
+        if required_min_sum > 1:
+            raise ValueError(
+                f"Sum of lower bounds for required ingredients ({required_min_sum:.3f}) exceeds 1.0."
+            )
+        if np.any(mins[required_indices] <= 0):
+            raise ValueError(
+                "Required formulation ingredients must have a lower bound greater than 0."
+            )
     
     # Validate that max ingredient count allows for a feasible solution
     # Check if we can satisfy the minimum number of ingredients
@@ -305,14 +339,27 @@ def gibbs_sample_formulation_space(
         raise ValueError(f"Cannot satisfy min_ingredients_per_formulation={min_ingredients_per_formulation}: minimum sum of {min_ingredients_per_formulation} smallest min constraints ({min_possible_sum:.3f}) exceeds 1.0")
     
     # Initialize with a valid starting point
+    def select_active_indices(n_active: int) -> np.ndarray:
+        """Pick which ingredients are active, always including required ones."""
+        optional_indices = [i for i in range(n_ingredients) if not required[i]]
+        n_optional_to_activate = n_active - n_required
+        if n_optional_to_activate > 0:
+            if n_optional_to_activate > len(optional_indices):
+                raise ValueError(
+                    "Cannot satisfy ingredient-count constraints with the given required ingredients."
+                )
+            extra_indices = np.random.choice(
+                optional_indices, size=n_optional_to_activate, replace=False
+            )
+            return np.concatenate([required_indices, extra_indices])
+        return required_indices.copy()
+
     def initialize_formulation():
         current = np.zeros(n_ingredients)
         
         # Randomly select how many ingredients to use
         n_active = np.random.randint(min_ingredients_per_formulation, max_ingredients_per_formulation + 1)
-        
-        # Randomly select which ingredients to activate
-        active_indices = np.random.choice(n_ingredients, size=n_active, replace=False)
+        active_indices = select_active_indices(n_active)
         
         # Set active ingredients to their minimum values
         for i in active_indices:
@@ -333,7 +380,7 @@ def gibbs_sample_formulation_space(
                     # No room to add more, try different ingredient selection
                     if attempt < max_attempts - 1:
                         current = np.zeros(n_ingredients)
-                        active_indices = np.random.choice(n_ingredients, size=n_active, replace=False)
+                        active_indices = select_active_indices(n_active)
                         for i in active_indices:
                             current[i] = mins[i]
                         remaining = 1.0 - np.sum(current)
@@ -355,7 +402,7 @@ def gibbs_sample_formulation_space(
                         current[i] = maxs[i]
                     if attempt < max_attempts - 1:
                         current = np.zeros(n_ingredients)
-                        active_indices = np.random.choice(n_ingredients, size=n_active, replace=False)
+                        active_indices = select_active_indices(n_active)
                         for i in active_indices:
                             current[i] = mins[i]
                         remaining = 1.0 - np.sum(current)
@@ -435,8 +482,11 @@ def gibbs_sample_formulation_space(
                             current[i] -= deficit
             
             elif move_type == 'deactivate' and len(active_ingredients) > min_ingredients_per_formulation:
-                # Deactivate an active ingredient
-                i = np.random.choice(active_ingredients)
+                # Deactivate an active ingredient (required ingredients cannot be deactivated)
+                deactivatable = [j for j in active_ingredients if not required[j]]
+                if not deactivatable:
+                    continue
+                i = np.random.choice(deactivatable)
                 
                 # Transfer all of this ingredient's amount to other active ingredients
                 amount_to_redistribute = current[i]
@@ -498,6 +548,16 @@ def gibbs_sample_formulation_space(
         if np.any(in_between_zero_and_min):
             raise ValueError("Sampling produced an ingredient below its min bound. Please re-try; this sometimes occurs due to the randomness involved in searching for a 'valid' formulation in a complex, high-dimensional space. This can get more difficult with more complex, higher-dimensional spaces. If re-trying many times does not resolve the issue, you may need to expand the upper & lower bound ranges on some of your ingredients and/or raise the max # of ingredients allowed per formulation, then try again.")
 
+        if np.any(required & (current <= 1e-12)):
+            raise ValueError(
+                "Sampling omitted a required ingredient. Please retry or adjust formulation bounds."
+            )
+        if np.any(required & (current < mins - 1e-12)):
+            raise ValueError(
+                "Sampling produced a required ingredient below its min bound. "
+                "Please retry or adjust formulation bounds."
+            )
+
         # Enforce active ingredient count rules before storing sample.
         active_count = np.sum(current > 1e-12)
         if active_count < min_ingredients_per_formulation or active_count > max_ingredients_per_formulation:
@@ -534,7 +594,14 @@ def build_synthetic_demo_dataset(
         all_inputs = list(general_inputs) + list(formulation_inputs)
         num_inputs = len(all_inputs)
         if inputs["formulation"]:
-            formulation_constraints = [(formulation_inputs[input_]["min"], formulation_inputs[input_]["max"]) for input_ in formulation_inputs]
+            formulation_constraints = [
+                (formulation_inputs[input_]["min"], formulation_inputs[input_]["max"])
+                for input_ in formulation_inputs
+            ]
+            formulation_required = [
+                formulation_inputs[input_].get("required", False)
+                for input_ in formulation_inputs
+            ]
 
 
     if isinstance(outputs, int):
@@ -571,6 +638,7 @@ def build_synthetic_demo_dataset(
                 n_samples=num_rows,
                 min_ingredients_per_formulation=min_ingredients_per_formulation,
                 max_ingredients_per_formulation=max_ingredients_per_formulation,
+                required=formulation_required,
             )
             X = np.concatenate((X_general, X_formulation), axis=1)
         else:

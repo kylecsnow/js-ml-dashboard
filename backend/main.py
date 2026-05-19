@@ -633,7 +633,15 @@ async def get_synthetic_demo_dataset(body: dict = Body(...)) -> dict[str, Any]:
 
         ### TODO: maybe make a function for this operation, instead of explicitly repreating it a bunch of times? (for better readability?)
         general_inputs = {item["name"]: {"min": float(item["min"]), "max": float(item["max"]), "units": item["units"]} for item in general_inputs}
-        formulation_inputs = {item["name"]: {"min": float(item["min"]), "max": float(item["max"]), "units": item["units"]} for item in formulation_inputs}
+        formulation_inputs = {
+            item["name"]: {
+                "min": float(item["min"]),
+                "max": float(item["max"]),
+                "units": item["units"],
+                "required": bool(item.get("required", False)),
+            }
+            for item in formulation_inputs
+        }
         outputs = {item["name"]: {"min": float(item["min"]), "max": float(item["max"]), "units": item["units"]} for item in outputs}
         inputs = {
             "general": general_inputs,
@@ -664,6 +672,20 @@ async def get_synthetic_demo_dataset(body: dict = Body(...)) -> dict[str, Any]:
                 raise ValueError(
                     f"max_ingredients_per_formulation (provided: {max_ingredients_per_formulation}) cannot exceed n_ingredients (provided: {n_ingredients})."
                 )
+
+            n_required = sum(1 for spec in formulation_inputs.values() if spec["required"])
+            if n_required > max_ingredients_per_formulation:
+                raise ValueError(
+                    f"Number of required ingredients ({n_required}) cannot exceed "
+                    f"max_ingredients_per_formulation ({max_ingredients_per_formulation})."
+                )
+            if min_ingredients_per_formulation < n_required:
+                min_ingredients_per_formulation = n_required
+            for name, spec in formulation_inputs.items():
+                if spec["required"] and spec["min"] <= 0:
+                    raise ValueError(
+                        f"Required formulation ingredient '{name}' must have a lower bound greater than 0."
+                    )
         else:
             min_ingredients_per_formulation = None
             max_ingredients_per_formulation = None
