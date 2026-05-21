@@ -9,7 +9,7 @@ def test_variable_options_returns_union_of_inputs_and_outputs(client, monkeypatc
         }
     }
 
-    monkeypatch.setattr("main.get_model_and_metadata", lambda model_name: mock_metadata)
+    monkeypatch.setattr("routers.models.get_model_and_metadata", lambda model_name: mock_metadata)
 
     response = client.get("/api/variable-options/demo_model")
     assert response.status_code == 200
@@ -28,7 +28,7 @@ def test_output_variable_options_returns_outputs_only(client, monkeypatch):
         }
     }
 
-    monkeypatch.setattr("main.get_model_and_metadata", lambda model_name: mock_metadata)
+    monkeypatch.setattr("routers.models.get_model_and_metadata", lambda model_name: mock_metadata)
 
     response = client.get("/api/output-variable-options/demo_model")
     assert response.status_code == 200
@@ -39,7 +39,7 @@ def test_variable_options_returns_500_when_model_lookup_fails(client, monkeypatc
     def _raise(*args, **kwargs):
         raise RuntimeError("model lookup failed")
 
-    monkeypatch.setattr("main.get_model_and_metadata", _raise)
+    monkeypatch.setattr("routers.models.get_model_and_metadata", _raise)
 
     response = client.get("/api/variable-options/bad_model")
     assert response.status_code == 500
@@ -55,8 +55,8 @@ def test_scatter_plot_two_variables_returns_plot_json(client, monkeypatch):
         }
     )
 
-    monkeypatch.setattr("main.get_dataset_name_from_model", lambda model_name: "demo")
-    monkeypatch.setattr("main.get_dataset", lambda dataset_name: dataset)
+    monkeypatch.setattr("routers.models.get_dataset_name_from_model", lambda model_name: "demo")
+    monkeypatch.setattr("routers.models.get_dataset", lambda dataset_name: dataset)
 
     response = client.post(
         "/api/scatter-plots/demo_model",

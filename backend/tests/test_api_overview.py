@@ -17,19 +17,19 @@ def _mock_overview_payload():
 
 
 def test_model_overview_returns_expected_shape(client, monkeypatch):
-    monkeypatch.setattr("main.get_model_and_metadata", lambda model_name: _mock_overview_payload())
+    monkeypatch.setattr("routers.models.get_model_and_metadata", lambda model_name: _mock_overview_payload())
     monkeypatch.setattr(
-        "main.get_dataset_name_from_model",
+        "routers.models.get_dataset_name_from_model",
         lambda model_name: "demo_dataset",
     )
     monkeypatch.setattr(
-        "main.create_parity_plot",
+        "routers.models.create_parity_plot",
         lambda data, title, width, height: go.Figure(
             data=[go.Scatter(x=[1, 2], y=[1, 2])]
         ),
     )
     monkeypatch.setattr(
-        "main.create_residual_plot",
+        "routers.models.create_residual_plot",
         lambda data, width, height: go.Figure(
             data=[go.Scatter(x=[1, 2], y=[0.1, -0.1])]
         ),
@@ -51,16 +51,16 @@ def test_model_overview_returns_expected_shape(client, monkeypatch):
 
 
 def test_model_overview_returns_500_on_plot_failure(client, monkeypatch):
-    monkeypatch.setattr("main.get_model_and_metadata", lambda model_name: _mock_overview_payload())
+    monkeypatch.setattr("routers.models.get_model_and_metadata", lambda model_name: _mock_overview_payload())
     monkeypatch.setattr(
-        "main.get_dataset_name_from_model",
+        "routers.models.get_dataset_name_from_model",
         lambda model_name: "demo_dataset",
     )
 
     def _raise(*args, **kwargs):
         raise RuntimeError("plot generation failed")
 
-    monkeypatch.setattr("main.create_parity_plot", _raise)
+    monkeypatch.setattr("routers.models.create_parity_plot", _raise)
 
     response = client.get("/api/overview/demo_model")
     assert response.status_code == 500

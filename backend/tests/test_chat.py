@@ -1,6 +1,6 @@
 import json
 
-from chat import _normalize_num, _strip_unchanged_updates
+from routers.chat import _normalize_num, _strip_unchanged_updates
 
 
 class _FakeCompletionMessage:
@@ -117,7 +117,7 @@ def test_chat_dataset_generator_ignores_updates_when_no_form_changes(client, mon
             "form_updates": {"noise": 0.1},
         }
     )
-    monkeypatch.setattr("chat.Groq", lambda api_key: _FakeGroq(api_key=api_key, content=llm_json))
+    monkeypatch.setattr("routers.chat.Groq", lambda api_key: _FakeGroq(api_key=api_key, content=llm_json))
 
     response = client.post(
         "/api/chat/dataset-generator",
@@ -141,7 +141,7 @@ def test_chat_dataset_generator_returns_only_changed_form_updates(client, monkey
             },
         }
     )
-    monkeypatch.setattr("chat.Groq", lambda api_key: _FakeGroq(api_key=api_key, content=llm_json))
+    monkeypatch.setattr("routers.chat.Groq", lambda api_key: _FakeGroq(api_key=api_key, content=llm_json))
 
     response = client.post(
         "/api/chat/dataset-generator",
