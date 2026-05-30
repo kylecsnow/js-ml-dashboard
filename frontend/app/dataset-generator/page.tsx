@@ -65,9 +65,11 @@ const DatasetGeneratorPage = () => {
   const [savedSchemas, setSavedSchemas] = useState<SavedSchemaEntry[]>([]);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showRenameModal, setShowRenameModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [schemaNameInput, setSchemaNameInput] = useState("");
   const [renamingSchemaId, setRenamingSchemaId] = useState<number | null>(null);
   const [renameSchemaInput, setRenameSchemaInput] = useState("");
+  const [deletingSchema, setDeletingSchema] = useState<{ id: number; name: string } | null>(null);
   const [schemaDropdownOpen, setSchemaDropdownOpen] = useState(false);
   const schemaDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -141,10 +143,24 @@ const DatasetGeneratorPage = () => {
     }
   };
 
-  const deleteSchema = async (schemaId: number) => {
+  const openDeleteModal = (schema: SavedSchemaEntry) => {
+    setDeletingSchema({ id: schema.id, name: schema.name });
+    setShowDeleteModal(true);
+    setSchemaDropdownOpen(false);
+  };
+
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setDeletingSchema(null);
+  };
+
+  const confirmDeleteSchema = async () => {
+    if (!deletingSchema) return;
+
     try {
-      const response = await fetch(`./api/schemas/${schemaId}`, { method: 'DELETE' });
+      const response = await fetch(`./api/schemas/${deletingSchema.id}`, { method: 'DELETE' });
       if (response.ok) {
+        closeDeleteModal();
         fetchSchemas();
       }
     } catch (err) {
@@ -588,7 +604,7 @@ const DatasetGeneratorPage = () => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            deleteSchema(schema.id);
+                            openDeleteModal(schema);
                           }}
                           className="ml-2 text-red-500 hover:text-red-700 text-sm flex-shrink-0"
                           title="Delete schema"
@@ -662,6 +678,34 @@ const DatasetGeneratorPage = () => {
                     className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
                   >
                     Rename
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Delete Schema modal */}
+          {showDeleteModal && deletingSchema && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 shadow-xl">
+                <h3 className="text-lg font-bold mb-4">Delete Schema</h3>
+                <div className="mb-6 text-sm text-gray-700 dark:text-gray-300">
+                  <p>Are you sure you want to delete the following schema?</p>
+                  <p className="mt-2 font-semibold">{deletingSchema.name}</p>
+                  <p className="mt-2">This cannot be undone.</p>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={closeDeleteModal}
+                    className="px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded hover:bg-gray-400 dark:hover:bg-gray-500"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDeleteSchema}
+                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                  >
+                    Yes, Delete
                   </button>
                 </div>
               </div>
