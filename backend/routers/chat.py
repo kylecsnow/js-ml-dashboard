@@ -21,7 +21,12 @@ has the following sections:
 1. **General Inputs** — continuous process variables (e.g. temperature, time, speed). \
    Each has: name, min, max, units.
 2. **Formulation Inputs** — mixture/recipe ingredients whose fractions must sum to 1. \
-   Each has: name, min (≥0, ≤1), max (≥0, ≤1). No units field (fractions implied). \
+   Each has: name, min (≥0, ≤1), max (≥0, ≤1), and required (boolean, default false). \
+   No units field (fractions implied). \
+   - **required: false** (optional, default) — the ingredient may be omitted (amount 0) even if \
+     min > 0; bounds apply only when the ingredient is included. \
+   - **required: true** — the ingredient must appear in every formulation within its min/max; \
+     min must be > 0. Use for base/primary ingredients the user says must always be present. \
    There are also optional "min_ingredients_per_formulation" and \
    "max_ingredients_per_formulation" integers that control how many ingredients are \
    active (non-zero) per row.
@@ -106,6 +111,13 @@ has the following sections:
 - Formulation input min and max values MUST be between 0 and 1. They represent \
   weight/volume/mole fractions. For example, 5% should be written as "0.05", \
   not "5". Double-check every formulation bound before responding.
+- Required ingredients (required: true) MUST have min > 0.
+- When the user asks to make an ingredient required, mandatory, or always included, \
+  set required: true on that ingredient (return the full formulation_inputs list).
+- When the user asks to make an ingredient optional or allow it to be omitted, \
+  set required: false on that ingredient (return the full formulation_inputs list).
+- When adding new formulation inputs, default to required: false unless the user \
+  clearly indicates the ingredient must always be present.
 
 **Updating the form:**
 - When the user asks you to ADD an item to a category, return the FULL list for that \
@@ -145,7 +157,7 @@ You MUST respond with valid JSON matching this schema exactly:
       {"name": "...", "min": "...", "max": "...", "units": "..."}
     ],
     "formulation_inputs": [        // optional
-      {"name": "...", "min": "...", "max": "..."}
+      {"name": "...", "min": "...", "max": "...", "required": false}
     ],
     "outputs": [                   // optional
       {"name": "...", "min": "...", "max": "...", "units": "..."}
@@ -171,10 +183,11 @@ should be numbers (or null).
 ### Before you respond, verify:
 1. Does every variable name contain ZERO parentheses? If any name has "(" or ")", fix it.
 2. Are ALL formulation input min/max values between 0 and 1?
-3. Is every ingredient actually used in this specific domain/application?
-4. Does each output have a unique, realistic range (not copy-pasted defaults)?
-5. Are units in the "units" field, NOT embedded in the name?
-6. Did the user ask you to change the form? If not, set form_changes_intended to false.
+3. Does every required ingredient have min > 0?
+4. Is every ingredient actually used in this specific domain/application?
+5. Does each output have a unique, realistic range (not copy-pasted defaults)?
+6. Are units in the "units" field, NOT embedded in the name?
+7. Did the user ask you to change the form? If not, set form_changes_intended to false.
 """
 
 
@@ -201,6 +214,21 @@ def _normalize_descriptors(
     ]
 
 
+def _normalize_formulation_descriptors(
+    items: list[dict],
+) -> list[tuple[str, str, str, bool]]:
+    """Convert formulation input dicts to canonical tuples for comparison."""
+    return [
+        (
+            d.get("name", ""),
+            _normalize_num(d.get("min", "")),
+            _normalize_num(d.get("max", "")),
+            bool(d.get("required", False)),
+        )
+        for d in items
+    ]
+
+
 def _strip_unchanged_updates(
     form_state: dict, form_updates: dict
 ) -> dict | None:
@@ -213,12 +241,18 @@ def _strip_unchanged_updates(
 
     cleaned: dict[str, Any] = {}
 
-    for key in ("general_inputs", "formulation_inputs", "outputs"):
+    for key in ("general_inputs", "outputs"):
         if key in form_updates:
             current = form_state.get(key, [])
             incoming = form_updates[key]
             if _normalize_descriptors(current) != _normalize_descriptors(incoming):
                 cleaned[key] = incoming
+
+    if "formulation_inputs" in form_updates:
+        current = form_state.get("formulation_inputs", [])
+        incoming = form_updates["formulation_inputs"]
+        if _normalize_formulation_descriptors(current) != _normalize_formulation_descriptors(incoming):
+            cleaned["formulation_inputs"] = incoming
 
     for key in ("num_rows", "noise", "filename"):
         if key in form_updates:

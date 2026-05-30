@@ -1,6 +1,10 @@
 import json
 
-from routers.chat import _normalize_num, _strip_unchanged_updates
+from routers.chat import (
+    _normalize_formulation_descriptors,
+    _normalize_num,
+    _strip_unchanged_updates,
+)
 
 
 class _FakeCompletionMessage:
@@ -66,6 +70,35 @@ def test_strip_unchanged_updates_prunes_to_none_when_identical():
     }
 
     assert _strip_unchanged_updates(form_state, incoming) is None
+
+
+def test_normalize_formulation_descriptors_includes_required():
+    items = [
+        {"name": "Base", "min": "0.5", "max": "0.9", "required": True},
+        {"name": "Additive", "min": "0.001", "max": "0.02"},
+    ]
+    assert _normalize_formulation_descriptors(items) == [
+        ("Base", "0.5", "0.9", True),
+        ("Additive", "0.001", "0.02", False),
+    ]
+
+
+def test_strip_unchanged_updates_detects_required_toggle_change():
+    form_state = {
+        "formulation_inputs": [
+            {"name": "Ice Cream Base", "min": "0.5", "max": "0.9", "required": False},
+            {"name": "DATEM", "min": "0.001", "max": "0.015", "required": False},
+        ],
+    }
+    incoming = {
+        "formulation_inputs": [
+            {"name": "Ice Cream Base", "min": "0.5", "max": "0.9", "required": True},
+            {"name": "DATEM", "min": "0.001", "max": "0.015", "required": False},
+        ],
+    }
+
+    cleaned = _strip_unchanged_updates(form_state, incoming)
+    assert cleaned == incoming
 
 
 def test_strip_unchanged_updates_keeps_only_changed_fields():
