@@ -57,6 +57,29 @@ async def create_schema(body: dict = Body(...), db: Session = Depends(get_db)) -
     }
 
 
+@router.patch("/api/schemas/{schema_id}")
+async def rename_schema(
+    schema_id: int, body: dict = Body(...), db: Session = Depends(get_db)
+) -> dict:
+    name = body.get("name")
+    if not name or not name.strip():
+        raise HTTPException(status_code=400, detail="Schema name is required.")
+
+    schema = db.query(SavedSchema).filter(SavedSchema.id == schema_id).first()
+    if not schema:
+        raise HTTPException(status_code=404, detail="Schema not found.")
+
+    schema.name = name.strip()
+    db.commit()
+    db.refresh(schema)
+
+    return {
+        "id": schema.id,
+        "name": schema.name,
+        "created_at": schema.created_at.isoformat() if schema.created_at else None,
+    }
+
+
 @router.delete("/api/schemas/{schema_id}")
 async def delete_schema(schema_id: int, db: Session = Depends(get_db)) -> dict[str, str]:
     schema = db.query(SavedSchema).filter(SavedSchema.id == schema_id).first()

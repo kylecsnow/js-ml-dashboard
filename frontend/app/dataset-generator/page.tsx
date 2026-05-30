@@ -64,7 +64,10 @@ const DatasetGeneratorPage = () => {
 
   const [savedSchemas, setSavedSchemas] = useState<SavedSchemaEntry[]>([]);
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showRenameModal, setShowRenameModal] = useState(false);
   const [schemaNameInput, setSchemaNameInput] = useState("");
+  const [renamingSchemaId, setRenamingSchemaId] = useState<number | null>(null);
+  const [renameSchemaInput, setRenameSchemaInput] = useState("");
   const [schemaDropdownOpen, setSchemaDropdownOpen] = useState(false);
   const schemaDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -146,6 +149,49 @@ const DatasetGeneratorPage = () => {
       }
     } catch (err) {
       console.error('Failed to delete schema:', err);
+    }
+  };
+
+  const openRenameModal = (schema: SavedSchemaEntry) => {
+    setRenamingSchemaId(schema.id);
+    setRenameSchemaInput(schema.name);
+    setShowRenameModal(true);
+    setSchemaDropdownOpen(false);
+  };
+
+  const closeRenameModal = () => {
+    setShowRenameModal(false);
+    setRenamingSchemaId(null);
+    setRenameSchemaInput("");
+  };
+
+  const renameSchema = async () => {
+    if (renamingSchemaId === null) return;
+
+    if (!renameSchemaInput.trim()) {
+      setError("Schema name is required.");
+      return;
+    }
+
+    try {
+      const response = await fetch(`./api/schemas/${renamingSchemaId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: renameSchemaInput }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        setError(errorData.detail || "Failed to rename schema.");
+        return;
+      }
+
+      closeRenameModal();
+      setError("");
+      fetchSchemas();
+    } catch (err) {
+      console.error('Failed to rename schema:', err);
+      setError("Failed to rename schema.");
     }
   };
 
@@ -513,7 +559,7 @@ const DatasetGeneratorPage = () => {
                 Load Schema {savedSchemas.length > 0 && `(${savedSchemas.length})`}
               </button>
               {schemaDropdownOpen && (
-                <div className="absolute z-10 mt-1 w-72 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-lg max-h-64 overflow-y-auto">
+                <div className="absolute z-10 mt-1 w-80 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-lg max-h-64 overflow-y-auto">
                   {savedSchemas.length === 0 ? (
                     <div className="p-3 text-sm text-gray-500">No saved schemas yet.</div>
                   ) : (
@@ -531,9 +577,22 @@ const DatasetGeneratorPage = () => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
+                            openRenameModal(schema);
+                          }}
+                          className="ml-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-sm flex-shrink-0"
+                          title="Rename schema"
+                          aria-label={`Rename ${schema.name}`}
+                        >
+                          ✎
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
                             deleteSchema(schema.id);
                           }}
                           className="ml-2 text-red-500 hover:text-red-700 text-sm flex-shrink-0"
+                          title="Delete schema"
+                          aria-label={`Delete ${schema.name}`}
                         >
                           ✕
                         </button>
@@ -571,6 +630,38 @@ const DatasetGeneratorPage = () => {
                     className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
                   >
                     Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Rename Schema modal */}
+          {showRenameModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 shadow-xl">
+                <h3 className="text-lg font-bold mb-4">Rename Schema</h3>
+                <input
+                  type="text"
+                  value={renameSchemaInput}
+                  onChange={(e) => setRenameSchemaInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') renameSchema(); }}
+                  placeholder="Enter a new name for this schema"
+                  className="w-full p-2 border border-gray-600 rounded mb-4"
+                  autoFocus
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={closeRenameModal}
+                    className="px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded hover:bg-gray-400 dark:hover:bg-gray-500"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={renameSchema}
+                    className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
+                  >
+                    Rename
                   </button>
                 </div>
               </div>
