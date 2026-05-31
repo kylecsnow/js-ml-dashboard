@@ -789,8 +789,8 @@ const DatasetGeneratorPage = () => {
                     >
                       ✕
                     </button>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <div>
+                    <div className="flex flex-col md:flex-row md:items-end gap-4">
+                      <div className="md:flex-1 md:min-w-">
                         <label className="block text-sm font-medium mb-1">Variable name</label>
                         <input
                           type="text"
@@ -799,7 +799,7 @@ const DatasetGeneratorPage = () => {
                           className="w-full p-2 border border-gray-600 rounded"
                         />
                       </div>
-                      <div>
+                      <div className="md:w-32">
                         <label className="block text-sm font-medium mb-1">Lower bound</label>
                         <input
                           type="number"
@@ -809,7 +809,7 @@ const DatasetGeneratorPage = () => {
                           className="w-full p-2 border border-gray-600 rounded"
                         />
                       </div>
-                      <div>
+                      <div className="md:w-32">
                         <label className="block text-sm font-medium mb-1">Upper bound</label>
                         <input
                           type="number"
@@ -899,8 +899,8 @@ const DatasetGeneratorPage = () => {
                     >
                       ✕
                     </button>
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                      <div>
+                    <div className="flex flex-col md:flex-row md:items-end gap-4">
+                      <div className="md:flex-1 md:min-w-0">
                         <label className="block text-sm font-medium mb-1">Variable name</label>
                         <input
                           type="text"
@@ -909,7 +909,7 @@ const DatasetGeneratorPage = () => {
                           className="w-full p-2 border border-gray-600 rounded"
                         />
                       </div>
-                      <div>
+                      <div className="md:w-32">
                         <label className="block text-sm font-medium mb-1">Lower bound</label>
                         <input
                           type="number"
@@ -919,7 +919,7 @@ const DatasetGeneratorPage = () => {
                           className="w-full p-2 border border-gray-600 rounded"
                         />
                       </div>
-                      <div>
+                      <div className="md:w-32">
                         <label className="block text-sm font-medium mb-1">Upper bound</label>
                         <input
                           type="number"
@@ -929,7 +929,7 @@ const DatasetGeneratorPage = () => {
                           className="w-full p-2 border border-gray-600 rounded"
                         />
                       </div>
-                      <div>
+                      <div className="md:w-[186px]">
                         <label className="block text-sm font-medium mb-1">Inclusion</label>
                         <div
                           className="inline-flex w-full rounded-lg border border-gray-600 p-0.5"
@@ -995,8 +995,8 @@ const DatasetGeneratorPage = () => {
                     >
                       ✕
                     </button>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <div>
+                    <div className="flex flex-col md:flex-row md:items-end gap-4">
+                      <div className="md:flex-1 md:min-w-0">
                         <label className="block text-sm font-medium mb-1">Variable name</label>
                         <input
                           type="text"
@@ -1005,7 +1005,7 @@ const DatasetGeneratorPage = () => {
                           className="w-full p-2 border border-gray-600 rounded"
                         />
                       </div>
-                      <div>
+                      <div className="md:w-32">
                         <label className="block text-sm font-medium mb-1">Lower bound</label>
                         <input
                           type="number"
@@ -1015,7 +1015,7 @@ const DatasetGeneratorPage = () => {
                           className="w-full p-2 border border-gray-600 rounded"
                         />
                       </div>
-                      <div>
+                      <div className="md:w-32">
                         <label className="block text-sm font-medium mb-1">Upper bound</label>
                         <input
                           type="number"
