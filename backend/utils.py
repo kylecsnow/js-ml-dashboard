@@ -238,6 +238,124 @@ def compact_to_wide_format(df):
 #     raise ValueError(f"Could not find any valid formulation after {max_attempts} attempts. Please check that your formulations are not over-constrained. (Your lower & upper bounds might make it impossible to find a formulation where the ingredient quantities sum to 100%)")
 
 
+# Smallest amount assigned to a present ingredient so that it is reliably
+# counted as present (> 0) even when its lower bound is exactly 0.
+_PRESENT_EPS = 1e-9
+
+
+def _fill_remaining_room(room: np.ndarray, remaining: float) -> np.ndarray:
+    """Randomly distribute ``remaining`` mass across items, each capped by ``room``.
+
+    The allocation always sums to ``remaining`` provided ``0 <= remaining <= sum(room)``
+    (within numerical tolerance). A per-item lower bound derived from the room still
+    available downstream guarantees feasibility regardless of the random order.
+    """
+    k = len(room)
+    alloc = np.zeros(k)
+    if k == 0:
+        return alloc
+
+    order = np.random.permutation(k)
+    room_ordered = room[order]
+
+    # Suffix sums of the remaining room after each position in ``order``.
+    suffix_sums = np.zeros(k + 1)
+    for idx in range(k - 1, -1, -1):
+        suffix_sums[idx] = suffix_sums[idx + 1] + room_ordered[idx]
+
+    rem = float(remaining)
+    for pos in range(k):
+        remaining_room_after = suffix_sums[pos + 1]
+        lo = max(0.0, rem - remaining_room_after)
+        hi = min(room_ordered[pos], rem)
+        amount = lo if hi <= lo else float(np.random.uniform(lo, hi))
+        alloc[order[pos]] = amount
+        rem -= amount
+
+    return alloc
+
+
+def _allocate_present(
+    present_indices: np.ndarray,
+    target: float,
+    mins: np.ndarray,
+    maxs: np.ndarray,
+    n: int,
+) -> Optional[np.ndarray]:
+    """Allocate ``target`` mass across a fixed set of present ingredients.
+
+    Returns a length-``n`` vector (zeros for absent ingredients) summing to
+    ``target`` with each present ingredient inside ``[min, max]``, or ``None`` if
+    the present set cannot accommodate ``target``.
+    """
+    vec = np.zeros(n)
+    if len(present_indices) == 0:
+        return vec if abs(target) < 1e-12 else None
+
+    # Floor zero lower bounds so present ingredients are strictly positive.
+    base = np.maximum(mins[present_indices], _PRESENT_EPS)
+    base_sum = float(base.sum())
+    remaining = target - base_sum
+    if remaining < -1e-9:
+        return None
+
+    room = maxs[present_indices] - base
+    if room.sum() < remaining - 1e-9:
+        return None
+
+    add = _fill_remaining_room(room, max(0.0, remaining))
+    vec[present_indices] = base + add
+    return vec
+
+
+def _sample_constrained_simplex(
+    target: float,
+    mins: np.ndarray,
+    maxs: np.ndarray,
+    required: np.ndarray,
+    min_count: int,
+    max_count: int,
+    attempts: int = 300,
+) -> Optional[np.ndarray]:
+    """Sample ``n`` non-negative amounts summing to ``target``.
+
+    Present (non-zero) ingredients stay within ``[min, max]``; required ingredients
+    are always present; the number of present ingredients lies in ``[min_count, max_count]``.
+    Returns ``None`` if no feasible allocation is found within ``attempts`` tries.
+    """
+    n = len(mins)
+    if target <= 1e-12:
+        # An absent group/region contributes nothing.
+        return np.zeros(n)
+
+    required_indices = [i for i in range(n) if required[i]]
+    optional_indices = [i for i in range(n) if not required[i]]
+    n_required = len(required_indices)
+
+    lo_count = max(int(min_count), n_required, 1)
+    hi_count = min(int(max_count), n)
+    if lo_count > hi_count:
+        return None
+
+    for _ in range(attempts):
+        n_present = np.random.randint(lo_count, hi_count + 1)
+        n_optional = n_present - n_required
+        if n_optional < 0 or n_optional > len(optional_indices):
+            continue
+        if n_optional > 0:
+            chosen = list(
+                np.random.choice(optional_indices, size=n_optional, replace=False)
+            )
+        else:
+            chosen = []
+        present_indices = np.array(required_indices + chosen, dtype=int)
+        vec = _allocate_present(present_indices, target, mins, maxs, n)
+        if vec is not None:
+            return vec
+
+    return None
+
+
 def gibbs_sample_formulation_space(
     n_ingredients: int,
     constraints: Optional[List[Tuple[float, float]]] = None,
@@ -249,7 +367,13 @@ def gibbs_sample_formulation_space(
 ):
     """
     Generate samples of ingredient formulations using Gibbs sampling.
-    
+
+    NOTE: This is the original MCMC-based sampler. It does NOT support ingredient
+    groups. It is retained for reference/experimentation; the app now uses
+    `group_aware_sample_formulation_space` instead. Prefer that function for new
+    work unless you specifically need the Markov-chain (transfer/activate/deactivate)
+    sampling behaviour here.
+
     Parameters:
     - n_ingredients: number of ingredients
     - constraints: list of (min, max) tuples for each ingredient, or None for unconstrained
@@ -260,7 +384,7 @@ def gibbs_sample_formulation_space(
     - required: per-ingredient flags; when True, the ingredient must be present in every formulation
       and its amount must stay within [min, max] (cannot be zero). When False (default), an
       ingredient may be omitted (zero) even if it has a positive lower bound.
-    
+
     Returns:
     - samples: array of shape (n_samples, n_ingredients)
     """
@@ -573,6 +697,308 @@ def gibbs_sample_formulation_space(
     return np.array(samples)
 
 
+def group_aware_sample_formulation_space(
+    n_ingredients: int,
+    constraints: Optional[List[Tuple[float, float]]] = None,
+    n_samples: int = 100,
+    burn_in: int = 100,
+    min_ingredients_per_formulation: Optional[int] = None,
+    max_ingredients_per_formulation: Optional[int] = None,
+    required: Optional[List[bool]] = None,
+    group_index: Optional[List[int]] = None,
+    group_constraints: Optional[List[Tuple[float, float]]] = None,
+    group_min_counts: Optional[List[int]] = None,
+    group_max_counts: Optional[List[int]] = None,
+):
+    """
+    Generate samples of ingredient formulations using a hierarchical (group-aware) sampler.
+
+    Parameters:
+    - n_ingredients: number of ingredients
+    - constraints: list of (min, max) tuples for each ingredient, or None for unconstrained
+    - n_samples: number of samples to generate
+    - burn_in: retained for backwards compatibility (unused; samples are drawn independently)
+    - min_ingredients_per_formulation: minimum number of ingredients used (non-zero) per formulation (global)
+    - max_ingredients_per_formulation: maximum number of ingredients used (non-zero) per formulation (global)
+    - required: per-ingredient flags; when True, the ingredient must be present in every formulation
+      and its amount must stay within [min, max] (cannot be zero). When False (default), an
+      ingredient may be omitted (zero) even if it has a positive lower bound.
+    - group_index: per-ingredient group id (0..n_groups-1). When None, all ingredients form a
+      single implicit group spanning the whole formulation.
+    - group_constraints: list of (min, max) bounds on the SUM of each group's ingredient amounts.
+      Group bounds are CONDITIONAL: they apply only when the group is present (at least one of its
+      ingredients is present). A group whose total is 0 (entirely absent) is always allowed unless
+      the group is forced present (has a required ingredient or a positive group_min_count).
+    - group_min_counts / group_max_counts: min/max number of present ingredients per group.
+
+    Returns:
+    - samples: array of shape (n_samples, n_ingredients)
+    """
+
+    if constraints is None:
+        constraints = [None] * n_ingredients
+    elif len(constraints) != n_ingredients:
+        raise ValueError(f"Length of formulation constraints (provided: {len(constraints)}) must equal n_ingredients (provided: {n_ingredients}).")
+
+    if required is None:
+        required = [False] * n_ingredients
+    elif len(required) != n_ingredients:
+        raise ValueError(
+            f"Length of required flags (provided: {len(required)}) must equal n_ingredients (provided: {n_ingredients})."
+        )
+
+    required = np.array(required, dtype=bool)
+
+    # Extract per-ingredient mins and maxs, treating None constraints as (0, 1).
+    mins = []
+    maxs = []
+    for constraint in constraints:
+        if constraint is not None:
+            min_val, max_val = constraint
+            mins.append(min_val)
+            maxs.append(max_val)
+        else:
+            mins.append(0.0)
+            maxs.append(1.0)
+    mins = np.array(mins, dtype=float)
+    maxs = np.array(maxs, dtype=float)
+
+    # Resolve global ingredient-count defaults.
+    if min_ingredients_per_formulation is None:
+        min_ingredients_per_formulation = n_ingredients
+    if max_ingredients_per_formulation is None:
+        max_ingredients_per_formulation = n_ingredients
+    global_min = int(min_ingredients_per_formulation)
+    global_max = int(max_ingredients_per_formulation)
+
+    # Resolve grouping. No groups => one implicit group spanning all ingredients,
+    # which reproduces the original (single-simplex) behaviour.
+    implicit_single_group = group_index is None
+    if implicit_single_group:
+        group_index = [0] * n_ingredients
+        if group_constraints is None:
+            group_constraints = [(0.0, 1.0)]
+
+    if len(group_index) != n_ingredients:
+        raise ValueError(
+            f"Length of group_index (provided: {len(group_index)}) must equal n_ingredients (provided: {n_ingredients})."
+        )
+
+    n_groups = (max(group_index) + 1) if n_ingredients > 0 else 0
+    members = [
+        np.array([i for i in range(n_ingredients) if group_index[i] == g], dtype=int)
+        for g in range(n_groups)
+    ]
+
+    if group_constraints is None:
+        group_constraints = [(0.0, 1.0)] * n_groups
+    group_lowers = np.array([gc[0] for gc in group_constraints], dtype=float)
+    group_uppers = np.array([gc[1] for gc in group_constraints], dtype=float)
+
+    if implicit_single_group:
+        group_min_counts = [global_min]
+        group_max_counts = [global_max]
+    if group_min_counts is None:
+        group_min_counts = [0] * n_groups
+    if group_max_counts is None:
+        group_max_counts = [len(members[g]) for g in range(n_groups)]
+    group_min_counts = [int(c) for c in group_min_counts]
+    group_max_counts = [int(c) for c in group_max_counts]
+
+    n_required_in_group = [int(required[members[g]].sum()) for g in range(n_groups)]
+    forced_present = [
+        (group_min_counts[g] > 0) or (n_required_in_group[g] > 0)
+        for g in range(n_groups)
+    ]
+
+    # ---- Feasibility validation (raised as ValueError -> HTTP 400 upstream) ----
+    if n_ingredients > 0:
+        if float(np.sum(group_uppers)) < 1.0 - 1e-9:
+            raise ValueError(
+                f"Sum of group upper bounds ({float(np.sum(group_uppers)):.3f}) is less than 1.0, "
+                "so ingredient amounts cannot sum to 100%."
+            )
+        forced_lower_sum = float(
+            np.sum([group_lowers[g] for g in range(n_groups) if forced_present[g]])
+        )
+        if forced_lower_sum > 1.0 + 1e-9:
+            raise ValueError(
+                f"Sum of lower bounds for always-present groups ({forced_lower_sum:.3f}) exceeds 1.0."
+            )
+
+    for g in range(n_groups):
+        size = len(members[g])
+        if group_min_counts[g] > group_max_counts[g]:
+            raise ValueError(
+                f"Group {g}: min ingredient count ({group_min_counts[g]}) cannot exceed max ({group_max_counts[g]})."
+            )
+        if group_max_counts[g] > size:
+            raise ValueError(
+                f"Group {g}: max ingredient count ({group_max_counts[g]}) cannot exceed the number of ingredients in the group ({size})."
+            )
+        req_idx = members[g][required[members[g]]]
+        if len(req_idx) > 0:
+            if np.any(mins[req_idx] <= 0):
+                raise ValueError(
+                    "Required formulation ingredients must have a lower bound greater than 0."
+                )
+            if float(np.sum(mins[req_idx])) > group_uppers[g] + 1e-9:
+                raise ValueError(
+                    f"Group {g}: sum of required ingredient lower bounds "
+                    f"({float(np.sum(mins[req_idx])):.3f}) exceeds the group's upper bound "
+                    f"({group_uppers[g]:.3f})."
+                )
+
+    if global_min < 1 and n_ingredients > 0:
+        raise ValueError("min_ingredients_per_formulation must be at least 1.")
+    if global_min > global_max:
+        raise ValueError(
+            f"min_ingredients_per_formulation (provided: {global_min}) cannot be greater than "
+            f"max_ingredients_per_formulation (provided: {global_max})."
+        )
+    if global_max > n_ingredients:
+        raise ValueError(
+            f"max_ingredients_per_formulation (provided: {global_max}) cannot exceed n_ingredients (provided: {n_ingredients})."
+        )
+
+    optional_groups = [g for g in range(n_groups) if not forced_present[g]]
+    forced_groups = [g for g in range(n_groups) if forced_present[g]]
+
+    def choose_present_groups() -> Optional[List[int]]:
+        """Pick which groups are present this formulation (forced + random optional)."""
+        present = list(forced_groups)
+        shuffled = list(optional_groups)
+        np.random.shuffle(shuffled)
+        for g in shuffled:
+            if np.random.rand() < 0.5:
+                present.append(g)
+
+        # Ensure enough capacity to reach a total of 1.0; add optional groups if short.
+        leftover = [g for g in shuffled if g not in present]
+        while float(np.sum(group_uppers[present])) < 1.0 - 1e-9 and leftover:
+            present.append(leftover.pop())
+
+        # If the present lower bounds overshoot 1.0, drop optional groups (largest lower first).
+        droppable = sorted(
+            [g for g in present if not forced_present[g]],
+            key=lambda g: group_lowers[g],
+            reverse=True,
+        )
+        di = 0
+        while float(np.sum(group_lowers[present])) > 1.0 + 1e-9 and di < len(droppable):
+            present.remove(droppable[di])
+            di += 1
+
+        if not present:
+            return None
+        if float(np.sum(group_lowers[present])) > 1.0 + 1e-9:
+            return None
+        if float(np.sum(group_uppers[present])) < 1.0 - 1e-9:
+            return None
+        return sorted(present)
+
+    def choose_counts(present: List[int], attempts: int = 200) -> Optional[dict]:
+        """Pick a per-group present count whose sum lands in the global window."""
+        for _ in range(attempts):
+            counts = {}
+            ok = True
+            for g in present:
+                lo = max(1, group_min_counts[g], n_required_in_group[g])
+                hi = group_max_counts[g]
+                if lo > hi:
+                    ok = False
+                    break
+                counts[g] = int(np.random.randint(lo, hi + 1))
+            if not ok:
+                return None
+            total = sum(counts.values())
+            if global_min <= total <= global_max:
+                return counts
+        return None
+
+    def generate_one_sample() -> np.ndarray:
+        max_attempts = 5000
+        for _ in range(max_attempts):
+            present = choose_present_groups()
+            if present is None:
+                continue
+            counts = choose_counts(present)
+            if counts is None:
+                continue
+
+            # Sample group totals summing to 1 with each present total in [L_g, U_g].
+            totals = _allocate_present(
+                np.arange(len(present)),
+                1.0,
+                group_lowers[present],
+                group_uppers[present],
+                len(present),
+            )
+            if totals is None:
+                continue
+
+            vec = np.zeros(n_ingredients)
+            ok = True
+            for idx, g in enumerate(present):
+                member_idx = members[g]
+                local = _sample_constrained_simplex(
+                    target=float(totals[idx]),
+                    mins=mins[member_idx],
+                    maxs=maxs[member_idx],
+                    required=required[member_idx],
+                    min_count=counts[g],
+                    max_count=counts[g],
+                )
+                if local is None:
+                    ok = False
+                    break
+                vec[member_idx] = local
+            if not ok:
+                continue
+
+            if abs(float(vec.sum()) - 1.0) > 1e-7:
+                continue
+            return vec
+
+        raise ValueError(
+            "Could not find a valid formulation. Please re-try; this sometimes occurs due to the "
+            "randomness involved in searching for a 'valid' formulation in a complex, "
+            "high-dimensional space. This often gets more difficult when ingredients or groups have "
+            "very narrow bound ranges. If re-trying many times does not resolve the issue, you may "
+            "need to widen some ingredient or group bounds and/or relax min/max ingredient counts, "
+            "then try again."
+        )
+
+    if n_ingredients == 0:
+        return np.zeros((n_samples, 0))
+
+    samples = []
+    for _ in range(n_samples):
+        current = generate_one_sample()
+        current[np.abs(current) < 1e-14] = 0.0
+
+        # Defensive post-checks (construction should already guarantee these).
+        if np.any(current < -1e-12):
+            raise ValueError("Sampling produced a negative ingredient quantity.")
+        if np.any(current > maxs + 1e-12):
+            raise ValueError("Sampling produced an ingredient above its max bound.")
+        if np.any(required & (current <= 1e-12)):
+            raise ValueError(
+                "Sampling omitted a required ingredient. Please retry or adjust formulation bounds."
+            )
+        for g in range(n_groups):
+            group_sum = float(current[members[g]].sum())
+            if group_sum > 1e-12:
+                if group_sum < group_lowers[g] - 1e-9 or group_sum > group_uppers[g] + 1e-9:
+                    raise ValueError(
+                        "Sampling violated a group sum bound. Please retry or adjust group bounds."
+                    )
+
+        samples.append(current.copy())
+
+    return np.array(samples)
+
+
 def build_synthetic_demo_dataset(
     inputs=5,
     outputs=1,
@@ -582,6 +1008,7 @@ def build_synthetic_demo_dataset(
     output_format="compact",  # SOMEDAY: let's give users the option (with a toggle?) whether they want to export in compact or wide table format.
     min_ingredients_per_formulation: Optional[int] = None,
     max_ingredients_per_formulation: Optional[int] = None,
+    formulation_groups: Optional[List[dict]] = None,
 ):
 
     if isinstance(inputs, int):
@@ -594,14 +1021,43 @@ def build_synthetic_demo_dataset(
         all_inputs = list(general_inputs) + list(formulation_inputs)
         num_inputs = len(all_inputs)
         if inputs["formulation"]:
+            ingredient_names = list(formulation_inputs)
             formulation_constraints = [
                 (formulation_inputs[input_]["min"], formulation_inputs[input_]["max"])
-                for input_ in formulation_inputs
+                for input_ in ingredient_names
             ]
             formulation_required = [
                 formulation_inputs[input_].get("required", False)
-                for input_ in formulation_inputs
+                for input_ in ingredient_names
             ]
+
+            # Build the group structure for the sampler. When no groups are
+            # supplied, the sampler treats all ingredients as one implicit group.
+            formulation_group_index = None
+            formulation_group_constraints = None
+            formulation_group_min_counts = None
+            formulation_group_max_counts = None
+            if formulation_groups is not None:
+                name_to_idx = {name: i for i, name in enumerate(ingredient_names)}
+                formulation_group_index = [0] * len(ingredient_names)
+                formulation_group_constraints = []
+                formulation_group_min_counts = []
+                formulation_group_max_counts = []
+                for g, group in enumerate(formulation_groups):
+                    formulation_group_constraints.append(
+                        (float(group["min"]), float(group["max"]))
+                    )
+                    group_size = len(group["ingredients"])
+                    min_count = group.get("min_count")
+                    max_count = group.get("max_count")
+                    formulation_group_min_counts.append(
+                        1 if min_count is None else int(min_count)
+                    )
+                    formulation_group_max_counts.append(
+                        group_size if max_count is None else int(max_count)
+                    )
+                    for name in group["ingredients"]:
+                        formulation_group_index[name_to_idx[name]] = g
 
 
     if isinstance(outputs, int):
@@ -632,13 +1088,18 @@ def build_synthetic_demo_dataset(
     else:
         X_general = np.array([[np.random.uniform(-2, 2) for i in range(num_general_inputs)] for j in range(num_rows)])
         if inputs["formulation"]:
-            X_formulation = gibbs_sample_formulation_space(
+            # X_formulation = gibbs_sample_formulation_space(  # old way of doing this before Groups support was added
+            X_formulation = group_aware_sample_formulation_space(
                 n_ingredients=num_formulation_inputs,
                 constraints=formulation_constraints,
                 n_samples=num_rows,
                 min_ingredients_per_formulation=min_ingredients_per_formulation,
                 max_ingredients_per_formulation=max_ingredients_per_formulation,
                 required=formulation_required,
+                group_index=formulation_group_index,
+                group_constraints=formulation_group_constraints,
+                group_min_counts=formulation_group_min_counts,
+                group_max_counts=formulation_group_max_counts,
             )
             X = np.concatenate((X_general, X_formulation), axis=1)
         else:

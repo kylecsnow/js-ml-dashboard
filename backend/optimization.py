@@ -296,22 +296,22 @@ class FormulationMCMC:
     def _swap_ingredients(self, current: np.ndarray) -> np.ndarray:
         """
         Swap one ingredient for another by:
-        1. Picking one active ingredient to remove (respecting min bounds)
-        2. Picking one inactive ingredient to add
+        1. Picking one present ingredient to remove (respecting min bounds)
+        2. Picking one absent ingredient to add
         3. Transferring the exact quantity from removed ingredient to new ingredient
         Tries all feasible (out, in) pairs in random order before giving up.
         """
-        # Identify active (removable) and inactive (addable) indices
-        active_indices = np.where(current > 1e-8)[0]
-        inactive_indices = np.where(current < 1e-8)[0]
+        # Identify present (removable) and absent (addable) indices
+        present_indices = np.where(current > 1e-8)[0]
+        absent_indices = np.where(current < 1e-8)[0]
 
         # quick check: there should be at least one ingredient present, and there should also be 
-        if len(active_indices) == 0 or len(inactive_indices) == 0:
+        if len(present_indices) == 0 or len(absent_indices) == 0:
             return current
 
         # Can only swap out ingredients whose minimum bound is effectively 0
         swappable_out = []
-        for idx in active_indices:
+        for idx in present_indices:
             name = self.ingredient_names[idx]
             if name in self.bounds:
                 min_b, _ = self.bounds[name]
@@ -323,7 +323,7 @@ class FormulationMCMC:
             return current
 
         # Build all candidate (out, in) pairs and try them in random order
-        candidate_pairs = [(o, i) for o in swappable_out for i in inactive_indices]
+        candidate_pairs = [(o, i) for o in swappable_out for i in absent_indices]
         if len(candidate_pairs) == 0:
             return current
 

@@ -28,9 +28,26 @@ export interface FormulationDescriptorGroup extends DescriptorGroup {
   required: boolean;
 }
 
+export interface FormulationGroup {
+  id: string;
+  name: string;
+  min: string;            // group sum lower bound (0..1)
+  max: string;            // group sum upper bound (0..1)
+  minIngredients: string; // optional per-group min active count
+  maxIngredients: string; // optional per-group max active count
+  ingredients: FormulationDescriptorGroup[];
+}
+
+type FormulationGroupConfig = Omit<FormulationGroup, 'id' | 'ingredients'> & {
+  ingredients: Omit<FormulationDescriptorGroup, 'id'>[];
+};
+
 interface SchemaConfig {
   generalInputs: Omit<DescriptorGroup, 'id'>[];
-  formulationInputs: Omit<FormulationDescriptorGroup, 'id'>[];
+  // New grouped structure. `formulationInputs` is still read for backwards
+  // compatibility with schemas saved before ingredient groups existed.
+  formulationGroups?: FormulationGroupConfig[];
+  formulationInputs?: Omit<FormulationDescriptorGroup, 'id'>[];
   outputs: Omit<DescriptorGroup, 'id'>[];
   numRows: number | '';
   noise: number;
@@ -38,6 +55,33 @@ interface SchemaConfig {
   minIngredientsPerFormulation: string;
   maxIngredientsPerFormulation: string;
 }
+
+const DEFAULT_GROUP_NAME = 'Default Group';
+const DEFAULT_MIN_BOUND = '0';
+const DEFAULT_MAX_BOUND = '1';
+const DEFAULT_MIN_GROUP_INGREDIENTS = '1';
+
+const resolveMinBound = (value: string) => (value.trim() === '' ? DEFAULT_MIN_BOUND : value);
+const resolveMaxBound = (value: string) => (value.trim() === '' ? DEFAULT_MAX_BOUND : value);
+
+const createEmptyIngredient = (): FormulationDescriptorGroup => ({
+  id: crypto.randomUUID(),
+  name: '',
+  min: '',
+  max: '',
+  units: '',
+  required: false,
+});
+
+const createEmptyFormulationGroup = (): FormulationGroup => ({
+  id: crypto.randomUUID(),
+  name: '',
+  min: '',
+  max: '',
+  minIngredients: '',
+  maxIngredients: '',
+  ingredients: [createEmptyIngredient()],
+});
 
 interface SavedSchemaEntry {
   id: number;
@@ -48,7 +92,7 @@ interface SavedSchemaEntry {
 
 const DatasetGeneratorPage = () => {
   const [generalInputs, setGeneralInputs] = useState<DescriptorGroup[]>([]);
-  const [formulationInputs, setFormulationInputs] = useState<FormulationDescriptorGroup[]>([]);
+  const [formulationGroups, setFormulationGroups] = useState<FormulationGroup[]>([]);
   const [outputs, setOutputs] = useState<DescriptorGroup[]>([]);
   const [numRows, setNumRows] = useState<number | ''>(50);
   const [showCoefficientsToggle, setShowCoefficientsToggle] = useState<boolean>(false);
@@ -111,7 +155,14 @@ const DatasetGeneratorPage = () => {
 
     const config: SchemaConfig = {
       generalInputs: generalInputs.map(({ name, min, max, units }) => ({ name, min, max, units })),
-      formulationInputs: formulationInputs.map(({ name, min, max, units, required }) => ({ name, min, max, units, required })),
+      formulationGroups: formulationGroups.map(({ name, min, max, minIngredients, maxIngredients, ingredients }) => ({
+        name,
+        min,
+        max,
+        minIngredients,
+        maxIngredients,
+        ingredients: ingredients.map(({ name, min, max, units, required }) => ({ name, min, max, units, required })),
+      })),
       outputs: outputs.map(({ name, min, max, units }) => ({ name, min, max, units })),
       numRows,
       noise,
@@ -214,7 +265,38 @@ const DatasetGeneratorPage = () => {
   const loadSchema = (schema: SavedSchemaEntry) => {
     const c = schema.config;
     setGeneralInputs(c.generalInputs.map(g => ({ ...g, id: crypto.randomUUID() })));
-    setFormulationInputs(c.formulationInputs.map(g => ({ ...g, required: g.required ?? false, id: crypto.randomUUID() })));
+
+    // Prefer the grouped structure; fall back to migrating a legacy flat
+    // formulationInputs list into a single default group.
+    let groupConfigs: FormulationGroupConfig[];
+    if (c.formulationGroups) {
+      groupConfigs = c.formulationGroups;
+    } else if (c.formulationInputs && c.formulationInputs.length > 0) {
+      groupConfigs = [{
+        name: DEFAULT_GROUP_NAME,
+        min: '',
+        max: '',
+        minIngredients: '',
+        maxIngredients: '',
+        ingredients: c.formulationInputs,
+      }];
+    } else {
+      groupConfigs = [];
+    }
+    setFormulationGroups(groupConfigs.map(g => ({
+      id: crypto.randomUUID(),
+      name: g.name ?? '',
+      min: g.min ?? '',
+      max: g.max ?? '',
+      minIngredients: g.minIngredients ?? '',
+      maxIngredients: g.maxIngredients ?? '',
+      ingredients: (g.ingredients ?? []).map(ing => ({
+        ...ing,
+        required: ing.required ?? false,
+        units: ing.units ?? '',
+        id: crypto.randomUUID(),
+      })),
+    })));
     setOutputs(c.outputs.map(g => ({ ...g, id: crypto.randomUUID() })));
     setNumRows(c.numRows);
     setNoise(c.noise);
@@ -225,7 +307,7 @@ const DatasetGeneratorPage = () => {
     setError("");
   };
 
-  const addDescriptorGroup = (category: 'general input' | 'formulation input' | 'output') => {
+  const addDescriptorGroup = (category: 'general input' | 'output') => {
     const newGroup = {
       id: crypto.randomUUID(),
       name: '',
@@ -236,30 +318,22 @@ const DatasetGeneratorPage = () => {
 
     if (category === 'general input') {
       setGeneralInputs([...generalInputs, newGroup]);
-    } else if (category === 'formulation input') {
-      setFormulationInputs([...formulationInputs, { ...newGroup, required: false }]);
     } else if (category === 'output') {
       setOutputs([...outputs, newGroup]);
     }
   };
 
-  const removeDescriptorGroup = (category: 'general input' | 'formulation input' | 'output', id: string) => {
+  const removeDescriptorGroup = (category: 'general input' | 'output', id: string) => {
     if (category === 'general input') {
       setGeneralInputs(generalInputs.filter(group => group.id !== id));
-    } else if (category === 'formulation input') {
-      setFormulationInputs(formulationInputs.filter(group => group.id !== id));
     } else if (category === 'output') {
       setOutputs(outputs.filter(group => group.id !== id));
     }
   };
 
-  const updateDescriptorGroup = (category: 'general input' | 'formulation input' | 'output', id: string, field: keyof DescriptorGroup, value: string) => {
+  const updateDescriptorGroup = (category: 'general input' | 'output', id: string, field: keyof DescriptorGroup, value: string) => {
     if (category === 'general input') {
       setGeneralInputs(generalInputs.map(group => 
-        group.id === id ? { ...group, [field]: value } : group
-      ));
-    } else if (category === 'formulation input') {
-      setFormulationInputs(formulationInputs.map(group => 
         group.id === id ? { ...group, [field]: value } : group
       ));
     } else if (category === 'output') {
@@ -269,9 +343,70 @@ const DatasetGeneratorPage = () => {
     }
   };
 
-  const updateFormulationRequired = (id: string, required: boolean) => {
-    setFormulationInputs(formulationInputs.map(group =>
-      group.id === id ? { ...group, required } : group
+  // ---- Formulation group + ingredient helpers ----
+
+  const addFormulationGroup = () => {
+    setFormulationGroups([...formulationGroups, createEmptyFormulationGroup()]);
+  };
+
+  const removeFormulationGroup = (groupId: string) => {
+    setFormulationGroups(formulationGroups.filter(group => group.id !== groupId));
+  };
+
+  const updateFormulationGroup = (
+    groupId: string,
+    field: 'name' | 'min' | 'max' | 'minIngredients' | 'maxIngredients',
+    value: string,
+  ) => {
+    setFormulationGroups(formulationGroups.map(group =>
+      group.id === groupId ? { ...group, [field]: value } : group
+    ));
+  };
+
+  const addIngredientToGroup = (groupId: string) => {
+    setFormulationGroups(formulationGroups.map(group =>
+      group.id === groupId
+        ? { ...group, ingredients: [...group.ingredients, createEmptyIngredient()] }
+        : group
+    ));
+  };
+
+  const removeIngredientFromGroup = (groupId: string, ingredientId: string) => {
+    setFormulationGroups(formulationGroups.map(group =>
+      group.id === groupId
+        ? { ...group, ingredients: group.ingredients.filter(ing => ing.id !== ingredientId) }
+        : group
+    ));
+  };
+
+  const updateIngredientInGroup = (
+    groupId: string,
+    ingredientId: string,
+    field: keyof DescriptorGroup,
+    value: string,
+  ) => {
+    setFormulationGroups(formulationGroups.map(group =>
+      group.id === groupId
+        ? {
+            ...group,
+            ingredients: group.ingredients.map(ing =>
+              ing.id === ingredientId ? { ...ing, [field]: value } : ing
+            ),
+          }
+        : group
+    ));
+  };
+
+  const updateIngredientRequired = (groupId: string, ingredientId: string, required: boolean) => {
+    setFormulationGroups(formulationGroups.map(group =>
+      group.id === groupId
+        ? {
+            ...group,
+            ingredients: group.ingredients.map(ing =>
+              ing.id === ingredientId ? { ...ing, required } : ing
+            ),
+          }
+        : group
     ));
   };
 
@@ -307,8 +442,12 @@ const DatasetGeneratorPage = () => {
       return;
     }
 
+    // Flatten ingredients across all groups for cross-cutting checks.
+    const allIngredients = formulationGroups.flatMap(g => g.ingredients);
+    const totalIngredients = allIngredients.length;
+
     // Validate that at least one input type exists
-    if (generalInputs.length === 0 && formulationInputs.length === 0) {
+    if (generalInputs.length === 0 && totalIngredients === 0) {
       setError("At least one General Input OR one Formulation Input is required.");
       return;
     }
@@ -319,9 +458,9 @@ const DatasetGeneratorPage = () => {
       return;
     }
 
-    // Validate all descriptor groups
-    const allGroups = [...generalInputs, ...formulationInputs, ...outputs];
-    for (const group of allGroups) {
+    // Validate general inputs and outputs (name + bounds required)
+    const namedBoundedGroups = [...generalInputs, ...outputs];
+    for (const group of namedBoundedGroups) {
       if (!group.name.trim()) {
         setError("Variable names cannot be left blank.");
         return;
@@ -336,29 +475,101 @@ const DatasetGeneratorPage = () => {
       }
     }
 
-    // Validate formulation input bounds are between 0 and 1
-    for (const group of formulationInputs) {
-      const min = parseFloat(group.min);
-      const max = parseFloat(group.max);
-      if (min < 0 || min > 1 || max < 0 || max > 1) {
-        setError("Formulation Input bounds must all have values between 0 and 1.");
+    // Validate formulation groups + their ingredients, accumulating feasibility totals.
+    let forcedGroupMinTotal = 0; // sum of min active ingredients forced by always-present groups
+    let sumGroupMax = 0;
+    let sumForcedGroupMin = 0;
+    let sumGroupMaxCounts = 0;
+
+    for (const group of formulationGroups) {
+      if (group.ingredients.length === 0) {
+        setError(`Group "${group.name || '(unnamed)'}" must contain at least one ingredient.`);
         return;
       }
-      if (group.required && min <= 0) {
-        setError(`Required ingredient "${group.name || '(unnamed)'}" must have a lower bound greater than 0.`);
+      if (!group.name.trim()) {
+        setError("Group names cannot be left blank.");
+        return;
+      }
+      const gMin = parseFloat(resolveMinBound(group.min));
+      const gMax = parseFloat(resolveMaxBound(group.max));
+      if (gMin < 0 || gMin > 1 || gMax < 0 || gMax > 1) {
+        setError("Group bounds must all have values between 0 and 1.");
+        return;
+      }
+      if (gMin > gMax) {
+        setError(`Group "${group.name}" lower bound cannot exceed its upper bound.`);
+        return;
+      }
+
+      const groupSize = group.ingredients.length;
+      const resolvedGroupMin = group.minIngredients.trim() === "" ? 1 : Number(group.minIngredients);
+      const resolvedGroupMax = group.maxIngredients.trim() === "" ? groupSize : Number(group.maxIngredients);
+      if (!Number.isInteger(resolvedGroupMin) || !Number.isInteger(resolvedGroupMax)) {
+        setError("Group min/max ingredients must be integers.");
+        return;
+      }
+      if (resolvedGroupMin < 0) {
+        setError("Group min ingredients cannot be negative.");
+        return;
+      }
+      if (resolvedGroupMin > resolvedGroupMax) {
+        setError(`Group "${group.name}" min ingredients cannot exceed its max ingredients.`);
+        return;
+      }
+      if (resolvedGroupMax > groupSize) {
+        setError(`Group "${group.name}" max ingredients cannot exceed the number of ingredients in the group.`);
+        return;
+      }
+
+      let groupRequiredCount = 0;
+      for (const ing of group.ingredients) {
+        if (!ing.name.trim()) {
+          setError("Variable names cannot be left blank.");
+          return;
+        }
+        const iMin = parseFloat(resolveMinBound(ing.min));
+        const iMax = parseFloat(resolveMaxBound(ing.max));
+        if (iMin < 0 || iMin > 1 || iMax < 0 || iMax > 1) {
+          setError("Formulation Input bounds must all have values between 0 and 1.");
+          return;
+        }
+        if (iMin > iMax) {
+          setError(`Ingredient "${ing.name}" lower bound cannot exceed its upper bound.`);
+          return;
+        }
+        if (ing.required && iMin <= 0) {
+          setError(`Required ingredient "${ing.name || '(unnamed)'}" must have a lower bound greater than 0.`);
+          return;
+        }
+        if (ing.required) groupRequiredCount += 1;
+      }
+
+      const isForced = resolvedGroupMin > 0 || groupRequiredCount > 0;
+      sumGroupMax += gMax;
+      sumGroupMaxCounts += resolvedGroupMax;
+      if (isForced) {
+        sumForcedGroupMin += gMin;
+        forcedGroupMinTotal += Math.max(resolvedGroupMin, groupRequiredCount);
+      }
+    }
+
+    if (totalIngredients > 0) {
+      if (sumGroupMax < 1 - 1e-9) {
+        setError("The sum of all group upper bounds is less than 1.0, so ingredient amounts cannot sum to 100%.");
+        return;
+      }
+      if (sumForcedGroupMin > 1 + 1e-9) {
+        setError("The sum of lower bounds for always-present groups exceeds 1.0; no feasible formulation exists.");
         return;
       }
     }
 
-    const requiredIngredientCount = formulationInputs.filter(g => g.required).length;
-
-
-    // Validate user selections for MinIngredientsPerFormulation and MaxIngredientsPerFormulation are allowable
+    // Resolve + validate the GLOBAL min/max ingredients per formulation.
     let resolvedMinIngredientsPerFormulation: number | null = null;
     let resolvedMaxIngredientsPerFormulation: number | null = null;
 
-    if (formulationInputs.length > 0) {
-      const nIngredients = formulationInputs.length;
+    if (totalIngredients > 0) {
+      const nIngredients = totalIngredients;
 
       resolvedMinIngredientsPerFormulation =
         minIngredientsPerFormulation.trim() === ""
@@ -392,13 +603,14 @@ const DatasetGeneratorPage = () => {
         return;
       }
 
-      if (requiredIngredientCount > resolvedMaxIngredientsPerFormulation) {
-        setError("The number of required ingredients cannot exceed max ingredients per formulation.");
+      if (forcedGroupMinTotal > resolvedMaxIngredientsPerFormulation) {
+        setError("The minimum number of ingredients forced by groups cannot exceed max ingredients per formulation.");
         return;
       }
 
-      if (resolvedMinIngredientsPerFormulation < requiredIngredientCount) {
-        resolvedMinIngredientsPerFormulation = requiredIngredientCount;
+      if (sumGroupMaxCounts < resolvedMinIngredientsPerFormulation) {
+        setError("The total of all group max ingredient counts is less than min ingredients per formulation.");
+        return;
       }
     }
 
@@ -415,7 +627,18 @@ const DatasetGeneratorPage = () => {
           },
           body: JSON.stringify({
             general_inputs: generalInputs,
-            formulation_inputs: formulationInputs,
+            formulation_groups: formulationGroups.map(g => ({
+              name: g.name,
+              min: resolveMinBound(g.min),
+              max: resolveMaxBound(g.max),
+              min_ingredients: g.minIngredients.trim() === "" ? null : Number(g.minIngredients),
+              max_ingredients: g.maxIngredients.trim() === "" ? null : Number(g.maxIngredients),
+              ingredients: g.ingredients.map(ing => ({
+                ...ing,
+                min: resolveMinBound(ing.min),
+                max: resolveMaxBound(ing.max),
+              })),
+            })),
             outputs: outputs,
             num_rows: numRows,
             noise: noise,
@@ -472,7 +695,7 @@ const DatasetGeneratorPage = () => {
       const getDatasetBaseName = (rawName: string) => rawName.trim() || "generated_dataset";
 
       const datasetBaseName = getDatasetBaseName(filename);
-      const hasFormulationInputs = formulationInputs.length > 0;
+      const hasFormulationInputs = totalIngredients > 0;
       const formulationsFilename = hasFormulationInputs
         ? `${datasetBaseName}_formulations.csv`
         : `${datasetBaseName}.csv`;
@@ -492,6 +715,11 @@ const DatasetGeneratorPage = () => {
       setError("An error occurred while generating the dataset. Please try again later.");
     }
   };
+
+  const totalFormulationIngredients = formulationGroups.reduce(
+    (count, group) => count + group.ingredients.length,
+    0,
+  );
 
 
   return (
@@ -848,10 +1076,12 @@ const DatasetGeneratorPage = () => {
             {isFormulationInputsOpen && (
               <>
                 <p className="mb-4 text-sm text-gray-600">
-                  Note: Lower and upper bounds must be between 0 and 1, representing percentages that will sum to 100%.
-                  Ex: 0.25 represents 25%. By default, ingredients are optional: a positive lower bound applies only when
-                  that ingredient is included (0 is also allowed). Mark an ingredient as required to force it into every
-                  formulation within its min/max bounds.
+                  Lower and upper bounds (for both ingredients and groups) must be between 0 and 1, representing fractions 
+                  that sum to 1 (i.e. 100%) across the whole formulation. Ex: 0.25 represents 25%. 
+                  A group&apos;s bounds constrain the SUM of all its ingredients and apply only when at least one of its
+                  ingredients is present. By default, ingredients are optionally included in any given formulation from the generator:
+                  a positive lower bound applies only when thatingredient is included. Mark an ingredient as required to
+                  force it into every formulation within its min/max bounds. Each group can also limit how many of its ingredients appear per formulation.
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
@@ -865,7 +1095,7 @@ const DatasetGeneratorPage = () => {
                       onWheel={preventWheelChange}
                       min="1"
                       step="1"
-                      placeholder={`Defaults to ${formulationInputs.length || "n_ingredients"}`}
+                      placeholder={`Defaults to ${totalFormulationIngredients || "n_ingredients"}`}
                       className="w-full p-2 border border-gray-600 rounded"
                     />
                   </div>
@@ -880,89 +1110,178 @@ const DatasetGeneratorPage = () => {
                       onWheel={preventWheelChange}
                       min="1"
                       step="1"
-                      placeholder={`Defaults to ${formulationInputs.length || "n_ingredients"}`}
+                      placeholder={`Defaults to ${totalFormulationIngredients || "n_ingredients"}`}
                       className="w-full p-2 border border-gray-600 rounded"
                     />
                   </div>
                 </div>
                 <button
-                  onClick={() => addDescriptorGroup('formulation input')}
+                  onClick={addFormulationGroup}
                   className="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                 >
-                  Add Formulation Input
+                  Add Group
                 </button>
-                {formulationInputs.map(group => (
-                  <div key={group.id} className="mb-6 p-4 border rounded-lg relative">
+                {formulationGroups.map(group => (
+                  <div key={group.id} className="mb-6 p-4 border-2 border-gray-300 rounded-lg relative bg-gray-50/40">
                     <button
-                      onClick={() => removeDescriptorGroup('formulation input', group.id)}
+                      onClick={() => removeFormulationGroup(group.id)}
                       className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+                      title="Remove group"
+                      aria-label="Remove group"
                     >
                       ✕
                     </button>
-                    <div className="flex flex-col md:flex-row md:items-end gap-4">
+
+                    {/* Group-level fields */}
+                    <div className="flex flex-col md:flex-row md:items-end gap-4 mb-4 pr-6">
                       <div className="md:flex-1 md:min-w-0">
-                        <label className="block text-sm font-medium mb-1">Variable name</label>
+                        <label className="block text-sm font-medium mb-1"><b>Group name</b></label>
                         <input
                           type="text"
                           value={group.name}
-                          onChange={(e) => updateDescriptorGroup('formulation input', group.id, 'name', e.target.value)}
+                          onChange={(e) => updateFormulationGroup(group.id, 'name', e.target.value)}
                           className="w-full p-2 border border-gray-600 rounded"
                         />
                       </div>
-                      <div className="md:w-32">
-                        <label className="block text-sm font-medium mb-1">Lower bound</label>
+                      <div className="md:w-28">
+                        <label className="block text-sm font-medium mb-1">Group lower</label>
                         <input
                           type="number"
                           value={group.min}
-                          onChange={(e) => updateDescriptorGroup('formulation input', group.id, 'min', e.target.value)}
+                          onChange={(e) => updateFormulationGroup(group.id, 'min', e.target.value)}
                           onWheel={preventWheelChange}
+                          placeholder={DEFAULT_MIN_BOUND}
                           className="w-full p-2 border border-gray-600 rounded"
                         />
                       </div>
-                      <div className="md:w-32">
-                        <label className="block text-sm font-medium mb-1">Upper bound</label>
+                      <div className="md:w-28">
+                        <label className="block text-sm font-medium mb-1">Group upper</label>
                         <input
                           type="number"
                           value={group.max}
-                          onChange={(e) => updateDescriptorGroup('formulation input', group.id, 'max', e.target.value)}
+                          onChange={(e) => updateFormulationGroup(group.id, 'max', e.target.value)}
                           onWheel={preventWheelChange}
+                          placeholder={DEFAULT_MAX_BOUND}
                           className="w-full p-2 border border-gray-600 rounded"
                         />
                       </div>
-                      <div className="md:w-[186px]">
-                        <label className="block text-sm font-medium mb-1">Inclusion</label>
-                        <div
-                          className="inline-flex w-full rounded-lg border border-gray-600 p-0.5"
-                          role="group"
-                          aria-label="Ingredient inclusion"
-                        >
-                          <button
-                            type="button"
-                            onClick={() => updateFormulationRequired(group.id, false)}
-                            aria-pressed={!group.required}
-                            className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
-                              !group.required
-                                ? 'bg-blue-500 text-white hover:bg-blue-600'
-                                : 'bg-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
-                            }`}
-                          >
-                            Optional
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => updateFormulationRequired(group.id, true)}
-                            aria-pressed={group.required}
-                            className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
-                              group.required
-                                ? 'bg-blue-500 text-white hover:bg-blue-600'
-                                : 'bg-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
-                            }`}
-                          >
-                            Required
-                          </button>
-                        </div>
+                      <div className="md:w-28">
+                        <label className="block text-sm font-medium mb-1">Min # per formulation</label>
+                        <input
+                          type="number"
+                          value={group.minIngredients}
+                          onChange={(e) => updateFormulationGroup(group.id, 'minIngredients', e.target.value)}
+                          onWheel={preventWheelChange}
+                          min="0"
+                          step="1"
+                          placeholder={DEFAULT_MIN_GROUP_INGREDIENTS}
+                          className="w-full p-2 border border-gray-600 rounded"
+                        />
+                      </div>
+                      <div className="md:w-28">
+                        <label className="block text-sm font-medium mb-1">Max # per formulation</label>
+                        <input
+                          type="number"
+                          value={group.maxIngredients}
+                          onChange={(e) => updateFormulationGroup(group.id, 'maxIngredients', e.target.value)}
+                          onWheel={preventWheelChange}
+                          min="0"
+                          step="1"
+                          placeholder={`${group.ingredients.length || "n"}`}
+                          className="w-full p-2 border border-gray-600 rounded"
+                        />
                       </div>
                     </div>
+
+                    <button
+                      onClick={() => addIngredientToGroup(group.id)}
+                      className="mb-3 px-3 py-1.5 text-sm bg-indigo-500 text-white rounded hover:bg-indigo-600"
+                    >
+                      Add Ingredient
+                    </button>
+
+                    {group.ingredients.length === 0 && (
+                      <p className="text-sm text-gray-500 mb-2">No ingredients in this group yet.</p>
+                    )}
+
+                    {group.ingredients.map(ingredient => (
+                      <div key={ingredient.id} className="mb-4 p-3 border rounded-lg relative bg-white">
+                        <button
+                          onClick={() => removeIngredientFromGroup(group.id, ingredient.id)}
+                          className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+                          title="Remove ingredient"
+                          aria-label="Remove ingredient"
+                        >
+                          ✕
+                        </button>
+                        <div className="flex flex-col md:flex-row md:items-end gap-4 pr-6">
+                          <div className="md:flex-1 md:min-w-0">
+                            <label className="block text-sm font-medium mb-1">Variable name</label>
+                            <input
+                              type="text"
+                              value={ingredient.name}
+                              onChange={(e) => updateIngredientInGroup(group.id, ingredient.id, 'name', e.target.value)}
+                              className="w-full p-2 border border-gray-600 rounded"
+                            />
+                          </div>
+                          <div className="md:w-28">
+                            <label className="block text-sm font-medium mb-1">Lower bound</label>
+                            <input
+                              type="number"
+                              value={ingredient.min}
+                              onChange={(e) => updateIngredientInGroup(group.id, ingredient.id, 'min', e.target.value)}
+                              onWheel={preventWheelChange}
+                              placeholder={DEFAULT_MIN_BOUND}
+                              className="w-full p-2 border border-gray-600 rounded"
+                            />
+                          </div>
+                          <div className="md:w-28">
+                            <label className="block text-sm font-medium mb-1">Upper bound</label>
+                            <input
+                              type="number"
+                              value={ingredient.max}
+                              onChange={(e) => updateIngredientInGroup(group.id, ingredient.id, 'max', e.target.value)}
+                              onWheel={preventWheelChange}
+                              placeholder={DEFAULT_MAX_BOUND}
+                              className="w-full p-2 border border-gray-600 rounded"
+                            />
+                          </div>
+                          <div className="md:w-[186px]">
+                            <label className="block text-sm font-medium mb-1">Inclusion</label>
+                            <div
+                              className="inline-flex w-full rounded-lg border border-gray-600 p-0.5"
+                              role="group"
+                              aria-label="Ingredient inclusion"
+                            >
+                              <button
+                                type="button"
+                                onClick={() => updateIngredientRequired(group.id, ingredient.id, false)}
+                                aria-pressed={!ingredient.required}
+                                className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
+                                  !ingredient.required
+                                    ? 'bg-blue-500 text-white hover:bg-blue-600'
+                                    : 'bg-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
+                                }`}
+                              >
+                                Optional
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => updateIngredientRequired(group.id, ingredient.id, true)}
+                                aria-pressed={ingredient.required}
+                                className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
+                                  ingredient.required
+                                    ? 'bg-blue-500 text-white hover:bg-blue-600'
+                                    : 'bg-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
+                                }`}
+                              >
+                                Required
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ))}
               </>
@@ -1047,7 +1366,7 @@ const DatasetGeneratorPage = () => {
         open={chatOpen}
         onOpenChange={setChatOpen}
         generalInputs={generalInputs}
-        formulationInputs={formulationInputs}
+        formulationInputs={formulationGroups.flatMap(g => g.ingredients)}
         outputs={outputs}
         numRows={numRows}
         noise={noise}
@@ -1055,7 +1374,21 @@ const DatasetGeneratorPage = () => {
         minIngredientsPerFormulation={minIngredientsPerFormulation}
         maxIngredientsPerFormulation={maxIngredientsPerFormulation}
         setGeneralInputs={setGeneralInputs}
-        setFormulationInputs={setFormulationInputs}
+        setFormulationInputs={(items) => {
+          // Chat is group-unaware for now: route any ingredient edits it makes
+          // into a single default group, preserving existing group bounds when
+          // a single group is already present.
+          setFormulationGroups((prev) => {
+            if (prev.length === 1) {
+              return [{ ...prev[0], ingredients: items }];
+            }
+            return [{
+              ...createEmptyFormulationGroup(),
+              name: DEFAULT_GROUP_NAME,
+              ingredients: items,
+            }];
+          });
+        }}
         setOutputs={setOutputs}
         setNumRows={setNumRows}
         setNoise={setNoise}
