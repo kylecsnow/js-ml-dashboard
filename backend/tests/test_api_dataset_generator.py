@@ -61,7 +61,7 @@ def test_dataset_generator_enforces_ingredient_count_bounds_compact_format(clien
     amount_col_indices = [header.index(name) for name in amount_col_names]
 
     for row in rows[1:]:
-        active_count = 0
+        present_count = 0
         for idx in amount_col_indices:
             if idx >= len(row):
                 continue
@@ -69,9 +69,9 @@ def test_dataset_generator_enforces_ingredient_count_bounds_compact_format(clien
             if not cell:
                 continue
             if float(cell) > 0.0:
-                active_count += 1
-        assert active_count >= 3
-        assert active_count <= 5
+                present_count += 1
+        assert present_count >= 3
+        assert present_count <= 5
 
 
 def test_dataset_generator_returns_components_csv_when_present(client):
@@ -129,12 +129,12 @@ def test_dataset_generator_enforces_ingredient_count_bounds_wide_format():
     )
 
     for _, row in data_df.iterrows():
-        active_count = sum(row[name] > 0.0 for name in ingredient_names)
-        assert active_count >= 3, (
-            f"Row has {active_count} active ingredients (min allowed: 3)"
+        present_count = sum(row[name] > 0.0 for name in ingredient_names)
+        assert present_count >= 3, (
+            f"Row has {present_count} present ingredients (min allowed: 3)"
         )
-        assert active_count <= 5, (
-            f"Row has {active_count} active ingredients (max allowed: 5)"
+        assert present_count <= 5, (
+            f"Row has {present_count} present ingredients (max allowed: 5)"
         )
 
 

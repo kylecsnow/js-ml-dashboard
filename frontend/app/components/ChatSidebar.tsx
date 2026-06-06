@@ -19,11 +19,21 @@ export interface FormulationDescriptorGroup extends DescriptorGroup {
   required: boolean;
 }
 
+export interface FormulationGroup {
+  id: string;
+  name: string;
+  min: string;            // group quantity sum lower bound (0..1)
+  max: string;            // group quantity sum upper bound (0..1)
+  minIngredients: string; // optional per-group min present ingredients count
+  maxIngredients: string; // optional per-group max present ingredients count
+  ingredients: FormulationDescriptorGroup[];
+}
+
 interface ChatSidebarProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   generalInputs: DescriptorGroup[];
-  formulationInputs: FormulationDescriptorGroup[];
+  formulationGroups: FormulationGroup[];
   outputs: DescriptorGroup[];
   numRows: number | '';
   noise: number;
@@ -31,7 +41,7 @@ interface ChatSidebarProps {
   minIngredientsPerFormulation: string;
   maxIngredientsPerFormulation: string;
   setGeneralInputs: (inputs: DescriptorGroup[]) => void;
-  setFormulationInputs: (inputs: FormulationDescriptorGroup[]) => void;
+  setFormulationGroups: (groups: FormulationGroup[]) => void;
   setOutputs: (outputs: DescriptorGroup[]) => void;
   setNumRows: (n: number | '') => void;
   setNoise: (n: number) => void;
@@ -46,9 +56,18 @@ interface ChatMessage {
   formUpdateSummary?: string;
 }
 
+interface LLMFormulationGroup {
+  name: string;
+  min: string;
+  max: string;
+  min_ingredients?: number | string | null;
+  max_ingredients?: number | string | null;
+  ingredients: { name: string; min: string; max: string; required?: boolean }[];
+}
+
 interface LLMFormUpdates {
   general_inputs?: { name: string; min: string; max: string; units?: string }[];
-  formulation_inputs?: { name: string; min: string; max: string; required?: boolean }[];
+  formulation_groups?: LLMFormulationGroup[];
   outputs?: { name: string; min: string; max: string; units?: string }[];
   num_rows?: number;
   noise?: number;
@@ -62,7 +81,7 @@ export default function ChatSidebar({
   open,
   onOpenChange,
   generalInputs,
-  formulationInputs,
+  formulationGroups,
   outputs,
   numRows,
   noise,
@@ -70,7 +89,7 @@ export default function ChatSidebar({
   minIngredientsPerFormulation,
   maxIngredientsPerFormulation,
   setGeneralInputs,
-  setFormulationInputs,
+  setFormulationGroups,
   setOutputs,
   setNumRows,
   setNoise,
@@ -111,14 +130,26 @@ export default function ChatSidebar({
 
   const buildFormContext = useCallback(() => ({
     general_inputs: generalInputs.map(g => ({ name: g.name, min: g.min, max: g.max, units: g.units })),
-    formulation_inputs: formulationInputs.map(g => ({ name: g.name, min: g.min, max: g.max, required: g.required })),
+    formulation_groups: formulationGroups.map(group => ({
+      name: group.name,
+      min: group.min,
+      max: group.max,
+      min_ingredients: group.minIngredients || null,
+      max_ingredients: group.maxIngredients || null,
+      ingredients: group.ingredients.map(i => ({
+        name: i.name,
+        min: i.min,
+        max: i.max,
+        required: i.required,
+      })),
+    })),
     outputs: outputs.map(g => ({ name: g.name, min: g.min, max: g.max, units: g.units })),
     num_rows: numRows,
     noise,
     filename,
     min_ingredients_per_formulation: minIngredientsPerFormulation || null,
     max_ingredients_per_formulation: maxIngredientsPerFormulation || null,
-  }), [generalInputs, formulationInputs, outputs, numRows, noise, filename, minIngredientsPerFormulation, maxIngredientsPerFormulation]);
+  }), [generalInputs, formulationGroups, outputs, numRows, noise, filename, minIngredientsPerFormulation, maxIngredientsPerFormulation]);
 
   function numEq(a: string | number, b: string | number): boolean {
     const na = Number(a);
@@ -141,6 +172,29 @@ export default function ChatSidebar({
     );
   }
 
+  function countEq(incoming: number | string | null | undefined, current: string): boolean {
+    const inc = incoming == null || incoming === '' ? '' : String(Number(incoming));
+    const cur = current.trim() === '' ? '' : String(Number(current));
+    return inc === cur;
+  }
+
+  function groupsChanged(current: FormulationGroup[], incoming: LLMFormulationGroup[]): boolean {
+    if (current.length !== incoming.length) return true;
+    return incoming.some((g, i) => {
+      const c = current[i];
+      if (
+        g.name !== c.name ||
+        !numEq(g.min, c.min) ||
+        !numEq(g.max, c.max) ||
+        !countEq(g.min_ingredients, c.minIngredients) ||
+        !countEq(g.max_ingredients, c.maxIngredients)
+      ) {
+        return true;
+      }
+      return descriptorsChanged(c.ingredients, g.ingredients);
+    });
+  }
+
   function applyFormUpdates(updates: LLMFormUpdates): string {
     const parts: string[] = [];
 
@@ -156,17 +210,29 @@ export default function ChatSidebar({
       parts.push(`${items.length} general input${items.length !== 1 ? 's' : ''}`);
     }
 
-    if (updates.formulation_inputs !== undefined && descriptorsChanged(formulationInputs, updates.formulation_inputs)) {
-      const items = updates.formulation_inputs.map(g => ({
+    if (updates.formulation_groups !== undefined && groupsChanged(formulationGroups, updates.formulation_groups)) {
+      const groups: FormulationGroup[] = updates.formulation_groups.map(g => ({
         id: crypto.randomUUID(),
         name: g.name,
         min: String(g.min),
         max: String(g.max),
-        units: '',
-        required: g.required ?? false,
+        minIngredients: g.min_ingredients == null ? '' : String(g.min_ingredients),
+        maxIngredients: g.max_ingredients == null ? '' : String(g.max_ingredients),
+        ingredients: (g.ingredients ?? []).map(i => ({
+          id: crypto.randomUUID(),
+          name: i.name,
+          min: String(i.min),
+          max: String(i.max),
+          units: '',
+          required: i.required ?? false,
+        })),
       }));
-      setFormulationInputs(items);
-      parts.push(`${items.length} formulation input${items.length !== 1 ? 's' : ''}`);
+      setFormulationGroups(groups);
+      const ingredientCount = groups.reduce((n, grp) => n + grp.ingredients.length, 0);
+      parts.push(
+        `${groups.length} formulation group${groups.length !== 1 ? 's' : ''} ` +
+        `(${ingredientCount} ingredient${ingredientCount !== 1 ? 's' : ''})`
+      );
     }
 
     if (updates.outputs !== undefined && descriptorsChanged(outputs, updates.outputs)) {

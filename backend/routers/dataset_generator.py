@@ -67,6 +67,31 @@ def _normalize_formulation_groups(raw_groups: list) -> list[dict]:
     return groups
 
 
+def _default_global_ingredient_counts(groups: list[dict]) -> tuple[int, int]:
+    """Derive default global min/max present-ingredient counts from group constraints.
+
+    Min is the sum of each group's minimum contribution: 0 if the group may be
+    entirely absent (min_count 0 and no required ingredients), otherwise
+    max(min_count, number of required ingredients). Clamped to at least 1 when
+    there are ingredients. Max is the sum of each group's max_count.
+    """
+    default_min = 0
+    default_max = 0
+    for group in groups:
+        n_required = sum(1 for i in group["ingredients"] if i.get("required", False))
+        min_count = group["min_count"]
+        max_count = group["max_count"]
+        if min_count == 0 and n_required == 0:
+            group_min_contrib = 0
+        else:
+            group_min_contrib = max(min_count, n_required)
+        default_min += group_min_contrib
+        default_max += max_count
+    if default_min < 1 and default_max > 0:
+        default_min = 1
+    return default_min, default_max
+
+
 def _validate_formulation_groups(
     groups: list[dict],
     global_min: int,
@@ -136,7 +161,7 @@ def _validate_formulation_groups(
             f"max_ingredients_per_formulation (provided: {global_max}) cannot exceed the total number of ingredients (provided: {total_ingredients})."
         )
 
-    # Forced groups must contribute at least their min_count active ingredients.
+    # Forced groups must contribute at least their min_count present ingredients.
     forced_min_total = sum(
         max(g["min_count"], sum(1 for i in g["ingredients"] if i["required"]))
         for g in groups
@@ -214,15 +239,23 @@ async def get_synthetic_demo_dataset(body: dict = Body(...)) -> dict[str, Any]:
         if formulation_inputs:
             n_ingredients = len(formulation_inputs)
 
+            if use_groups:
+                default_global_min, default_global_max = _default_global_ingredient_counts(
+                    normalized_groups
+                )
+            else:
+                default_global_min = n_ingredients
+                default_global_max = n_ingredients
+
             min_ingredients_per_formulation = (
                 int(min_ingredients_per_formulation)
                 if min_ingredients_per_formulation not in (None, "")
-                else n_ingredients
+                else default_global_min
             )
             max_ingredients_per_formulation = (
                 int(max_ingredients_per_formulation)
                 if max_ingredients_per_formulation not in (None, "")
-                else n_ingredients
+                else default_global_max
             )
 
             if use_groups:

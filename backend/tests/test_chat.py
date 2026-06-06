@@ -1,7 +1,7 @@
 import json
 
 from routers.chat import (
-    _normalize_formulation_descriptors,
+    _normalize_formulation_groups,
     _normalize_num,
     _strip_unchanged_updates,
 )
@@ -50,7 +50,16 @@ def test_normalize_num_coerces_equivalent_numbers():
 def test_strip_unchanged_updates_prunes_to_none_when_identical():
     form_state = {
         "general_inputs": [{"name": "Temp", "min": "20", "max": "80", "units": "C"}],
-        "formulation_inputs": [{"name": "Monomer A", "min": "0.1", "max": "0.8"}],
+        "formulation_groups": [
+            {
+                "name": "Monomers",
+                "min": "0.5",
+                "max": "0.9",
+                "min_ingredients": 1,
+                "max_ingredients": 2,
+                "ingredients": [{"name": "Monomer A", "min": "0.1", "max": "0.8", "required": False}],
+            }
+        ],
         "outputs": [{"name": "Strength", "min": "10", "max": "90", "units": "MPa"}],
         "num_rows": 100,
         "noise": 0.025,
@@ -60,7 +69,16 @@ def test_strip_unchanged_updates_prunes_to_none_when_identical():
     }
     incoming = {
         "general_inputs": [{"name": "Temp", "min": 20, "max": 80.0, "units": "C"}],
-        "formulation_inputs": [{"name": "Monomer A", "min": 0.1, "max": 0.8, "units": ""}],
+        "formulation_groups": [
+            {
+                "name": "Monomers",
+                "min": 0.5,
+                "max": 0.9,
+                "min_ingredients": "1",
+                "max_ingredients": "2",
+                "ingredients": [{"name": "Monomer A", "min": 0.1, "max": 0.8, "required": False}],
+            }
+        ],
         "outputs": [{"name": "Strength", "min": "10.0", "max": "90.0", "units": "MPa"}],
         "num_rows": "100",
         "noise": "0.025",
@@ -72,28 +90,58 @@ def test_strip_unchanged_updates_prunes_to_none_when_identical():
     assert _strip_unchanged_updates(form_state, incoming) is None
 
 
-def test_normalize_formulation_descriptors_includes_required():
+def test_normalize_formulation_groups_includes_counts_and_required():
     items = [
-        {"name": "Base", "min": "0.5", "max": "0.9", "required": True},
-        {"name": "Additive", "min": "0.001", "max": "0.02"},
+        {
+            "name": "Base",
+            "min": "0.5",
+            "max": "0.9",
+            "min_ingredients": 1,
+            "max_ingredients": 1,
+            "ingredients": [
+                {"name": "Base Resin", "min": "0.5", "max": "0.9", "required": True},
+            ],
+        },
+        {
+            "name": "Additives",
+            "min": "0.001",
+            "max": "0.02",
+            "ingredients": [
+                {"name": "Stabilizer", "min": "0.001", "max": "0.02"},
+            ],
+        },
     ]
-    assert _normalize_formulation_descriptors(items) == [
-        ("Base", "0.5", "0.9", True),
-        ("Additive", "0.001", "0.02", False),
+    assert _normalize_formulation_groups(items) == [
+        ("Base", "0.5", "0.9", "1.0", "1.0", (("Base Resin", "0.5", "0.9", True),)),
+        ("Additives", "0.001", "0.02", "", "", (("Stabilizer", "0.001", "0.02", False),)),
     ]
 
 
 def test_strip_unchanged_updates_detects_required_toggle_change():
     form_state = {
-        "formulation_inputs": [
-            {"name": "Ice Cream Base", "min": "0.5", "max": "0.9", "required": False},
-            {"name": "DATEM", "min": "0.001", "max": "0.015", "required": False},
+        "formulation_groups": [
+            {
+                "name": "Base",
+                "min": "0.5",
+                "max": "0.9",
+                "ingredients": [
+                    {"name": "Ice Cream Base", "min": "0.5", "max": "0.9", "required": False},
+                    {"name": "DATEM", "min": "0.001", "max": "0.015", "required": False},
+                ],
+            },
         ],
     }
     incoming = {
-        "formulation_inputs": [
-            {"name": "Ice Cream Base", "min": "0.5", "max": "0.9", "required": True},
-            {"name": "DATEM", "min": "0.001", "max": "0.015", "required": False},
+        "formulation_groups": [
+            {
+                "name": "Base",
+                "min": "0.5",
+                "max": "0.9",
+                "ingredients": [
+                    {"name": "Ice Cream Base", "min": "0.5", "max": "0.9", "required": True},
+                    {"name": "DATEM", "min": "0.001", "max": "0.015", "required": False},
+                ],
+            },
         ],
     }
 

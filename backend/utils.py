@@ -463,10 +463,10 @@ def gibbs_sample_formulation_space(
         raise ValueError(f"Cannot satisfy min_ingredients_per_formulation={min_ingredients_per_formulation}: minimum sum of {min_ingredients_per_formulation} smallest min constraints ({min_possible_sum:.3f}) exceeds 1.0")
     
     # Initialize with a valid starting point
-    def select_active_indices(n_active: int) -> np.ndarray:
-        """Pick which ingredients are active, always including required ones."""
+    def select_present_indices(n_present: int) -> np.ndarray:
+        """Pick which ingredients are present, always including required ones."""
         optional_indices = [i for i in range(n_ingredients) if not required[i]]
-        n_optional_to_activate = n_active - n_required
+        n_optional_to_activate = n_present - n_required
         if n_optional_to_activate > 0:
             if n_optional_to_activate > len(optional_indices):
                 raise ValueError(
@@ -482,30 +482,30 @@ def gibbs_sample_formulation_space(
         current = np.zeros(n_ingredients)
         
         # Randomly select how many ingredients to use
-        n_active = np.random.randint(min_ingredients_per_formulation, max_ingredients_per_formulation + 1)
-        active_indices = select_active_indices(n_active)
+        n_present = np.random.randint(min_ingredients_per_formulation, max_ingredients_per_formulation + 1)
+        present_indices = select_present_indices(n_present)
         
-        # Set active ingredients to their minimum values
-        for i in active_indices:
+        # Set present ingredients to their minimum values
+        for i in present_indices:
             current[i] = mins[i]
         
         # Calculate remaining amount to distribute
         remaining = 1.0 - np.sum(current)
         
-        # Distribute remaining amount among active ingredients within their constraints
+        # Distribute remaining amount among present ingredients within their constraints
         if remaining > 1e-12:
             max_attempts = 10000
             for attempt in range(max_attempts):
-                # Calculate room for more for each active ingredient
-                room = np.array([maxs[i] - current[i] for i in active_indices])
+                # Calculate room for more for each present ingredient
+                room = np.array([maxs[i] - current[i] for i in present_indices])
                 total_room = np.sum(room)
                 
                 if total_room <= 1e-12:
                     # No room to add more, try different ingredient selection
                     if attempt < max_attempts - 1:
                         current = np.zeros(n_ingredients)
-                        active_indices = select_active_indices(n_active)
-                        for i in active_indices:
+                        present_indices = select_present_indices(n_present)
+                        for i in present_indices:
                             current[i] = mins[i]
                         remaining = 1.0 - np.sum(current)
                         continue
@@ -516,18 +516,18 @@ def gibbs_sample_formulation_space(
                 if total_room >= remaining:
                     # We have enough room, distribute proportionally
                     weights = room / total_room
-                    for idx, i in enumerate(active_indices):
+                    for idx, i in enumerate(present_indices):
                         add_amount = weights[idx] * remaining
                         current[i] += add_amount
                     break
                 else:
                     # Fill up all available room and try again with different selection
-                    for idx, i in enumerate(active_indices):
+                    for idx, i in enumerate(present_indices):
                         current[i] = maxs[i]
                     if attempt < max_attempts - 1:
                         current = np.zeros(n_ingredients)
-                        active_indices = select_active_indices(n_active)
-                        for i in active_indices:
+                        present_indices = select_present_indices(n_present)
+                        for i in present_indices:
                             current[i] = mins[i]
                         remaining = 1.0 - np.sum(current)
                         continue
@@ -550,14 +550,14 @@ def gibbs_sample_formulation_space(
             # Randomly choose between different types of moves
             move_type = np.random.choice(['transfer', 'activate', 'deactivate'], p=[0.6, 0.2, 0.2])
             
-            active_ingredients = [i for i in range(n_ingredients) if current[i] > 1e-12]
-            inactive_ingredients = [i for i in range(n_ingredients) if current[i] <= 1e-12]
+            present_ingredients = [i for i in range(n_ingredients) if current[i] > 1e-12]
+            absent_ingredients = [i for i in range(n_ingredients) if current[i] <= 1e-12]
             
-            if move_type == 'transfer' and len(active_ingredients) >= 2:
-                # Transfer between two active ingredients
-                i, j = np.random.choice(active_ingredients, 2, replace=False)
+            if move_type == 'transfer' and len(present_ingredients) >= 2:
+                # Transfer between two present ingredients
+                i, j = np.random.choice(present_ingredients, 2, replace=False)
                 
-                # For active ingredients, they must stay within [min, max] or go to 0
+                # For present ingredients, they must stay within [min, max] or go to 0
                 # Calculate valid range for transfer
                 delta_min = max(mins[i] - current[i], current[j] - maxs[j])
                 delta_max = min(maxs[i] - current[i], current[j] - mins[j])
@@ -576,12 +576,12 @@ def gibbs_sample_formulation_space(
                         current[j] = mins[j]
                         current[i] -= deficit
             
-            elif move_type == 'activate' and len(inactive_ingredients) > 0 and len(active_ingredients) < max_ingredients_per_formulation:
-                # Activate an inactive ingredient
-                i = np.random.choice(inactive_ingredients)
+            elif move_type == 'activate' and len(absent_ingredients) > 0 and len(present_ingredients) < max_ingredients_per_formulation:
+                # Activate an absent ingredient
+                i = np.random.choice(absent_ingredients)
                 
-                # Find active ingredients to take from
-                candidates = [j for j in active_ingredients if current[j] > mins[j] + 1e-12]
+                # Find present ingredients to take from
+                candidates = [j for j in present_ingredients if current[j] > mins[j] + 1e-12]
                 if candidates:
                     j = np.random.choice(candidates)
                     
@@ -605,38 +605,38 @@ def gibbs_sample_formulation_space(
                             current[j] = mins[j]
                             current[i] -= deficit
             
-            elif move_type == 'deactivate' and len(active_ingredients) > min_ingredients_per_formulation:
-                # Deactivate an active ingredient (required ingredients cannot be deactivated)
-                deactivatable = [j for j in active_ingredients if not required[j]]
+            elif move_type == 'deactivate' and len(present_ingredients) > min_ingredients_per_formulation:
+                # Deactivate an present ingredient (required ingredients cannot be deactivated)
+                deactivatable = [j for j in present_ingredients if not required[j]]
                 if not deactivatable:
                     continue
                 i = np.random.choice(deactivatable)
                 
-                # Transfer all of this ingredient's amount to other active ingredients
+                # Transfer all of this ingredient's amount to other present ingredients
                 amount_to_redistribute = current[i]
-                other_active = [j for j in active_ingredients if j != i]
+                other_present = [j for j in present_ingredients if j != i]
                 
-                if other_active and amount_to_redistribute > 1e-12:
-                    # Calculate room available in other active ingredients
-                    room = np.array([maxs[j] - current[j] for j in other_active])
+                if other_present and amount_to_redistribute > 1e-12:
+                    # Calculate room available in other present ingredients
+                    room = np.array([maxs[j] - current[j] for j in other_present])
                     total_room = np.sum(room)
                     
                     if total_room >= amount_to_redistribute:
                         # Distribute proportionally among ingredients with room
                         if total_room > 0:
                             weights = room / total_room
-                            for idx, j in enumerate(other_active):
+                            for idx, j in enumerate(other_present):
                                 add_amount = weights[idx] * amount_to_redistribute
                                 current[j] += add_amount
                         current[i] = 0.0
                     else:
-                        # Not enough room in current active ingredients
+                        # Not enough room in current present ingredients
                         # Try to activate a new ingredient to take the excess
-                        if len(inactive_ingredients) > 0:
-                            k = np.random.choice(inactive_ingredients)
+                        if len(absent_ingredients) > 0:
+                            k = np.random.choice(absent_ingredients)
                             if maxs[k] >= mins[k] + amount_to_redistribute - total_room:
-                                # Fill up existing active ingredients
-                                for idx, j in enumerate(other_active):
+                                # Fill up existing present ingredients
+                                for idx, j in enumerate(other_present):
                                     current[j] = maxs[j]
                                 # Put remainder in new ingredient
                                 remaining = amount_to_redistribute - total_room
@@ -682,9 +682,9 @@ def gibbs_sample_formulation_space(
                 "Please retry or adjust formulation bounds."
             )
 
-        # Enforce active ingredient count rules before storing sample.
-        active_count = np.sum(current > 1e-12)
-        if active_count < min_ingredients_per_formulation or active_count > max_ingredients_per_formulation:
+        # Enforce present ingredient count rules before storing sample.
+        present_count = np.sum(current > 1e-12)
+        if present_count < min_ingredients_per_formulation or present_count > max_ingredients_per_formulation:
             raise ValueError(
                 "Sampling violated ingredient-count constraints. "
                 "Please retry or adjust formulation bounds."

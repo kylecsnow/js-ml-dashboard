@@ -20,16 +20,28 @@ has the following sections:
 
 1. **General Inputs** — continuous process variables (e.g. temperature, time, speed). \
    Each has: name, min, max, units.
-2. **Formulation Inputs** — mixture/recipe ingredients whose fractions must sum to 1. \
-   Each has: name, min (≥0, ≤1), max (≥0, ≤1), and required (boolean, default false). \
-   No units field (fractions implied). \
-   - **required: false** (optional, default) — the ingredient may be omitted (amount 0) even if \
-     min > 0; bounds apply only when the ingredient is included. \
-   - **required: true** — the ingredient must appear in every formulation within its min/max; \
-     min must be > 0. Use for base/primary ingredients the user says must always be present. \
-   There are also optional "min_ingredients_per_formulation" and \
+2. **Formulation Inputs** — mixture/recipe ingredients whose fractions must sum to 1 \
+   across the whole formulation. Ingredients are organized into one or more \
+   **Groups**. A Group represents a functional class / role of ingredients in the \
+   formulation (e.g. "Monomer", "Oligomer", "Photoinitiator", "Filler", \
+   "Solvent", "Surfactant"). Each group has: \
+   - **name** — the role/class name (clean name, no parentheses). \
+   - **min** and **max** — the GROUP SUM bounds: the combined fraction (≥0, ≤1) of \
+     all of the group's present ingredients. These apply only when at least one \
+     ingredient in the group is present. \
+   - **min_ingredients** and **max_ingredients** (optional integers, or null) — how \
+     many of the group's own ingredients may be present (non-zero) per formulation. \
+   - **ingredients** — the list of ingredients belonging to the group. Each \
+     ingredient has: name, min (≥0, ≤1), max (≥0, ≤1), and required (boolean, \
+     default false). Ingredients have no units field (fractions implied). \
+     - **required: false** (optional, default) — the ingredient may be omitted \
+       (amount 0) even if min > 0; bounds apply only when the ingredient is included. \
+     - **required: true** — the ingredient must appear in every formulation within \
+       its min/max; min must be > 0. Use for base/primary ingredients the user says \
+       must always be present. \
+   There are also optional top-level "min_ingredients_per_formulation" and \
    "max_ingredients_per_formulation" integers that control how many ingredients are \
-   active (non-zero) per row.
+   present (non-zero) per row across ALL groups combined.
 3. **Outputs** — the response variables the ML model will predict / optimize. \
    Each has: name, min, max, units.
 4. **Metadata** — num_rows (int), noise (float, default 0.025), \
@@ -107,16 +119,44 @@ has the following sections:
   use (as a very loose guide, not a strict rule); then if the user follows up asking \
   for more or less, follow their guidance.
 
+**Formulation groups:**
+- Organize formulation ingredients into Groups by their functional role/class in the \
+  domain. Put each ingredient in the group whose role it serves (e.g. all monomers \
+  in a "Monomer" group, all photoinitiators in a "Photoinitiator" group). \
+- Group names should be clean role/class names with no parentheses.
+- Every ingredient MUST belong to exactly one group. Do not leave ingredients \
+  ungrouped. If a problem genuinely has only one role, a single group is fine.
+- Prefer a handful of meaningful groups over many tiny ones. Around 2-5 groups is a \
+  typical, useful starting point for a formulation problem.
+- Each group's min/max are GROUP SUM bounds (the combined fraction of that group's \
+  ingredients), also between 0 and 1. Set them from domain knowledge: e.g. the \
+  monomer/resin backbone might be 0.5-0.9 of the formulation while photoinitiators \
+  together are only 0.005-0.05.
+- A group is "always present" if it has min_ingredients > 0 or contains any required \
+  ingredient.
+
+**Group feasibility (CHECK THESE so the form is valid):**
+- The SUM of all groups' max values MUST be ≥ 1.0 (otherwise the ingredients can \
+  never reach 100%). When unsure, leave room: it is safe for group maxes to overlap \
+  and sum to well above 1.0.
+- The SUM of the min values of all "always-present" groups MUST be ≤ 1.0.
+- Each group's min_ingredients ≤ max_ingredients, and max_ingredients ≤ the number \
+  of ingredients in that group.
+- The number of ingredients forced by always-present groups (sum of each such \
+  group's min_ingredients, at least the count of its required ingredients) MUST be \
+  ≤ max_ingredients_per_formulation.
+- The sum of every group's max_ingredients MUST be ≥ min_ingredients_per_formulation.
+
 **Formulation input bounds:**
 - Formulation input min and max values MUST be between 0 and 1. They represent \
   weight/volume/mole fractions. For example, 5% should be written as "0.05", \
-  not "5". Double-check every formulation bound before responding.
+  not "5". Double-check every formulation bound (ingredient AND group) before responding.
 - Required ingredients (required: true) MUST have min > 0.
 - When the user asks to make an ingredient required, mandatory, or always included, \
-  set required: true on that ingredient (return the full formulation_inputs list).
+  set required: true on that ingredient (return the full formulation_groups list).
 - When the user asks to make an ingredient optional or allow it to be omitted, \
-  set required: false on that ingredient (return the full formulation_inputs list).
-- When adding new formulation inputs, default to required: false unless the user \
+  set required: false on that ingredient (return the full formulation_groups list).
+- When adding new formulation ingredients, default to required: false unless the user \
   clearly indicates the ingredient must always be present.
 
 **Updating the form:**
@@ -124,6 +164,14 @@ has the following sections:
   category (existing items + the new one). Do NOT return only the delta.
 - When the user asks you to REMOVE an item, return the full list minus that item.
 - When the user asks you to MODIFY an item, return the full list with the modification.
+- For formulation_groups specifically: ALWAYS return the COMPLETE list of groups, \
+  with each group containing its COMPLETE list of ingredients. Adding, removing, \
+  moving, or modifying a single ingredient still requires returning every group and \
+  every ingredient (with the change applied). Never return a partial group list and \
+  never return a group with only some of its ingredients.
+- When the user asks to move an ingredient from one group to another, or to \
+  reorganize ingredients into groups, return the full formulation_groups list \
+  reflecting the new organization.
 - Only include a category key in form_updates when it should change. Omit categories \
   that should stay the same.
 
@@ -156,8 +204,17 @@ You MUST respond with valid JSON matching this schema exactly:
     "general_inputs": [            // optional
       {"name": "...", "min": "...", "max": "...", "units": "..."}
     ],
-    "formulation_inputs": [        // optional
-      {"name": "...", "min": "...", "max": "...", "required": false}
+    "formulation_groups": [        // optional
+      {
+        "name": "Monomer",        // the group's role/class name
+        "min": "0.5",              // group SUM lower bound (0..1), string
+        "max": "0.9",              // group SUM upper bound (0..1), string
+        "min_ingredients": 1,      // optional (integer or null) present count in group
+        "max_ingredients": 3,      // optional (integer or null) present count in group
+        "ingredients": [
+          {"name": "...", "min": "...", "max": "...", "required": false}
+        ]
+      }
     ],
     "outputs": [                   // optional
       {"name": "...", "min": "...", "max": "...", "units": "..."}
@@ -177,17 +234,21 @@ You MUST respond with valid JSON matching this schema exactly:
   even if you include a form_updates object, it will be IGNORED when this is false.
 
 All min/max values in the arrays MUST be strings (they are displayed in text inputs). \
-num_rows, noise, min_ingredients_per_formulation, and max_ingredients_per_formulation \
-should be numbers (or null).
+This includes each group's "min"/"max" (the group sum bounds) and every ingredient's \
+"min"/"max". A group's "min_ingredients"/"max_ingredients", plus num_rows, noise, \
+min_ingredients_per_formulation, and max_ingredients_per_formulation should be numbers \
+(or null).
 
 ### Before you respond, verify:
-1. Does every variable name contain ZERO parentheses? If any name has "(" or ")", fix it.
-2. Are ALL formulation input min/max values between 0 and 1?
+1. Does every variable name AND group name contain ZERO parentheses? If any has "(" or ")", fix it.
+2. Are ALL formulation min/max values (ingredient AND group sum bounds) between 0 and 1?
 3. Does every required ingredient have min > 0?
-4. Is every ingredient actually used in this specific domain/application?
+4. Is every ingredient actually used in this specific domain/application, and placed in the right group?
 5. Does each output have a unique, realistic range (not copy-pasted defaults)?
 6. Are units in the "units" field, NOT embedded in the name?
-7. Did the user ask you to change the form? If not, set form_changes_intended to false.
+7. Does the SUM of all group max values reach at least 1.0, and do the always-present groups' mins sum to ≤ 1.0?
+8. Is each group's max_ingredients ≤ its number of ingredients, and does every ingredient belong to exactly one group?
+9. Did the user ask you to change the form? If not, set form_changes_intended to false.
 """
 
 
@@ -214,19 +275,37 @@ def _normalize_descriptors(
     ]
 
 
-def _normalize_formulation_descriptors(
-    items: list[dict],
-) -> list[tuple[str, str, str, bool]]:
-    """Convert formulation input dicts to canonical tuples for comparison."""
-    return [
-        (
-            d.get("name", ""),
-            _normalize_num(d.get("min", "")),
-            _normalize_num(d.get("max", "")),
-            bool(d.get("required", False)),
+def _normalize_count(val: Any) -> str:
+    """Normalize an optional integer count; None and '' both map to ''."""
+    if val in (None, ""):
+        return ""
+    return _normalize_num(val)
+
+
+def _normalize_formulation_groups(items: list[dict]) -> list[tuple]:
+    """Convert formulation group dicts to canonical tuples for comparison."""
+    normalized: list[tuple] = []
+    for group in items:
+        ingredients = tuple(
+            (
+                ing.get("name", ""),
+                _normalize_num(ing.get("min", "")),
+                _normalize_num(ing.get("max", "")),
+                bool(ing.get("required", False)),
+            )
+            for ing in group.get("ingredients", [])
         )
-        for d in items
-    ]
+        normalized.append(
+            (
+                group.get("name", ""),
+                _normalize_num(group.get("min", "")),
+                _normalize_num(group.get("max", "")),
+                _normalize_count(group.get("min_ingredients")),
+                _normalize_count(group.get("max_ingredients")),
+                ingredients,
+            )
+        )
+    return normalized
 
 
 def _strip_unchanged_updates(
@@ -248,11 +327,11 @@ def _strip_unchanged_updates(
             if _normalize_descriptors(current) != _normalize_descriptors(incoming):
                 cleaned[key] = incoming
 
-    if "formulation_inputs" in form_updates:
-        current = form_state.get("formulation_inputs", [])
-        incoming = form_updates["formulation_inputs"]
-        if _normalize_formulation_descriptors(current) != _normalize_formulation_descriptors(incoming):
-            cleaned["formulation_inputs"] = incoming
+    if "formulation_groups" in form_updates:
+        current = form_state.get("formulation_groups", [])
+        incoming = form_updates["formulation_groups"]
+        if _normalize_formulation_groups(current) != _normalize_formulation_groups(incoming):
+            cleaned["formulation_groups"] = incoming
 
     for key in ("num_rows", "noise", "filename"):
         if key in form_updates:

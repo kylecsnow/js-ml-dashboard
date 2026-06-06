@@ -33,8 +33,8 @@ export interface FormulationGroup {
   name: string;
   min: string;            // group sum lower bound (0..1)
   max: string;            // group sum upper bound (0..1)
-  minIngredients: string; // optional per-group min active count
-  maxIngredients: string; // optional per-group max active count
+  minIngredients: string; // optional per-group min present count
+  maxIngredients: string; // optional per-group max present count
   ingredients: FormulationDescriptorGroup[];
 }
 
@@ -63,6 +63,32 @@ const DEFAULT_MIN_GROUP_INGREDIENTS = '1';
 
 const resolveMinBound = (value: string) => (value.trim() === '' ? DEFAULT_MIN_BOUND : value);
 const resolveMaxBound = (value: string) => (value.trim() === '' ? DEFAULT_MAX_BOUND : value);
+
+/** Resolved per-group min/max present-ingredient counts (matches generate/validate logic). */
+const resolveGroupIngredientCounts = (group: FormulationGroup) => {
+  const size = group.ingredients.length;
+  const min = group.minIngredients.trim() === '' ? 1 : Number(group.minIngredients);
+  const max = group.maxIngredients.trim() === '' ? size : Number(group.maxIngredients);
+  const requiredCount = group.ingredients.filter(ing => ing.required).length;
+  return { min, max, requiredCount };
+};
+
+/** Default global min/max when the top-level fields are left blank. */
+const defaultGlobalIngredientCounts = (groups: FormulationGroup[]) => {
+  let defaultMin = 0;
+  let defaultMax = 0;
+  for (const group of groups) {
+    if (group.ingredients.length === 0) continue;
+    const { min, max, requiredCount } = resolveGroupIngredientCounts(group);
+    const groupMinContrib = min === 0 && requiredCount === 0 ? 0 : Math.max(min, requiredCount);
+    defaultMin += groupMinContrib;
+    defaultMax += max;
+  }
+  if (defaultMin < 1 && defaultMax > 0) {
+    defaultMin = 1;
+  }
+  return { min: defaultMin, max: defaultMax };
+};
 
 const createEmptyIngredient = (): FormulationDescriptorGroup => ({
   id: crypto.randomUUID(),
@@ -476,7 +502,7 @@ const DatasetGeneratorPage = () => {
     }
 
     // Validate formulation groups + their ingredients, accumulating feasibility totals.
-    let forcedGroupMinTotal = 0; // sum of min active ingredients forced by always-present groups
+    let forcedGroupMinTotal = 0; // sum of min present ingredients forced by always-present groups
     let sumGroupMax = 0;
     let sumForcedGroupMin = 0;
     let sumGroupMaxCounts = 0;
@@ -502,8 +528,8 @@ const DatasetGeneratorPage = () => {
       }
 
       const groupSize = group.ingredients.length;
-      const resolvedGroupMin = group.minIngredients.trim() === "" ? 1 : Number(group.minIngredients);
-      const resolvedGroupMax = group.maxIngredients.trim() === "" ? groupSize : Number(group.maxIngredients);
+      const { min: resolvedGroupMin, max: resolvedGroupMax, requiredCount: groupRequiredCount } =
+        resolveGroupIngredientCounts(group);
       if (!Number.isInteger(resolvedGroupMin) || !Number.isInteger(resolvedGroupMax)) {
         setError("Group min/max ingredients must be integers.");
         return;
@@ -521,7 +547,6 @@ const DatasetGeneratorPage = () => {
         return;
       }
 
-      let groupRequiredCount = 0;
       for (const ing of group.ingredients) {
         if (!ing.name.trim()) {
           setError("Variable names cannot be left blank.");
@@ -541,7 +566,6 @@ const DatasetGeneratorPage = () => {
           setError(`Required ingredient "${ing.name || '(unnamed)'}" must have a lower bound greater than 0.`);
           return;
         }
-        if (ing.required) groupRequiredCount += 1;
       }
 
       const isForced = resolvedGroupMin > 0 || groupRequiredCount > 0;
@@ -570,14 +594,18 @@ const DatasetGeneratorPage = () => {
 
     if (totalIngredients > 0) {
       const nIngredients = totalIngredients;
+      const { min: defaultGlobalMin, max: defaultGlobalMax } =
+        formulationGroups.length > 0
+          ? defaultGlobalIngredientCounts(formulationGroups)
+          : { min: nIngredients, max: nIngredients };
 
       resolvedMinIngredientsPerFormulation =
         minIngredientsPerFormulation.trim() === ""
-          ? nIngredients
+          ? defaultGlobalMin
           : Number(minIngredientsPerFormulation);
       resolvedMaxIngredientsPerFormulation =
         maxIngredientsPerFormulation.trim() === ""
-          ? nIngredients
+          ? defaultGlobalMax
           : Number(maxIngredientsPerFormulation);
 
       if (
@@ -720,6 +748,10 @@ const DatasetGeneratorPage = () => {
     (count, group) => count + group.ingredients.length,
     0,
   );
+  const defaultIngredientCounts =
+    totalFormulationIngredients > 0
+      ? defaultGlobalIngredientCounts(formulationGroups)
+      : null;
 
 
   return (
@@ -1095,7 +1127,11 @@ const DatasetGeneratorPage = () => {
                       onWheel={preventWheelChange}
                       min="1"
                       step="1"
-                      placeholder={`Defaults to ${totalFormulationIngredients || "n_ingredients"}`}
+                      placeholder={
+                        defaultIngredientCounts != null
+                          ? `Defaults to ${defaultIngredientCounts.min}`
+                          : 'Defaults to n_ingredients'
+                      }
                       className="w-full p-2 border border-gray-600 rounded"
                     />
                   </div>
@@ -1110,7 +1146,11 @@ const DatasetGeneratorPage = () => {
                       onWheel={preventWheelChange}
                       min="1"
                       step="1"
-                      placeholder={`Defaults to ${totalFormulationIngredients || "n_ingredients"}`}
+                      placeholder={
+                        defaultIngredientCounts != null
+                          ? `Defaults to ${defaultIngredientCounts.max}`
+                          : 'Defaults to n_ingredients'
+                      }
                       className="w-full p-2 border border-gray-600 rounded"
                     />
                   </div>
@@ -1366,7 +1406,7 @@ const DatasetGeneratorPage = () => {
         open={chatOpen}
         onOpenChange={setChatOpen}
         generalInputs={generalInputs}
-        formulationInputs={formulationGroups.flatMap(g => g.ingredients)}
+        formulationGroups={formulationGroups}
         outputs={outputs}
         numRows={numRows}
         noise={noise}
@@ -1374,21 +1414,7 @@ const DatasetGeneratorPage = () => {
         minIngredientsPerFormulation={minIngredientsPerFormulation}
         maxIngredientsPerFormulation={maxIngredientsPerFormulation}
         setGeneralInputs={setGeneralInputs}
-        setFormulationInputs={(items) => {
-          // Chat is group-unaware for now: route any ingredient edits it makes
-          // into a single default group, preserving existing group bounds when
-          // a single group is already present.
-          setFormulationGroups((prev) => {
-            if (prev.length === 1) {
-              return [{ ...prev[0], ingredients: items }];
-            }
-            return [{
-              ...createEmptyFormulationGroup(),
-              name: DEFAULT_GROUP_NAME,
-              ingredients: items,
-            }];
-          });
-        }}
+        setFormulationGroups={setFormulationGroups}
         setOutputs={setOutputs}
         setNumRows={setNumRows}
         setNoise={setNoise}

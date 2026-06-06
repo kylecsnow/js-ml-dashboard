@@ -4,6 +4,7 @@ import csv
 
 import numpy as np
 
+from routers.dataset_generator import _default_global_ingredient_counts
 from utils import build_synthetic_demo_dataset
 
 
@@ -49,15 +50,15 @@ def test_group_sum_bounds_and_counts_respected_wide_format():
     # Whole formulation always sums to 1.
     assert np.allclose(df[["A", "B", "C", "D"]].sum(axis=1), 1.0, atol=1e-6)
 
-    # Per-group active counts within [min_count, max_count].
+    # Per-group present counts within [min_count, max_count].
     c1 = (df[["A", "B"]] > 0).sum(axis=1)
     c2 = (df[["C", "D"]] > 0).sum(axis=1)
     assert (c1 >= 1).all() and (c1 <= 2).all()
     assert (c2 >= 1).all() and (c2 <= 2).all()
 
-    # Global active count within [min, max].
-    total_active = c1 + c2
-    assert (total_active >= 2).all() and (total_active <= 4).all()
+    # Global present count within [min, max].
+    total_present = c1 + c2
+    assert (total_present >= 2).all() and (total_present <= 4).all()
 
 
 def test_optional_group_can_be_absent_but_required_group_always_present():
@@ -201,6 +202,63 @@ def test_grouped_api_rejects_group_max_count_exceeding_group_size(client):
 
     response = client.post("/api/dataset-generator", json=body)
     assert response.status_code == 400
+
+
+def test_default_global_ingredient_counts_from_groups():
+    """Min/max defaults follow per-group counts, not total ingredient count."""
+    groups = [
+        {
+            "min_count": 3,
+            "max_count": 3,
+            "ingredients": [
+                {"required": True},
+                {"required": True},
+                {"required": True},
+            ],
+        },
+        {"min_count": 1, "max_count": 1, "ingredients": [{"required": True}]},
+        {"min_count": 1, "max_count": 3, "ingredients": [{}, {}, {}]},
+        {"min_count": 1, "max_count": 3, "ingredients": [{}, {}, {}]},
+        {"min_count": 1, "max_count": 2, "ingredients": [{}, {}]},
+    ]
+    assert _default_global_ingredient_counts(groups) == (7, 12)
+
+
+def test_grouped_api_omitted_global_counts_use_group_defaults(client):
+    body = {
+        "general_inputs": [],
+        "formulation_groups": [
+            {
+                "name": "Resins",
+                "min": 0.5,
+                "max": 0.9,
+                "min_ingredients": 1,
+                "max_ingredients": 2,
+                "ingredients": [
+                    {"name": "UDMA", "min": 0.1, "max": 0.8, "units": "", "required": False},
+                    {"name": "IBOA", "min": 0.1, "max": 0.8, "units": "", "required": False},
+                ],
+            },
+            {
+                "name": "Additives",
+                "min": 0.1,
+                "max": 0.5,
+                "min_ingredients": 1,
+                "max_ingredients": 1,
+                "ingredients": [
+                    {"name": "Irganox819", "min": 0.05, "max": 0.5, "units": "", "required": False},
+                ],
+            },
+        ],
+        "outputs": [
+            {"name": "modulus", "min": 100.0, "max": 10000.0, "units": "MPa"},
+        ],
+        "num_rows": 25,
+        "noise": 0.01,
+    }
+
+    response = client.post("/api/dataset-generator", json=body)
+    assert response.status_code == 200
 
 
 def test_legacy_formulation_inputs_still_supported(client):
