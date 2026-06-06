@@ -3,7 +3,14 @@
 import Image from "next/image";
 import Link from 'next/link';
 import Sidebar from '../components/Sidebar';
-import ChatSidebar from '../components/ChatSidebar';
+import ChatSidebar from '../components/dataset-generator/ChatSidebar';
+import SchemaToolbar from '../components/dataset-generator/SchemaToolbar';
+import SaveSchemaModal from '../components/dataset-generator/SaveSchemaModal';
+import RenameSchemaModal from '../components/dataset-generator/RenameSchemaModal';
+import DeleteSchemaModal from '../components/dataset-generator/DeleteSchemaModal';
+import GenerationSettingsBar from '../components/dataset-generator/GenerationSettingsBar';
+import DescriptorSection from '../components/dataset-generator/DescriptorSection';
+import FormulationSection from '../components/dataset-generator/FormulationSection';
 import { Switch } from '@headlessui/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -59,7 +66,6 @@ interface SchemaConfig {
 const DEFAULT_GROUP_NAME = 'Default Group';
 const DEFAULT_MIN_BOUND = '0';
 const DEFAULT_MAX_BOUND = '1';
-const DEFAULT_MIN_GROUP_INGREDIENTS = '1';
 
 const resolveMinBound = (value: string) => (value.trim() === '' ? DEFAULT_MIN_BOUND : value);
 const resolveMaxBound = (value: string) => (value.trim() === '' ? DEFAULT_MAX_BOUND : value);
@@ -109,7 +115,7 @@ const createEmptyFormulationGroup = (): FormulationGroup => ({
   ingredients: [createEmptyIngredient()],
 });
 
-interface SavedSchemaEntry {
+export interface SavedSchemaEntry {
   id: number;
   name: string;
   config: SchemaConfig;
@@ -818,592 +824,99 @@ const DatasetGeneratorPage = () => {
             </div>
           )}
 
-          {/* Save / Load Schema controls */}
-          <div className="mb-4 flex items-center gap-2">
-            <button
-              onClick={() => setShowSaveModal(true)}
-              className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
-            >
-              Save Schema
-            </button>
+          <SchemaToolbar
+            savedSchemas={savedSchemas}
+            dropdownOpen={schemaDropdownOpen}
+            dropdownRef={schemaDropdownRef}
+            onToggleDropdown={() => setSchemaDropdownOpen(!schemaDropdownOpen)}
+            onOpenSaveModal={() => setShowSaveModal(true)}
+            onLoadSchema={loadSchema}
+            onOpenRenameModal={openRenameModal}
+            onOpenDeleteModal={openDeleteModal}
+          />
 
-            <div className="relative" ref={schemaDropdownRef}>
-              <button
-                onClick={() => setSchemaDropdownOpen(!schemaDropdownOpen)}
-                className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
-              >
-                Load Schema {savedSchemas.length > 0 && `(${savedSchemas.length})`}
-              </button>
-              {schemaDropdownOpen && (
-                <div className="absolute z-10 mt-1 w-80 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-lg max-h-64 overflow-y-auto">
-                  {savedSchemas.length === 0 ? (
-                    <div className="p-3 text-sm text-gray-500">No saved schemas yet.</div>
-                  ) : (
-                    savedSchemas.map(schema => (
-                      <div
-                        key={schema.id}
-                        className="flex items-center justify-between p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-                      >
-                        <button
-                          onClick={() => loadSchema(schema)}
-                          className="flex-1 text-left text-sm truncate"
-                        >
-                          {schema.name}
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openRenameModal(schema);
-                          }}
-                          className="ml-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-sm flex-shrink-0"
-                          title="Rename schema"
-                          aria-label={`Rename ${schema.name}`}
-                        >
-                          ✎
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openDeleteModal(schema);
-                          }}
-                          className="ml-2 text-red-500 hover:text-red-700 text-sm flex-shrink-0"
-                          title="Delete schema"
-                          aria-label={`Delete ${schema.name}`}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Save Schema modal */}
           {showSaveModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 shadow-xl">
-                <h3 className="text-lg font-bold mb-4">Save Schema</h3>
-                <input
-                  type="text"
-                  value={schemaNameInput}
-                  onChange={(e) => setSchemaNameInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') saveSchema(); }}
-                  placeholder="Enter a name for this schema"
-                  className="w-full p-2 border border-gray-600 rounded mb-4"
-                  autoFocus
-                />
-                <div className="flex justify-end gap-2">
-                  <button
-                    onClick={() => { setShowSaveModal(false); setSchemaNameInput(""); }}
-                    className="px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded hover:bg-gray-400 dark:hover:bg-gray-500"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={saveSchema}
-                    className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
-                  >
-                    Save
-                  </button>
-                </div>
-              </div>
-            </div>
+            <SaveSchemaModal
+              value={schemaNameInput}
+              onChange={setSchemaNameInput}
+              onSave={saveSchema}
+              onCancel={() => { setShowSaveModal(false); setSchemaNameInput(""); }}
+            />
           )}
 
-
-          {/* Rename Schema modal */}
           {showRenameModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 shadow-xl">
-                <h3 className="text-lg font-bold mb-4">Rename Schema</h3>
-                <input
-                  type="text"
-                  value={renameSchemaInput}
-                  onChange={(e) => setRenameSchemaInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') renameSchema(); }}
-                  placeholder="Enter a new name for this schema"
-                  className="w-full p-2 border border-gray-600 rounded mb-4"
-                  autoFocus
-                />
-                <div className="flex justify-end gap-2">
-                  <button
-                    onClick={closeRenameModal}
-                    className="px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded hover:bg-gray-400 dark:hover:bg-gray-500"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={renameSchema}
-                    className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
-                  >
-                    Rename
-                  </button>
-                </div>
-              </div>
-            </div>
+            <RenameSchemaModal
+              value={renameSchemaInput}
+              onChange={setRenameSchemaInput}
+              onRename={renameSchema}
+              onCancel={closeRenameModal}
+            />
           )}
 
-
-          {/* Delete Schema modal */}
           {showDeleteModal && deletingSchema && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 shadow-xl">
-                <h3 className="text-lg font-bold mb-4">Delete Schema</h3>
-                <div className="mb-6 text-sm text-gray-700 dark:text-gray-300">
-                  <p>Are you sure you want to delete the following schema?</p>
-                  <p className="mt-2 font-semibold">{deletingSchema.name}</p>
-                  <p className="mt-2">This cannot be undone.</p>
-                </div>
-                <div className="flex justify-end gap-2">
-                  <button
-                    onClick={closeDeleteModal}
-                    className="px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded hover:bg-gray-400 dark:hover:bg-gray-500"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={confirmDeleteSchema}
-                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-                  >
-                    Yes, Delete
-                  </button>
-                </div>
-              </div>
-            </div>
+            <DeleteSchemaModal
+              schemaName={deletingSchema.name}
+              onConfirm={confirmDeleteSchema}
+              onCancel={closeDeleteModal}
+            />
           )}
 
-          <div className="mb-6 flex items-center">
-            <label className="block text-sm font-medium mb-1 mr-2">
-              Number of Rows
-            </label>
-            <input
-              type="number"
-              value={numRows}
-              onChange={(e) => setNumRows(Number(e.target.value) || '')}
-              onWheel={preventWheelChange}
-              min="1"
-              className="w-20 p-2 border border-gray-600 rounded mr-2"
-            />
-            <label className="block text-sm font-medium mb-1 mr-2">
-              Noise
-            </label>
-            <input
-              type="number"
-              value={noise}
-              onChange={(e) => setNoise(Number(e.target.value) || 0)}
-              onWheel={preventWheelChange}
-              min="0"
-              step="0.01"
-              className="w-20 p-2 border border-gray-600 rounded mr-2"
-            />
-            <label className="block text-sm font-medium mb-1 mr-2">
-              Dataset Name
-            </label>
-            <input
-              type="text"
-              value={filename}
-              placeholder="generated_dataset"
-              onChange={(e) => setFilename(e.target.value)}
-              min="1"
-              className="w-full p-2 border border-gray-600 rounded mr-2"
-            />
-            <button
-              onClick={() => generateData('compact')}
-              className="flex flex-col items-center px-5 py-1 bg-green-500 text-white rounded hover:bg-green-600 mr-2"
-            >
-              <span className="whitespace-nowrap">Export CSV</span>
-              <span className="text-xs whitespace-nowrap">(Compact Format)</span>
-            </button>
-            <button
-              onClick={() => generateData('wide')}
-              className="flex flex-col items-center px-5 py-1 bg-green-500 text-white rounded hover:bg-green-600"
-            >
-              <span className="whitespace-nowrap">Export CSV</span>
-              <span className="text-xs whitespace-nowrap">(Wide Format)</span>
-            </button>
-          </div>
+          <GenerationSettingsBar
+            numRows={numRows}
+            noise={noise}
+            filename={filename}
+            onNumRowsChange={setNumRows}
+            onNoiseChange={setNoise}
+            onFilenameChange={setFilename}
+            onExport={generateData}
+            preventWheelChange={preventWheelChange}
+          />
 
+          <DescriptorSection
+            title="General Inputs"
+            addLabel="Add General Input"
+            isOpen={isGeneralInputsOpen}
+            onToggle={() => setIsGeneralInputsOpen((prev) => !prev)}
+            groups={generalInputs}
+            onAdd={() => addDescriptorGroup('general input')}
+            onRemove={(id) => removeDescriptorGroup('general input', id)}
+            onUpdate={(id, field, value) => updateDescriptorGroup('general input', id, field, value)}
+            preventWheelChange={preventWheelChange}
+            renderCollapseIcon={renderCollapseIcon}
+          />
 
-          {/* General Inputs Section */}
-          <div className="mb-6 p-4 border-2 border-gray-400 rounded-lg">
-            <button
-              type="button"
-              onClick={() => setIsGeneralInputsOpen((prev) => !prev)}
-              className="mb-2 w-full flex items-center gap-4 text-left"
-            >
-              {renderCollapseIcon(isGeneralInputsOpen)}
-              <h2 className="text-lg font-bold">General Inputs</h2>
-            </button>
-            {isGeneralInputsOpen && (
-              <>
-                <button
-                  onClick={() => addDescriptorGroup('general input')}
-                  className="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                >
-                  Add General Input
-                </button>
-                {generalInputs.map(group => (
-                  <div key={group.id} className="mb-6 p-4 border rounded-lg relative">
-                    <button
-                      onClick={() => removeDescriptorGroup('general input', group.id)}
-                      className="absolute top-2 right-2 text-red-500 hover:text-red-700"
-                    >
-                      ✕
-                    </button>
-                    <div className="flex flex-col md:flex-row md:items-end gap-4">
-                      <div className="md:flex-1 md:min-w-">
-                        <label className="block text-sm font-medium mb-1">Variable name</label>
-                        <input
-                          type="text"
-                          value={group.name}
-                          onChange={(e) => updateDescriptorGroup('general input', group.id, 'name', e.target.value)}
-                          className="w-full p-2 border border-gray-600 rounded"
-                        />
-                      </div>
-                      <div className="md:w-32">
-                        <label className="block text-sm font-medium mb-1">Lower bound</label>
-                        <input
-                          type="number"
-                          value={group.min}
-                          onChange={(e) => updateDescriptorGroup('general input', group.id, 'min', e.target.value)}
-                          onWheel={preventWheelChange}
-                          className="w-full p-2 border border-gray-600 rounded"
-                        />
-                      </div>
-                      <div className="md:w-32">
-                        <label className="block text-sm font-medium mb-1">Upper bound</label>
-                        <input
-                          type="number"
-                          value={group.max}
-                          onChange={(e) => updateDescriptorGroup('general input', group.id, 'max', e.target.value)}
-                          onWheel={preventWheelChange}
-                          className="w-full p-2 border border-gray-600 rounded"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Units (optional)</label>
-                        <input
-                          type="text"
-                          value={group.units}
-                          onChange={(e) => updateDescriptorGroup('general input', group.id, 'units', e.target.value)}
-                          className="w-full p-2 border border-gray-600 rounded"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </>
-            )}
-          </div>
+          <FormulationSection
+            isOpen={isFormulationInputsOpen}
+            onToggle={() => setIsFormulationInputsOpen((prev) => !prev)}
+            renderCollapseIcon={renderCollapseIcon}
+            formulationGroups={formulationGroups}
+            minIngredientsPerFormulation={minIngredientsPerFormulation}
+            maxIngredientsPerFormulation={maxIngredientsPerFormulation}
+            defaultIngredientCounts={defaultIngredientCounts}
+            onMinIngredientsChange={setMinIngredientsPerFormulation}
+            onMaxIngredientsChange={setMaxIngredientsPerFormulation}
+            onAddGroup={addFormulationGroup}
+            onRemoveGroup={removeFormulationGroup}
+            onUpdateGroup={updateFormulationGroup}
+            onAddIngredient={addIngredientToGroup}
+            onRemoveIngredient={removeIngredientFromGroup}
+            onUpdateIngredient={updateIngredientInGroup}
+            onUpdateIngredientRequired={updateIngredientRequired}
+            preventWheelChange={preventWheelChange}
+          />
 
-
-          {/* Formulation Inputs Section */}
-          <div className="mb-6 p-4 border-2 border-gray-400 rounded-lg">
-            <button
-              type="button"
-              onClick={() => setIsFormulationInputsOpen((prev) => !prev)}
-              className="mb-2 w-full flex items-center gap-4 text-left"
-            >
-              {renderCollapseIcon(isFormulationInputsOpen)}
-              <h2 className="text-lg font-bold">Formulation Inputs</h2>
-            </button>
-            {isFormulationInputsOpen && (
-              <>
-                <p className="mb-4 text-sm text-gray-600">
-                  Lower and upper bounds (for both ingredients and groups) must be between 0 and 1, representing fractions 
-                  that sum to 1 (i.e. 100%) across the whole formulation. Ex: 0.25 represents 25%. 
-                  A group&apos;s bounds constrain the SUM of all its ingredients and apply only when at least one of its
-                  ingredients is present. By default, ingredients are optionally included in any given formulation from the generator:
-                  a positive lower bound applies only when thatingredient is included. Mark an ingredient as required to
-                  force it into every formulation within its min/max bounds. Each group can also limit how many of its ingredients appear per formulation.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Min ingredients per formulation (optional)
-                    </label>
-                    <input
-                      type="number"
-                      value={minIngredientsPerFormulation}
-                      onChange={(e) => setMinIngredientsPerFormulation(e.target.value)}
-                      onWheel={preventWheelChange}
-                      min="1"
-                      step="1"
-                      placeholder={
-                        defaultIngredientCounts != null
-                          ? `Defaults to ${defaultIngredientCounts.min}`
-                          : 'Defaults to n_ingredients'
-                      }
-                      className="w-full p-2 border border-gray-600 rounded"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Max ingredients per formulation (optional)
-                    </label>
-                    <input
-                      type="number"
-                      value={maxIngredientsPerFormulation}
-                      onChange={(e) => setMaxIngredientsPerFormulation(e.target.value)}
-                      onWheel={preventWheelChange}
-                      min="1"
-                      step="1"
-                      placeholder={
-                        defaultIngredientCounts != null
-                          ? `Defaults to ${defaultIngredientCounts.max}`
-                          : 'Defaults to n_ingredients'
-                      }
-                      className="w-full p-2 border border-gray-600 rounded"
-                    />
-                  </div>
-                </div>
-                <button
-                  onClick={addFormulationGroup}
-                  className="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                >
-                  Add Group
-                </button>
-                {formulationGroups.map(group => (
-                  <div key={group.id} className="mb-6 p-4 border-2 border-gray-300 rounded-lg relative bg-gray-50/40">
-                    <button
-                      onClick={() => removeFormulationGroup(group.id)}
-                      className="absolute top-2 right-2 text-red-500 hover:text-red-700"
-                      title="Remove group"
-                      aria-label="Remove group"
-                    >
-                      ✕
-                    </button>
-
-                    {/* Group-level fields */}
-                    <div className="flex flex-col md:flex-row md:items-end gap-4 mb-4 pr-6">
-                      <div className="md:flex-1 md:min-w-0">
-                        <label className="block text-sm font-medium mb-1"><b>Group name</b></label>
-                        <input
-                          type="text"
-                          value={group.name}
-                          onChange={(e) => updateFormulationGroup(group.id, 'name', e.target.value)}
-                          className="w-full p-2 border border-gray-600 rounded"
-                        />
-                      </div>
-                      <div className="md:w-28">
-                        <label className="block text-sm font-medium mb-1">Group lower</label>
-                        <input
-                          type="number"
-                          value={group.min}
-                          onChange={(e) => updateFormulationGroup(group.id, 'min', e.target.value)}
-                          onWheel={preventWheelChange}
-                          placeholder={DEFAULT_MIN_BOUND}
-                          className="w-full p-2 border border-gray-600 rounded"
-                        />
-                      </div>
-                      <div className="md:w-28">
-                        <label className="block text-sm font-medium mb-1">Group upper</label>
-                        <input
-                          type="number"
-                          value={group.max}
-                          onChange={(e) => updateFormulationGroup(group.id, 'max', e.target.value)}
-                          onWheel={preventWheelChange}
-                          placeholder={DEFAULT_MAX_BOUND}
-                          className="w-full p-2 border border-gray-600 rounded"
-                        />
-                      </div>
-                      <div className="md:w-28">
-                        <label className="block text-sm font-medium mb-1">Min # per formulation</label>
-                        <input
-                          type="number"
-                          value={group.minIngredients}
-                          onChange={(e) => updateFormulationGroup(group.id, 'minIngredients', e.target.value)}
-                          onWheel={preventWheelChange}
-                          min="0"
-                          step="1"
-                          placeholder={DEFAULT_MIN_GROUP_INGREDIENTS}
-                          className="w-full p-2 border border-gray-600 rounded"
-                        />
-                      </div>
-                      <div className="md:w-28">
-                        <label className="block text-sm font-medium mb-1">Max # per formulation</label>
-                        <input
-                          type="number"
-                          value={group.maxIngredients}
-                          onChange={(e) => updateFormulationGroup(group.id, 'maxIngredients', e.target.value)}
-                          onWheel={preventWheelChange}
-                          min="0"
-                          step="1"
-                          placeholder={`${group.ingredients.length || "n"}`}
-                          className="w-full p-2 border border-gray-600 rounded"
-                        />
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => addIngredientToGroup(group.id)}
-                      className="mb-3 px-3 py-1.5 text-sm bg-indigo-500 text-white rounded hover:bg-indigo-600"
-                    >
-                      Add Ingredient
-                    </button>
-
-                    {group.ingredients.length === 0 && (
-                      <p className="text-sm text-gray-500 mb-2">No ingredients in this group yet.</p>
-                    )}
-
-                    {group.ingredients.map(ingredient => (
-                      <div key={ingredient.id} className="mb-4 p-3 border rounded-lg relative bg-white">
-                        <button
-                          onClick={() => removeIngredientFromGroup(group.id, ingredient.id)}
-                          className="absolute top-2 right-2 text-red-500 hover:text-red-700"
-                          title="Remove ingredient"
-                          aria-label="Remove ingredient"
-                        >
-                          ✕
-                        </button>
-                        <div className="flex flex-col md:flex-row md:items-end gap-4 pr-6">
-                          <div className="md:flex-1 md:min-w-0">
-                            <label className="block text-sm font-medium mb-1">Variable name</label>
-                            <input
-                              type="text"
-                              value={ingredient.name}
-                              onChange={(e) => updateIngredientInGroup(group.id, ingredient.id, 'name', e.target.value)}
-                              className="w-full p-2 border border-gray-600 rounded"
-                            />
-                          </div>
-                          <div className="md:w-28">
-                            <label className="block text-sm font-medium mb-1">Lower bound</label>
-                            <input
-                              type="number"
-                              value={ingredient.min}
-                              onChange={(e) => updateIngredientInGroup(group.id, ingredient.id, 'min', e.target.value)}
-                              onWheel={preventWheelChange}
-                              placeholder={DEFAULT_MIN_BOUND}
-                              className="w-full p-2 border border-gray-600 rounded"
-                            />
-                          </div>
-                          <div className="md:w-28">
-                            <label className="block text-sm font-medium mb-1">Upper bound</label>
-                            <input
-                              type="number"
-                              value={ingredient.max}
-                              onChange={(e) => updateIngredientInGroup(group.id, ingredient.id, 'max', e.target.value)}
-                              onWheel={preventWheelChange}
-                              placeholder={DEFAULT_MAX_BOUND}
-                              className="w-full p-2 border border-gray-600 rounded"
-                            />
-                          </div>
-                          <div className="md:w-[186px]">
-                            <label className="block text-sm font-medium mb-1">Inclusion</label>
-                            <div
-                              className="inline-flex w-full rounded-lg border border-gray-600 p-0.5"
-                              role="group"
-                              aria-label="Ingredient inclusion"
-                            >
-                              <button
-                                type="button"
-                                onClick={() => updateIngredientRequired(group.id, ingredient.id, false)}
-                                aria-pressed={!ingredient.required}
-                                className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
-                                  !ingredient.required
-                                    ? 'bg-blue-500 text-white hover:bg-blue-600'
-                                    : 'bg-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
-                                }`}
-                              >
-                                Optional
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => updateIngredientRequired(group.id, ingredient.id, true)}
-                                aria-pressed={ingredient.required}
-                                className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
-                                  ingredient.required
-                                    ? 'bg-blue-500 text-white hover:bg-blue-600'
-                                    : 'bg-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
-                                }`}
-                              >
-                                Required
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </>
-            )}
-          </div>
-
-
-          {/* Outputs Section */}
-          <div className="mb-6 p-4 border-2 border-gray-400 rounded-lg">
-            <button
-              type="button"
-              onClick={() => setIsOutputsOpen((prev) => !prev)}
-              className="mb-2 w-full flex items-center gap-4 text-left"
-            >
-              {renderCollapseIcon(isOutputsOpen)}
-              <h2 className="text-lg font-bold">Outputs</h2>
-            </button>
-            {isOutputsOpen && (
-              <>
-                <button
-                  onClick={() => addDescriptorGroup('output')}
-                  className="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                >
-                  Add Output
-                </button>
-                {outputs.map(group => (
-                  <div key={group.id} className="mb-6 p-4 border rounded-lg relative">
-                    <button
-                      onClick={() => removeDescriptorGroup('output', group.id)}
-                      className="absolute top-2 right-2 text-red-500 hover:text-red-700"
-                    >
-                      ✕
-                    </button>
-                    <div className="flex flex-col md:flex-row md:items-end gap-4">
-                      <div className="md:flex-1 md:min-w-0">
-                        <label className="block text-sm font-medium mb-1">Variable name</label>
-                        <input
-                          type="text"
-                          value={group.name}
-                          onChange={(e) => updateDescriptorGroup('output', group.id, 'name', e.target.value)}
-                          className="w-full p-2 border border-gray-600 rounded"
-                        />
-                      </div>
-                      <div className="md:w-32">
-                        <label className="block text-sm font-medium mb-1">Lower bound</label>
-                        <input
-                          type="number"
-                          value={group.min}
-                          onChange={(e) => updateDescriptorGroup('output', group.id, 'min', e.target.value)}
-                          onWheel={preventWheelChange}
-                          className="w-full p-2 border border-gray-600 rounded"
-                        />
-                      </div>
-                      <div className="md:w-32">
-                        <label className="block text-sm font-medium mb-1">Upper bound</label>
-                        <input
-                          type="number"
-                          value={group.max}
-                          onChange={(e) => updateDescriptorGroup('output', group.id, 'max', e.target.value)}
-                          onWheel={preventWheelChange}
-                          className="w-full p-2 border border-gray-600 rounded"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Units (optional)</label>
-                        <input
-                          type="text"
-                          value={group.units}
-                          onChange={(e) => updateDescriptorGroup('output', group.id, 'units', e.target.value)}
-                          className="w-full p-2 border border-gray-600 rounded"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </>
-            )}
-          </div>
+          <DescriptorSection
+            title="Outputs"
+            addLabel="Add Output"
+            isOpen={isOutputsOpen}
+            onToggle={() => setIsOutputsOpen((prev) => !prev)}
+            groups={outputs}
+            onAdd={() => addDescriptorGroup('output')}
+            onRemove={(id) => removeDescriptorGroup('output', id)}
+            onUpdate={(id, field, value) => updateDescriptorGroup('output', id, field, value)}
+            preventWheelChange={preventWheelChange}
+            renderCollapseIcon={renderCollapseIcon}
+          />
         </div>
       </div>
 
