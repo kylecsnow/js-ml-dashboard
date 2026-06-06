@@ -383,7 +383,10 @@ export default function ChatSidebar({
               <p className="mb-2 font-medium text-gray-500">How can I help?</p>
               <p>Describe the type of formulation problem you want to model, and I&apos;ll populate the form for you.</p>
               <p className="mt-4 text-xs text-gray-400">
-                Example: &quot;Set up a dataset for DLP 3D printing resins with UDMA, IBOA, HDDA, GCMA, and Irganox 819 as ingredients.&quot; {/* TODO: Change this to a better example */}
+                Example #1: &quot;Set up a dataset for DLP 3D printing resins, including ingredients like the following: UDMA as an oligomer, IBOA, HDDA, and GCMA as monomers, and Irganox 819 as a photoinitiator. Feel free to expand on this list of ingredients with additional examples.&quot; {/* TODO: Change this to a better example */}
+              </p>
+              <p className="mt-4 text-xs text-gray-400">
+                Example #2: &quot;Ice cream emulsifier optimization dataset&quot; {/* TODO: Change this to a better example */}
               </p>
             </div>
           )}

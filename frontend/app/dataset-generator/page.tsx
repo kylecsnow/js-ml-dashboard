@@ -912,6 +912,7 @@ const DatasetGeneratorPage = () => {
             </div>
           )}
 
+
           {/* Rename Schema modal */}
           {showRenameModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -943,6 +944,7 @@ const DatasetGeneratorPage = () => {
               </div>
             </div>
           )}
+
 
           {/* Delete Schema modal */}
           {showDeleteModal && deletingSchema && (
@@ -1023,6 +1025,7 @@ const DatasetGeneratorPage = () => {
             </button>
           </div>
 
+
           {/* General Inputs Section */}
           <div className="mb-6 p-4 border-2 border-gray-400 rounded-lg">
             <button
@@ -1094,6 +1097,7 @@ const DatasetGeneratorPage = () => {
               </>
             )}
           </div>
+
 
           {/* Formulation Inputs Section */}
           <div className="mb-6 p-4 border-2 border-gray-400 rounded-lg">
@@ -1327,6 +1331,7 @@ const DatasetGeneratorPage = () => {
               </>
             )}
           </div>
+
 
           {/* Outputs Section */}
           <div className="mb-6 p-4 border-2 border-gray-400 rounded-lg">
