@@ -11,17 +11,9 @@ import DeleteSchemaModal from '../components/dataset-generator/DeleteSchemaModal
 import GenerationSettingsBar from '../components/dataset-generator/GenerationSettingsBar';
 import DescriptorSection from '../components/dataset-generator/DescriptorSection';
 import FormulationSection from '../components/dataset-generator/FormulationSection';
+import CoefficientsTable, { type CoefficientTableValue } from '../components/dataset-generator/CoefficientsTable';
 import { Switch } from '@headlessui/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-
-// import Table from '@mui/material/Table';
-// import TableBody from '@mui/material/TableBody';
-// import TableCell from '@mui/material/TableCell';
-// import TableContainer from '@mui/material/TableContainer';
-// import TableHead from '@mui/material/TableHead';
-// import TableRow from '@mui/material/TableRow';
-// import Paper from '@mui/material/Paper';
-// import { TableVirtuoso, TableComponents } from 'react-virtuoso';
 
 export interface DescriptorGroup {
   id: string;
@@ -66,6 +58,35 @@ interface SchemaConfig {
 const DEFAULT_GROUP_NAME = 'Default Group';
 const DEFAULT_MIN_BOUND = '0';
 const DEFAULT_MAX_BOUND = '1';
+
+
+
+
+// TODO: get rid of this later once you add the real CoefficientMatrix and hook it up to the backend
+const createZeroCoefficientMatrix = (
+  rowCount: number,
+  columnCount: number,
+): CoefficientTableValue =>
+  Array.from({ length: rowCount }, () =>
+    Array.from({ length: columnCount }, () => '0'),
+  );
+
+const resizeCoefficientMatrix = (
+  previousValues: CoefficientTableValue,
+  rowCount: number,
+  columnCount: number,
+): CoefficientTableValue =>
+  Array.from({ length: rowCount }, (_, rowIndex) =>
+    Array.from(
+      { length: columnCount },
+      (_, columnIndex) => previousValues[rowIndex]?.[columnIndex] ?? '0',
+    ),
+  );
+
+const labelWithFallback = (value: string, fallback: string) => value.trim() || fallback;
+
+
+
 
 const resolveMinBound = (value: string) => (value.trim() === '' ? DEFAULT_MIN_BOUND : value);
 const resolveMaxBound = (value: string) => (value.trim() === '' ? DEFAULT_MAX_BOUND : value);
@@ -128,6 +149,15 @@ const DatasetGeneratorPage = () => {
   const [outputs, setOutputs] = useState<DescriptorGroup[]>([]);
   const [numRows, setNumRows] = useState<number | ''>(50);
   const [showCoefficientsToggle, setShowCoefficientsToggle] = useState<boolean>(false);
+
+
+
+  const [coefficientValues, setCoefficientValues] = useState<CoefficientTableValue>(() =>
+    createZeroCoefficientMatrix(1, 1),    // TODO: eventually remove/replace this with the real CoefficientTable(?)
+  );
+
+
+
   const [filename, setFilename] = useState<string>("generated_dataset");
   const [noise, setNoise] = useState<number>(0.025);
   const [error, setError] = useState<string>("");
@@ -759,6 +789,45 @@ const DatasetGeneratorPage = () => {
       ? defaultGlobalIngredientCounts(formulationGroups)
       : null;
 
+  const coefficientInputNames = [
+    ...generalInputs.map(({ name }) => name),
+    ...formulationGroups.flatMap(({ ingredients }) =>
+      ingredients.map(({ name }) => name),
+    ),
+  ];
+  const coefficientInputLabels = (
+    coefficientInputNames.length > 0 ? coefficientInputNames : ['']
+  ).map((name, index) => labelWithFallback(name, `Input ${index + 1}`));
+  const coefficientOutputLabels = (
+    outputs.length > 0 ? outputs.map(({ name }) => name) : ['']
+  ).map((name, index) => labelWithFallback(name, `Output ${index + 1}`));
+
+  useEffect(() => {
+    setCoefficientValues((currentValues) =>
+      resizeCoefficientMatrix(
+        currentValues,
+        coefficientOutputLabels.length,
+        coefficientInputLabels.length,
+      ),
+    );
+  }, [coefficientInputLabels.length, coefficientOutputLabels.length]);
+
+  const updateCoefficientValue = (
+    rowIndex: number,
+    columnIndex: number,
+    value: string,
+  ) => {
+    setCoefficientValues((currentValues) =>
+      currentValues.map((row, currentRowIndex) =>
+        currentRowIndex === rowIndex
+          ? row.map((cell, currentColumnIndex) =>
+              currentColumnIndex === columnIndex ? value : cell,
+            )
+          : row,
+      ),
+    );
+  };
+
 
   return (
     <div className="flex min-h-screen">
@@ -783,24 +852,26 @@ const DatasetGeneratorPage = () => {
           </Link>
         </div>
 
-        {/* <div>
+
+
+
+        {/* <div> */}
+        <div className="text-red-600">
           <h3>TODOs:</h3>
           
           
           
           <ol className="list-decimal ml-6">
-            <li>Fix sampling for narrow formulation ranges</li>
             <li>Add an "advanced" menu that allows users to specify their coefficients</li>
-            <li>Allow users to add noise to the functions generating their data (one for each output)</li>
           </ol>
           <br></br>
 
           <ol className="list-decimal ml-6">
+            <li>(someday) Allow users to add noise to the functions generating their data (on an output-by-output level, i.e. one noise value for each output)</li>
             <li>(someday) allow users to preview rows of generated data (include interactive table somehow?)</li>
-            <li>(someday) For formulation ingredients, add logic for "must include", "can include", or "exclude"</li>
           </ol>
-        </div> */}
-        {/* <div>
+        </div>
+        <div>
           <label className="mr-2">Show coefficients</label>
           <Switch
             checked={showCoefficientsToggle}
@@ -816,7 +887,11 @@ const DatasetGeneratorPage = () => {
               } inline-block w-4 h-4 transform bg-white rounded-full transition`}
             />
           </Switch>
-        </div> */}
+        </div>
+
+
+
+
         <div className="w-full max-w-4xl">
           {error && (
             <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
@@ -858,6 +933,15 @@ const DatasetGeneratorPage = () => {
               schemaName={deletingSchema.name}
               onConfirm={confirmDeleteSchema}
               onCancel={closeDeleteModal}
+            />
+          )}
+
+          {showCoefficientsToggle && (
+            <CoefficientsTable
+              inputLabels={coefficientInputLabels}
+              outputLabels={coefficientOutputLabels}
+              values={coefficientValues}
+              onCellChange={updateCoefficientValue}
             />
           )}
 
