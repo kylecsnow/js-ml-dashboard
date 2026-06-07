@@ -863,10 +863,19 @@ const DatasetGeneratorPage = () => {
           
           <ol className="list-decimal ml-6">
             <li>Add an "advanced" menu that allows users to specify their coefficients</li>
+            <li>Coefficients Table: fix numbers getting transferred over to another column when you delete an input, or transferred to another row when you delete an output</li>
+            <li>Coefficients Table: add some actual checks/preventions of users setting these values outside the range they need to be (it should only be from -1 to 1, I think?)</li>
+            <li>Coefficients Table: stop the annoying "scrolling inside of text box changes the value" issue</li>
+            <li>Coefficients Table: break the table out of this silly box that is forced to be the same narrow width as the other stuff on this page!</li>
+            <li>Coefficients Table: figure out the right copy to use to explain the table (or maybe use a tooltip?)</li>
+            <li>Coefficients Table: Actually hook this stuff up to the backend!! But maybe separate out the random-number generation of the coefficients from a button that will "confirm/submit" the table's coefficients and then run the rest of the math...?</li>
+            {/* <li>Coefficients Table: </li> */}
           </ol>
           <br></br>
 
           <ol className="list-decimal ml-6">
+            <li>(someday) Add the `quick_dataset_eval.py` capability to this page so a user can interactively test/tweak how much "noise" they actually want to use when generating their dataset!</li>
+            <li>(someday) Coefficients Table: Do I want to consider (or put on backlog) making table cells smaller/dynamically resizable? Because sometimes there's a lot of info to fit all in one page...</li>
             <li>(someday) Allow users to add noise to the functions generating their data (on an output-by-output level, i.e. one noise value for each output)</li>
             <li>(someday) allow users to preview rows of generated data (include interactive table somehow?)</li>
           </ol>
