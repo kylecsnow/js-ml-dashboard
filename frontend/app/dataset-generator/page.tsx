@@ -872,9 +872,10 @@ const DatasetGeneratorPage = () => {
             <li>Add an "advanced" menu that allows users to specify their coefficients</li>
             <li>Coefficients Table: add some actual checks/preventions of users setting these values outside the range they need to be (it should only be from -1 to 1, I think?)</li>
             <li>Coefficients Table: stop the annoying "scrolling inside of text box changes the value" issue</li>
-            <li>Coefficients Table: break the table out of this silly box that is forced to be the same narrow width as the other stuff on this page!</li>
+            <li>Coefficients Table: put the table BELOW the # of rows, noise, and filename text fields...!</li>
             <li>Coefficients Table: figure out the right copy to use to explain the table (or maybe use a tooltip?)</li>
             <li>Coefficients Table: Actually hook this stuff up to the backend!! But maybe separate out the random-number generation of the coefficients from a button that will "confirm/submit" the table's coefficients and then run the rest of the math...?</li>
+            <li>Coefficients Table: Get the LLM chatbot to stop appending a ".csv" file extension on the end of the text in the filename text box</li>
             {/* <li>Coefficients Table: </li> */}
           </ol>
           <br></br>
@@ -951,14 +952,20 @@ const DatasetGeneratorPage = () => {
             />
           )}
 
-          {showCoefficientsToggle && (
+        </div>
+
+        {showCoefficientsToggle && (
+          <div className="w-full max-w-7xl">
             <CoefficientsTable
               inputs={visibleCoefficientInputs}
               outputs={visibleCoefficientOutputs}
               values={coefficientValues}
               onCellChange={updateCoefficientValue}
             />
-          )}
+          </div>
+        )}
+
+        <div className="w-full max-w-4xl">
 
           <GenerationSettingsBar
             numRows={numRows}
