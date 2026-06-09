@@ -11,7 +11,10 @@ import DeleteSchemaModal from '../components/dataset-generator/DeleteSchemaModal
 import GenerationSettingsBar from '../components/dataset-generator/GenerationSettingsBar';
 import DescriptorSection from '../components/dataset-generator/DescriptorSection';
 import FormulationSection from '../components/dataset-generator/FormulationSection';
-import CoefficientsTable, { type CoefficientTableValue } from '../components/dataset-generator/CoefficientsTable';
+import CoefficientsTable, {
+  type CoefficientTableAxisItem,
+  type CoefficientTableValue,
+} from '../components/dataset-generator/CoefficientsTable';
 import { Switch } from '@headlessui/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -58,29 +61,21 @@ interface SchemaConfig {
 const DEFAULT_GROUP_NAME = 'Default Group';
 const DEFAULT_MIN_BOUND = '0';
 const DEFAULT_MAX_BOUND = '1';
-
-
-
-
-// TODO: get rid of this later once you add the real CoefficientMatrix and hook it up to the backend
-const createZeroCoefficientMatrix = (
-  rowCount: number,
-  columnCount: number,
-): CoefficientTableValue =>
-  Array.from({ length: rowCount }, () =>
-    Array.from({ length: columnCount }, () => '0'),
-  );
-
-const resizeCoefficientMatrix = (
+const reconcileCoefficientValues = (
   previousValues: CoefficientTableValue,
-  rowCount: number,
-  columnCount: number,
+  outputIds: string[],
+  inputIds: string[],
 ): CoefficientTableValue =>
-  Array.from({ length: rowCount }, (_, rowIndex) =>
-    Array.from(
-      { length: columnCount },
-      (_, columnIndex) => previousValues[rowIndex]?.[columnIndex] ?? '0',
-    ),
+  Object.fromEntries(
+    outputIds.map((outputId) => [
+      outputId,
+      Object.fromEntries(
+        inputIds.map((inputId) => [
+          inputId,
+          previousValues[outputId]?.[inputId] ?? '0',
+        ]),
+      ),
+    ]),
   );
 
 const labelWithFallback = (value: string, fallback: string) => value.trim() || fallback;
@@ -149,15 +144,9 @@ const DatasetGeneratorPage = () => {
   const [outputs, setOutputs] = useState<DescriptorGroup[]>([]);
   const [numRows, setNumRows] = useState<number | ''>(50);
   const [showCoefficientsToggle, setShowCoefficientsToggle] = useState<boolean>(false);
-
-
-
   const [coefficientValues, setCoefficientValues] = useState<CoefficientTableValue>(() =>
-    createZeroCoefficientMatrix(1, 1),    // TODO: eventually remove/replace this with the real CoefficientTable(?)
+    reconcileCoefficientValues({}, ['default-output'], ['default-input']),
   );
-
-
-
   const [filename, setFilename] = useState<string>("generated_dataset");
   const [noise, setNoise] = useState<number>(0.025);
   const [error, setError] = useState<string>("");
@@ -789,42 +778,60 @@ const DatasetGeneratorPage = () => {
       ? defaultGlobalIngredientCounts(formulationGroups)
       : null;
 
-  const coefficientInputNames = [
-    ...generalInputs.map(({ name }) => name),
+  const coefficientInputs: CoefficientTableAxisItem[] = [
+    ...generalInputs.map(({ id, name }, index) => ({
+      id,
+      label: labelWithFallback(name, `Input ${index + 1}`),
+    })),
     ...formulationGroups.flatMap(({ ingredients }) =>
-      ingredients.map(({ name }) => name),
+      ingredients.map(({ id, name }, index) => ({
+        id,
+        label: labelWithFallback(name, `Input ${generalInputs.length + index + 1}`),
+      })),
     ),
   ];
-  const coefficientInputLabels = (
-    coefficientInputNames.length > 0 ? coefficientInputNames : ['']
-  ).map((name, index) => labelWithFallback(name, `Input ${index + 1}`));
-  const coefficientOutputLabels = (
-    outputs.length > 0 ? outputs.map(({ name }) => name) : ['']
-  ).map((name, index) => labelWithFallback(name, `Output ${index + 1}`));
+  const coefficientOutputs: CoefficientTableAxisItem[] = outputs.map(
+    ({ id, name }, index) => ({
+      id,
+      label: labelWithFallback(name, `Output ${index + 1}`),
+    }),
+  );
+  const visibleCoefficientInputs =
+    coefficientInputs.length > 0
+      ? coefficientInputs
+      : [{ id: 'default-input', label: 'Input 1' }];
+  const visibleCoefficientOutputs =
+    coefficientOutputs.length > 0
+      ? coefficientOutputs
+      : [{ id: 'default-output', label: 'Output 1' }];
+  const visibleCoefficientInputIds = visibleCoefficientInputs.map(({ id }) => id);
+  const visibleCoefficientOutputIds = visibleCoefficientOutputs.map(({ id }) => id);
+  const visibleCoefficientInputKey = visibleCoefficientInputIds.join('|');
+  const visibleCoefficientOutputKey = visibleCoefficientOutputIds.join('|');
 
   useEffect(() => {
     setCoefficientValues((currentValues) =>
-      resizeCoefficientMatrix(
+      reconcileCoefficientValues(
         currentValues,
-        coefficientOutputLabels.length,
-        coefficientInputLabels.length,
+        visibleCoefficientOutputKey.split('|'),
+        visibleCoefficientInputKey.split('|'),
       ),
     );
-  }, [coefficientInputLabels.length, coefficientOutputLabels.length]);
+  }, [visibleCoefficientInputKey, visibleCoefficientOutputKey]);
 
   const updateCoefficientValue = (
-    rowIndex: number,
-    columnIndex: number,
+    outputId: string,
+    inputId: string,
     value: string,
   ) => {
     setCoefficientValues((currentValues) =>
-      currentValues.map((row, currentRowIndex) =>
-        currentRowIndex === rowIndex
-          ? row.map((cell, currentColumnIndex) =>
-              currentColumnIndex === columnIndex ? value : cell,
-            )
-          : row,
-      ),
+      ({
+        ...currentValues,
+        [outputId]: {
+          ...currentValues[outputId],
+          [inputId]: value,
+        },
+      }),
     );
   };
 
@@ -863,7 +870,6 @@ const DatasetGeneratorPage = () => {
           
           <ol className="list-decimal ml-6">
             <li>Add an "advanced" menu that allows users to specify their coefficients</li>
-            <li>Coefficients Table: fix numbers getting transferred over to another column when you delete an input, or transferred to another row when you delete an output</li>
             <li>Coefficients Table: add some actual checks/preventions of users setting these values outside the range they need to be (it should only be from -1 to 1, I think?)</li>
             <li>Coefficients Table: stop the annoying "scrolling inside of text box changes the value" issue</li>
             <li>Coefficients Table: break the table out of this silly box that is forced to be the same narrow width as the other stuff on this page!</li>
@@ -947,8 +953,8 @@ const DatasetGeneratorPage = () => {
 
           {showCoefficientsToggle && (
             <CoefficientsTable
-              inputLabels={coefficientInputLabels}
-              outputLabels={coefficientOutputLabels}
+              inputs={visibleCoefficientInputs}
+              outputs={visibleCoefficientOutputs}
               values={coefficientValues}
               onCellChange={updateCoefficientValue}
             />

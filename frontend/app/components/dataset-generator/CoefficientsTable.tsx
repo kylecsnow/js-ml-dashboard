@@ -9,18 +9,23 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TextField from '@mui/material/TextField';
 
-export type CoefficientTableValue = string[][];
+export type CoefficientTableValue = Record<string, Record<string, string>>;
+
+export interface CoefficientTableAxisItem {
+  id: string;
+  label: string;
+}
 
 interface CoefficientsTableProps {
-  inputLabels: string[];
-  outputLabels: string[];
+  inputs: CoefficientTableAxisItem[];
+  outputs: CoefficientTableAxisItem[];
   values: CoefficientTableValue;
-  onCellChange: (rowIndex: number, columnIndex: number, value: string) => void;
+  onCellChange: (outputId: string, inputId: string, value: string) => void;
 }
 
 const CoefficientsTable = ({
-  inputLabels,
-  outputLabels,
+  inputs,
+  outputs,
   values,
   onCellChange,
 }: CoefficientsTableProps) => {
@@ -47,38 +52,38 @@ const CoefficientsTable = ({
               >
                 Output \\ Input
               </TableCell>
-              {inputLabels.map((label, columnIndex) => (
+              {inputs.map((input) => (
                 <TableCell
-                  key={`${label}-${columnIndex}`}
+                  key={input.id}
                   align="center"
                   component="th"
                   scope="col"
                   sx={{ fontWeight: 'bold', minWidth: 140 }}
                 >
-                  {label}
+                  {input.label}
                 </TableCell>
               ))}
             </TableRow>
           </TableHead>
           <TableBody>
-            {outputLabels.map((outputLabel, rowIndex) => (
-              <TableRow key={`${outputLabel}-${rowIndex}`}>
+            {outputs.map((output) => (
+              <TableRow key={output.id}>
                 <TableCell
                   component="th"
                   scope="row"
                   sx={{ fontWeight: 'bold', minWidth: 140 }}
                 >
-                  {outputLabel}
+                  {output.label}
                 </TableCell>
-                {inputLabels.map((inputLabel, columnIndex) => (
-                  <TableCell key={`${outputLabel}-${inputLabel}-${columnIndex}`} align="center">
+                {inputs.map((input) => (
+                  <TableCell key={`${output.id}-${input.id}`} align="center">
                     <TextField
                       type="number"
                       size="small"
-                      value={values[rowIndex]?.[columnIndex] ?? '0'}
-                      onChange={(event) => onCellChange(rowIndex, columnIndex, event.target.value)}
+                      value={values[output.id]?.[input.id] ?? '0'}
+                      onChange={(event) => onCellChange(output.id, input.id, event.target.value)}
                       inputProps={{
-                        'aria-label': `${outputLabel} coefficient for ${inputLabel}`,
+                        'aria-label': `${output.label} coefficient for ${input.label}`,
                         step: 'any',
                       }}
                       sx={{ width: 112 }}
