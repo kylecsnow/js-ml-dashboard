@@ -961,6 +961,7 @@ const DatasetGeneratorPage = () => {
               outputs={visibleCoefficientOutputs}
               values={coefficientValues}
               onCellChange={updateCoefficientValue}
+              preventWheelChange={preventWheelChange}
             />
           </div>
         )}

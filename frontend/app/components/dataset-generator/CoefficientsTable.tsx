@@ -1,5 +1,6 @@
 'use client';
 
+import type { WheelEvent } from 'react';
 import Paper from '@mui/material/Paper';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -21,6 +22,7 @@ interface CoefficientsTableProps {
   outputs: CoefficientTableAxisItem[];
   values: CoefficientTableValue;
   onCellChange: (outputId: string, inputId: string, value: string) => void;
+  preventWheelChange: (e: WheelEvent<HTMLInputElement>) => void;
 }
 
 const CoefficientsTable = ({
@@ -28,6 +30,7 @@ const CoefficientsTable = ({
   outputs,
   values,
   onCellChange,
+  preventWheelChange,
 }: CoefficientsTableProps) => {
   return (
     <div className="mb-6 p-4 border-2 border-gray-400 rounded-lg">
@@ -82,9 +85,12 @@ const CoefficientsTable = ({
                       size="small"
                       value={values[output.id]?.[input.id] ?? '0'}
                       onChange={(event) => onCellChange(output.id, input.id, event.target.value)}
-                      inputProps={{
-                        'aria-label': `${output.label} coefficient for ${input.label}`,
-                        step: 'any',
+                      slotProps={{
+                        htmlInput: {
+                          'aria-label': `${output.label} coefficient for ${input.label}`,
+                          step: 'any',
+                          onWheel: preventWheelChange,
+                        },
                       }}
                       sx={{ width: 112 }}
                     />
