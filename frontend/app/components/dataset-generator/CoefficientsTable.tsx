@@ -25,6 +25,34 @@ interface CoefficientsTableProps {
   preventWheelChange: (e: WheelEvent<HTMLInputElement>) => void;
 }
 
+const COEFFICIENT_MIN = -1;
+const COEFFICIENT_MAX = 1;
+const FLOAT_INPUT_RE = /^-?\d*\.?\d*$/;
+
+const isPartialCoefficient = (value: string) =>
+  value === '' || value === '-' || value === '.' || value === '-.';
+
+const sanitizeCoefficientChange = (value: string): string | null => {
+  if (!FLOAT_INPUT_RE.test(value)) return null;
+  if (isPartialCoefficient(value)) return value;
+
+  const num = Number(value);
+  if (Number.isNaN(num)) return null;
+  if (num < COEFFICIENT_MIN) return String(COEFFICIENT_MIN);
+  if (num > COEFFICIENT_MAX) return String(COEFFICIENT_MAX);
+  return value;
+};
+
+const finalizeCoefficientValue = (value: string): string => {
+  if (isPartialCoefficient(value)) return '0';
+
+  const num = Number(value);
+  if (Number.isNaN(num)) return '0';
+  if (num < COEFFICIENT_MIN) return String(COEFFICIENT_MIN);
+  if (num > COEFFICIENT_MAX) return String(COEFFICIENT_MAX);
+  return value;
+};
+
 const CoefficientsTable = ({
   inputs,
   outputs,
@@ -81,14 +109,27 @@ const CoefficientsTable = ({
                 {inputs.map((input) => (
                   <TableCell key={`${output.id}-${input.id}`} align="center">
                     <TextField
-                      type="number"
+                      type="text"
+                      inputMode="decimal"
                       size="small"
                       value={values[output.id]?.[input.id] ?? '0'}
-                      onChange={(event) => onCellChange(output.id, input.id, event.target.value)}
+                      onChange={(event) => {
+                        const sanitized = sanitizeCoefficientChange(event.target.value);
+                        if (sanitized !== null) {
+                          onCellChange(output.id, input.id, sanitized);
+                        }
+                      }}
+                      onBlur={(event) => {
+                        const finalized = finalizeCoefficientValue(event.target.value);
+                        if (finalized !== event.target.value) {
+                          onCellChange(output.id, input.id, finalized);
+                        }
+                      }}
                       slotProps={{
                         htmlInput: {
                           'aria-label': `${output.label} coefficient for ${input.label}`,
-                          step: 'any',
+                          min: COEFFICIENT_MIN,
+                          max: COEFFICIENT_MAX,
                           onWheel: preventWheelChange,
                         },
                       }}

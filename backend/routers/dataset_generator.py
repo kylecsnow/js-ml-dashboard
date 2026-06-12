@@ -313,6 +313,7 @@ async def get_synthetic_demo_dataset(body: dict = Body(...)) -> dict[str, Any]:
             outputs=outputs,
             num_rows=num_rows,
             noise=noise,
+            coefs=None,
             output_format=output_format,
             min_ingredients_per_formulation=min_ingredients_per_formulation,
             max_ingredients_per_formulation=max_ingredients_per_formulation,
