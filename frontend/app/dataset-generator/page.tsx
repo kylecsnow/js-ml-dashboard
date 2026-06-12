@@ -147,7 +147,7 @@ const DatasetGeneratorPage = () => {
   const [coefficientValues, setCoefficientValues] = useState<CoefficientTableValue>(() =>
     reconcileCoefficientValues({}, ['default-output'], ['default-input']),
   );
-  const [filename, setFilename] = useState<string>("generated_dataset");
+  const [filename, setFilename] = useState<string>("generated_dataset_name");
   const [noise, setNoise] = useState<number>(0.025);
   const [error, setError] = useState<string>("");
   const [minIngredientsPerFormulation, setMinIngredientsPerFormulation] = useState<string>("");  // TODO: do we really want to allow these to be strings....???
@@ -745,7 +745,7 @@ const DatasetGeneratorPage = () => {
         }
       };
 
-      const getDatasetBaseName = (rawName: string) => rawName.trim() || "generated_dataset";
+      const getDatasetBaseName = (rawName: string) => rawName.trim() || "generated_dataset_name";
 
       const datasetBaseName = getDatasetBaseName(filename);
       const hasFormulationInputs = totalIngredients > 0;
@@ -872,7 +872,6 @@ const DatasetGeneratorPage = () => {
             <li>Add an "advanced" menu that allows users to specify their coefficients</li>
             <li>Coefficients Table: figure out the right copy to use to explain the table (or maybe use a tooltip?)</li>
             <li>Coefficients Table: Actually hook this stuff up to the backend!! But maybe separate out the random-number generation of the coefficients from a button that will "confirm/submit" the table's coefficients and then run the rest of the math...?</li>
-            <li>Coefficients Table: Get the LLM chatbot to stop appending a ".csv" file extension on the end of the text in the filename text box</li>
             {/* <li>Coefficients Table: </li> */}
           </ol>
           <br></br>

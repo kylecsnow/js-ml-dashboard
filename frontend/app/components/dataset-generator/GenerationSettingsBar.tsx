@@ -54,7 +54,7 @@ const GenerationSettingsBar = ({
       <input
         type="text"
         value={filename}
-        placeholder="generated_dataset"
+        placeholder="generated_dataset_name"
         onChange={(e) => onFilenameChange(e.target.value)}
         min="1"
         className="w-full p-2 border border-gray-600 rounded mr-2"

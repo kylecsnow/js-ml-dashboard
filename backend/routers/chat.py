@@ -45,7 +45,7 @@ has the following sections:
 3. **Outputs** — the response variables the ML model will predict / optimize. \
    Each has: name, min, max, units.
 4. **Metadata** — num_rows (int), noise (float, default 0.025), \
-   filename (string ending in .csv).
+   filename (string).
 
 ### Rules you MUST follow:
 
@@ -221,7 +221,7 @@ You MUST respond with valid JSON matching this schema exactly:
     ],
     "num_rows": 50,                // optional (integer)
     "noise": 0.025,                // optional (float)
-    "filename": "my_dataset.csv",  // optional (string)
+    "filename": "dataset_name",  // optional (string)
     "min_ingredients_per_formulation": null,  // optional (integer or null)
     "max_ingredients_per_formulation": null   // optional (integer or null)
   }
