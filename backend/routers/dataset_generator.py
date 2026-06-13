@@ -1,6 +1,7 @@
 import logging
 from typing import Any
 
+import numpy as np
 import pandas as pd
 from fastapi import APIRouter, Body, HTTPException
 
@@ -179,6 +180,51 @@ def _validate_formulation_groups(
         )
 
 
+def _validate_coefs(
+    coefs: Any,
+    num_outputs: int,
+    num_inputs: int,
+) -> np.ndarray | None:
+    """Validate client-supplied coefficients and return a float ndarray, or None if omitted.
+
+    Expects a 2D list shaped [num_outputs][num_inputs], with one row per output and
+    one column per input (general inputs first, then formulation ingredients).
+    """
+    if coefs is None:
+        return None
+
+    if not isinstance(coefs, list) or len(coefs) == 0:
+        raise ValueError("coefs must be a non-empty 2D list.")
+    if len(coefs) != num_outputs:
+        raise ValueError(
+            f"coefs must have {num_outputs} rows (one per output), got {len(coefs)}."
+        )
+
+    validated_rows: list[list[float]] = []
+    for row_idx, row in enumerate(coefs):
+        if not isinstance(row, list) or len(row) != num_inputs:
+            raise ValueError(
+                f"coefs row {row_idx} must have {num_inputs} columns (one per input), "
+                f"got {len(row) if isinstance(row, list) else 'non-list'}."
+            )
+        validated_row: list[float] = []
+        for col_idx, value in enumerate(row):
+            try:
+                num = float(value)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    f"coefs[{row_idx}][{col_idx}] must be a finite number."
+                ) from exc
+            if not np.isfinite(num):
+                raise ValueError(
+                    f"coefs[{row_idx}][{col_idx}] must be a finite number."
+                )
+            validated_row.append(num)
+        validated_rows.append(validated_row)
+
+    return np.array(validated_rows, dtype=float)
+
+
 @router.post("/api/dataset-generator")
 async def get_synthetic_demo_dataset(body: dict = Body(...)) -> dict[str, Any]:
 
@@ -192,6 +238,7 @@ async def get_synthetic_demo_dataset(body: dict = Body(...)) -> dict[str, Any]:
         output_format = body.get("output_format", "compact")
         min_ingredients_per_formulation = body.get("min_ingredients_per_formulation")
         max_ingredients_per_formulation = body.get("max_ingredients_per_formulation")
+        raw_coefs = body.get("coefs")
 
         general_inputs = {item["name"]: {"min": float(item["min"]), "max": float(item["max"]), "units": item["units"]} for item in general_inputs}
         outputs = {item["name"]: {"min": float(item["min"]), "max": float(item["max"]), "units": item["units"]} for item in outputs}
@@ -308,12 +355,16 @@ async def get_synthetic_demo_dataset(body: dict = Body(...)) -> dict[str, Any]:
         if output_format not in ("compact", "wide"):
             raise ValueError("output_format must be either 'compact' or 'wide'.")
 
+        num_inputs = len(general_inputs) + len(formulation_inputs)
+        num_outputs = len(outputs)
+        coefs = _validate_coefs(raw_coefs, num_outputs, num_inputs)
+
         synthetic_demo_data_df, synthetic_demo_coefs_df = build_synthetic_demo_dataset(
             inputs=inputs,
             outputs=outputs,
             num_rows=num_rows,
             noise=noise,
-            coefs=None,
+            coefs=coefs,
             output_format=output_format,
             min_ingredients_per_formulation=min_ingredients_per_formulation,
             max_ingredients_per_formulation=max_ingredients_per_formulation,

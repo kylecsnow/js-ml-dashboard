@@ -22,6 +22,7 @@ interface CoefficientsTableProps {
   outputs: CoefficientTableAxisItem[];
   values: CoefficientTableValue;
   onCellChange: (outputId: string, inputId: string, value: string) => void;
+  onRandomize: () => void;
   preventWheelChange: (e: WheelEvent<HTMLInputElement>) => void;
 }
 
@@ -58,18 +59,31 @@ const CoefficientsTable = ({
   outputs,
   values,
   onCellChange,
+  onRandomize,
   preventWheelChange,
 }: CoefficientsTableProps) => {
   return (
     <div className="mb-6 p-4 border-2 border-gray-400 rounded-lg">
-      <div className="mb-4">
-        <h2 className="text-lg font-bold">Coefficients</h2>
-        {/* <p className="text-sm text-gray-600"> */}
-        <p className="text-sm text-red-600">
-          Edit the coefficient values below. [TODO: figure out the right "copy" for this part.] The coefficients can range from -1 to 1. 
-          Setting coefficients will influence whether each input variable has a positively-correlated or negatively-correlated influence 
-          on the corresponding output variable. 
-        </p>
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-lg font-bold">Coefficients for data generation</h2>
+          <p className="text-sm text-gray-600">
+            (Optional) Edit the coefficient values below. The coefficients can range from -1 to 1. The coefficient
+            values in this table will influence the direction & magnitude whith which a given input variable will 
+            influence the corresponding output variable. Positive values indicate a positively-correlated influence
+            of an input variable on the output, while negative values indicate a negatively-correlated influence. 
+            Small absolute-value entries will reduce the strength of this effect, but be wary that sufficiently small
+            coefficient values may mean that the influnece of that variable may become "washed out" by noise, 
+            depending on the noise value used for synthetic data generation.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onRandomize}
+          className="shrink-0 px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
+        >
+          Randomize
+        </button>
       </div>
 
       <TableContainer component={Paper} sx={{ maxWidth: '100%', overflowX: 'auto' }}>

@@ -61,6 +61,35 @@ interface SchemaConfig {
 const DEFAULT_GROUP_NAME = 'Default Group';
 const DEFAULT_MIN_BOUND = '0';
 const DEFAULT_MAX_BOUND = '1';
+const COEFFICIENT_DECIMALS = 3;
+
+const randomCoefficient = () => (Math.random() * 2 - 1).toFixed(COEFFICIENT_DECIMALS);
+
+const labelWithFallback = (value: string, fallback: string) => value.trim() || fallback;
+
+const buildCoefficientAxes = (
+  generalInputs: DescriptorGroup[],
+  formulationGroups: FormulationGroup[],
+  outputs: DescriptorGroup[],
+): { inputs: CoefficientTableAxisItem[]; outputs: CoefficientTableAxisItem[] } => ({
+  inputs: [
+    ...generalInputs.map(({ id, name }, index) => ({
+      id,
+      label: labelWithFallback(name, `Input ${index + 1}`),
+    })),
+    ...formulationGroups.flatMap(({ ingredients }) =>
+      ingredients.map(({ id, name }, index) => ({
+        id,
+        label: labelWithFallback(name, `Input ${generalInputs.length + index + 1}`),
+      })),
+    ),
+  ],
+  outputs: outputs.map(({ id, name }, index) => ({
+    id,
+    label: labelWithFallback(name, `Output ${index + 1}`),
+  })),
+});
+
 const reconcileCoefficientValues = (
   previousValues: CoefficientTableValue,
   outputIds: string[],
@@ -72,13 +101,28 @@ const reconcileCoefficientValues = (
       Object.fromEntries(
         inputIds.map((inputId) => [
           inputId,
-          previousValues[outputId]?.[inputId] ?? '0',
+          previousValues[outputId]?.[inputId] ?? randomCoefficient(),
         ]),
       ),
     ]),
   );
 
-const labelWithFallback = (value: string, fallback: string) => value.trim() || fallback;
+const parseCoefficient = (value: string | undefined): number => {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return 0;
+  return Math.min(1, Math.max(-1, num));
+};
+
+const buildCoefsPayload = (
+  inputs: CoefficientTableAxisItem[],
+  outputs: CoefficientTableAxisItem[],
+  values: CoefficientTableValue,
+): number[][] | null => {
+  if (inputs.length === 0 || outputs.length === 0) return null;
+  return outputs.map((output) =>
+    inputs.map((input) => parseCoefficient(values[output.id]?.[input.id])),
+  );
+};
 
 
 
@@ -670,6 +714,13 @@ const DatasetGeneratorPage = () => {
     // Clear any existing error
     setError("");
 
+    const { inputs: coefInputs, outputs: coefOutputs } = buildCoefficientAxes(
+      generalInputs,
+      formulationGroups,
+      outputs,
+    );
+    const coefs = buildCoefsPayload(coefInputs, coefOutputs, coefficientValues);
+
     try {
       const response = await fetch(
         // `http://localhost:8000/api/dataset-generator`, {
@@ -698,6 +749,7 @@ const DatasetGeneratorPage = () => {
             output_format: outputFormat,
             min_ingredients_per_formulation: resolvedMinIngredientsPerFormulation,
             max_ingredients_per_formulation: resolvedMaxIngredientsPerFormulation,
+            coefs,
           }),
         }
       );
@@ -778,23 +830,10 @@ const DatasetGeneratorPage = () => {
       ? defaultGlobalIngredientCounts(formulationGroups)
       : null;
 
-  const coefficientInputs: CoefficientTableAxisItem[] = [
-    ...generalInputs.map(({ id, name }, index) => ({
-      id,
-      label: labelWithFallback(name, `Input ${index + 1}`),
-    })),
-    ...formulationGroups.flatMap(({ ingredients }) =>
-      ingredients.map(({ id, name }, index) => ({
-        id,
-        label: labelWithFallback(name, `Input ${generalInputs.length + index + 1}`),
-      })),
-    ),
-  ];
-  const coefficientOutputs: CoefficientTableAxisItem[] = outputs.map(
-    ({ id, name }, index) => ({
-      id,
-      label: labelWithFallback(name, `Output ${index + 1}`),
-    }),
+  const { inputs: coefficientInputs, outputs: coefficientOutputs } = buildCoefficientAxes(
+    generalInputs,
+    formulationGroups,
+    outputs,
   );
   const visibleCoefficientInputs =
     coefficientInputs.length > 0
@@ -835,6 +874,19 @@ const DatasetGeneratorPage = () => {
     );
   };
 
+  const randomizeCoefficients = () => {
+    setCoefficientValues(() =>
+      Object.fromEntries(
+        visibleCoefficientOutputIds.map((outputId) => [
+          outputId,
+          Object.fromEntries(
+            visibleCoefficientInputIds.map((inputId) => [inputId, randomCoefficient()]),
+          ),
+        ]),
+      ),
+    );
+  };
+
 
   return (
     <div className="flex min-h-screen">
@@ -866,11 +918,7 @@ const DatasetGeneratorPage = () => {
         <div className="text-red-600">
           <h3>TODOs:</h3>
           
-          
-          
           <ol className="list-decimal ml-6">
-            <li>Add an "advanced" menu that allows users to specify their coefficients</li>
-            <li>Coefficients Table: figure out the right copy to use to explain the table (or maybe use a tooltip?)</li>
             <li>Coefficients Table: Actually hook this stuff up to the backend!! But maybe separate out the random-number generation of the coefficients from a button that will "confirm/submit" the table's coefficients and then run the rest of the math...?</li>
             {/* <li>Coefficients Table: </li> */}
           </ol>
@@ -879,10 +927,14 @@ const DatasetGeneratorPage = () => {
           <ol className="list-decimal ml-6">
             <li>(someday) Add the `quick_dataset_eval.py` capability to this page so a user can interactively test/tweak how much "noise" they actually want to use when generating their dataset!</li>
             <li>(someday) Coefficients Table: Do I want to consider (or put on backlog) making table cells smaller/dynamically resizable? Because sometimes there's a lot of info to fit all in one page...</li>
-            <li>(someday) Allow users to add noise to the functions generating their data (on an output-by-output level, i.e. one noise value for each output)</li>
+            <li>(someday) Allow users to add noise to the functions generating their data, on an output-by-output level (i.e. one noise value for each output)</li>
             <li>(someday) allow users to preview rows of generated data (include interactive table somehow?)</li>
           </ol>
         </div>
+
+
+
+
         <div>
           <label className="mr-2">Show coefficients</label>
           <Switch
@@ -970,6 +1022,7 @@ const DatasetGeneratorPage = () => {
               outputs={visibleCoefficientOutputs}
               values={coefficientValues}
               onCellChange={updateCoefficientValue}
+              onRandomize={randomizeCoefficients}
               preventWheelChange={preventWheelChange}
             />
           </div>
