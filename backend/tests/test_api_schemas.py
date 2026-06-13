@@ -121,3 +121,28 @@ def test_delete_schema_not_found(client):
     response = client.delete("/api/schemas/999999999")
     assert response.status_code == 404
     assert response.json()["detail"] == "Schema not found."
+
+
+def test_create_schema_round_trips_coefficient_values(client):
+    config = {
+        **MINIMAL_CONFIG,
+        "generalInputs": [
+            {"id": "input-a", "name": "Temperature", "min": "0", "max": "1", "units": "C"},
+        ],
+        "outputs": [
+            {"id": "output-a", "name": "Viscosity", "min": "0", "max": "1", "units": ""},
+        ],
+        "coefficientValues": {
+            "output-a": {"input-a": "0.42"},
+        },
+    }
+    name = f"test-schema-{uuid.uuid4()}"
+    response = client.post("/api/schemas", json={"name": name, "config": config})
+    assert response.status_code == 201
+    schema_id = response.json()["id"]
+
+    list_response = client.get("/api/schemas")
+    saved = next(s for s in list_response.json()["schemas"] if s["id"] == schema_id)
+    assert saved["config"] == config
+
+    client.delete(f"/api/schemas/{schema_id}")

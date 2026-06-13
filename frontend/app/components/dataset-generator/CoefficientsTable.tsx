@@ -1,6 +1,6 @@
 'use client';
 
-import type { WheelEvent } from 'react';
+import { useState, type WheelEvent } from 'react';
 import Paper from '@mui/material/Paper';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -23,6 +23,7 @@ interface CoefficientsTableProps {
   values: CoefficientTableValue;
   onCellChange: (outputId: string, inputId: string, value: string) => void;
   onRandomize: () => void;
+  onSetAllToValue: (value: string) => void;
   preventWheelChange: (e: WheelEvent<HTMLInputElement>) => void;
 }
 
@@ -60,12 +61,21 @@ const CoefficientsTable = ({
   values,
   onCellChange,
   onRandomize,
+  onSetAllToValue,
   preventWheelChange,
 }: CoefficientsTableProps) => {
+  const [setAllInputValue, setSetAllInputValue] = useState('');
+
+  const applySetAllValue = () => {
+    const value = finalizeCoefficientValue(setAllInputValue);
+    onSetAllToValue(value);
+    setSetAllInputValue(value);
+  };
+
   return (
     <div className="mb-6 p-4 border-2 border-gray-400 rounded-lg">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
+        <div className="min-w-0 flex-1">
           <h2 className="text-lg font-bold">Coefficients for data generation</h2>
           <p className="text-sm text-gray-600">
             (Optional) Edit the coefficient values below. The coefficients can range from -1 to 1. The coefficient
@@ -77,13 +87,57 @@ const CoefficientsTable = ({
             depending on the noise value used for synthetic data generation.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onRandomize}
-          className="shrink-0 px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
-        >
-          Randomize
-        </button>
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <button
+            type="button"
+            onClick={onRandomize}
+            className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
+          >
+            Randomize values
+          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={applySetAllValue}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-gray-600 whitespace-nowrap"
+            >
+              Set all to:
+            </button>
+            <TextField
+              type="text"
+              inputMode="decimal"
+              size="small"
+              value={setAllInputValue}
+              placeholder="0"
+              onChange={(event) => {
+                const sanitized = sanitizeCoefficientChange(event.target.value);
+                if (sanitized !== null) {
+                  setSetAllInputValue(sanitized);
+                }
+              }}
+              onBlur={(event) => {
+                const finalized = finalizeCoefficientValue(event.target.value);
+                if (finalized !== event.target.value) {
+                  setSetAllInputValue(finalized);
+                }
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  applySetAllValue();
+                }
+              }}
+              slotProps={{
+                htmlInput: {
+                  'aria-label': 'Value to apply to all coefficients',
+                  min: COEFFICIENT_MIN,
+                  max: COEFFICIENT_MAX,
+                  onWheel: preventWheelChange,
+                },
+              }}
+              sx={{ width: 58 }}
+            />
+          </div>
+        </div>
       </div>
 
       <TableContainer component={Paper} sx={{ maxWidth: '100%', overflowX: 'auto' }}>

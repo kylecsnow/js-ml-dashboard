@@ -40,22 +40,28 @@ export interface FormulationGroup {
   ingredients: FormulationDescriptorGroup[];
 }
 
+type SavedDescriptorGroup = Omit<DescriptorGroup, 'id'> & { id?: string };
+
+type SavedFormulationDescriptorGroup = Omit<FormulationDescriptorGroup, 'id'> & { id?: string };
+
 type FormulationGroupConfig = Omit<FormulationGroup, 'id' | 'ingredients'> & {
-  ingredients: Omit<FormulationDescriptorGroup, 'id'>[];
+  id?: string;
+  ingredients: SavedFormulationDescriptorGroup[];
 };
 
 interface SchemaConfig {
-  generalInputs: Omit<DescriptorGroup, 'id'>[];
+  generalInputs: SavedDescriptorGroup[];
   // New grouped structure. `formulationInputs` is still read for backwards
   // compatibility with schemas saved before ingredient groups existed.
   formulationGroups?: FormulationGroupConfig[];
-  formulationInputs?: Omit<FormulationDescriptorGroup, 'id'>[];
-  outputs: Omit<DescriptorGroup, 'id'>[];
+  formulationInputs?: SavedFormulationDescriptorGroup[];
+  outputs: SavedDescriptorGroup[];
   numRows: number | '';
   noise: number;
   filename: string;
   minIngredientsPerFormulation: string;
   maxIngredientsPerFormulation: string;
+  coefficientValues?: CoefficientTableValue;
 }
 
 const DEFAULT_GROUP_NAME = 'Default Group';
@@ -194,8 +200,8 @@ const DatasetGeneratorPage = () => {
   const [filename, setFilename] = useState<string>("generated_dataset_name");
   const [noise, setNoise] = useState<number>(0.025);
   const [error, setError] = useState<string>("");
-  const [minIngredientsPerFormulation, setMinIngredientsPerFormulation] = useState<string>("");  // TODO: do we really want to allow these to be strings....???
-  const [maxIngredientsPerFormulation, setMaxIngredientsPerFormulation] = useState<string>("");  // TODO: do we really want to allow these to be strings....???
+  const [minIngredientsPerFormulation, setMinIngredientsPerFormulation] = useState<string>("");
+  const [maxIngredientsPerFormulation, setMaxIngredientsPerFormulation] = useState<string>("");
   const [chatOpen, setChatOpen] = useState(false);
   const [isGeneralInputsOpen, setIsGeneralInputsOpen] = useState(true);
   const [isFormulationInputsOpen, setIsFormulationInputsOpen] = useState(true);
@@ -248,22 +254,53 @@ const DatasetGeneratorPage = () => {
       return;
     }
 
+    const { inputs: coefInputs, outputs: coefOutputs } = buildCoefficientAxes(
+      generalInputs,
+      formulationGroups,
+      outputs,
+    );
+
     const config: SchemaConfig = {
-      generalInputs: generalInputs.map(({ name, min, max, units }) => ({ name, min, max, units })),
-      formulationGroups: formulationGroups.map(({ name, min, max, minIngredients, maxIngredients, ingredients }) => ({
+      generalInputs: generalInputs.map(({ id, name, min, max, units }) => ({
+        id,
+        name,
+        min,
+        max,
+        units,
+      })),
+      formulationGroups: formulationGroups.map(({ id, name, min, max, minIngredients, maxIngredients, ingredients }) => ({
+        id,
         name,
         min,
         max,
         minIngredients,
         maxIngredients,
-        ingredients: ingredients.map(({ name, min, max, units, required }) => ({ name, min, max, units, required })),
+        ingredients: ingredients.map(({ id, name, min, max, units, required }) => ({
+          id,
+          name,
+          min,
+          max,
+          units,
+          required,
+        })),
       })),
-      outputs: outputs.map(({ name, min, max, units }) => ({ name, min, max, units })),
+      outputs: outputs.map(({ id, name, min, max, units }) => ({
+        id,
+        name,
+        min,
+        max,
+        units,
+      })),
       numRows,
       noise,
       filename,
       minIngredientsPerFormulation,
       maxIngredientsPerFormulation,
+      coefficientValues: reconcileCoefficientValues(
+        coefficientValues,
+        coefOutputs.map(({ id }) => id),
+        coefInputs.map(({ id }) => id),
+      ),
     };
 
     try {
@@ -359,7 +396,11 @@ const DatasetGeneratorPage = () => {
 
   const loadSchema = (schema: SavedSchemaEntry) => {
     const c = schema.config;
-    setGeneralInputs(c.generalInputs.map(g => ({ ...g, id: crypto.randomUUID() })));
+
+    const loadedGeneralInputs: DescriptorGroup[] = c.generalInputs.map((g) => ({
+      ...g,
+      id: g.id ?? crypto.randomUUID(),
+    }));
 
     // Prefer the grouped structure; fall back to migrating a legacy flat
     // formulationInputs list into a single default group.
@@ -378,26 +419,48 @@ const DatasetGeneratorPage = () => {
     } else {
       groupConfigs = [];
     }
-    setFormulationGroups(groupConfigs.map(g => ({
-      id: crypto.randomUUID(),
+
+    const loadedFormulationGroups: FormulationGroup[] = groupConfigs.map((g) => ({
+      id: g.id ?? crypto.randomUUID(),
       name: g.name ?? '',
       min: g.min ?? '',
       max: g.max ?? '',
       minIngredients: g.minIngredients ?? '',
       maxIngredients: g.maxIngredients ?? '',
-      ingredients: (g.ingredients ?? []).map(ing => ({
+      ingredients: (g.ingredients ?? []).map((ing) => ({
         ...ing,
         required: ing.required ?? false,
         units: ing.units ?? '',
-        id: crypto.randomUUID(),
+        id: ing.id ?? crypto.randomUUID(),
       })),
-    })));
-    setOutputs(c.outputs.map(g => ({ ...g, id: crypto.randomUUID() })));
+    }));
+
+    const loadedOutputs: DescriptorGroup[] = c.outputs.map((g) => ({
+      ...g,
+      id: g.id ?? crypto.randomUUID(),
+    }));
+
+    const { inputs: loadedCoefInputs, outputs: loadedCoefOutputs } = buildCoefficientAxes(
+      loadedGeneralInputs,
+      loadedFormulationGroups,
+      loadedOutputs,
+    );
+
+    setGeneralInputs(loadedGeneralInputs);
+    setFormulationGroups(loadedFormulationGroups);
+    setOutputs(loadedOutputs);
     setNumRows(c.numRows);
     setNoise(c.noise);
     setFilename(c.filename);
     setMinIngredientsPerFormulation(c.minIngredientsPerFormulation);
     setMaxIngredientsPerFormulation(c.maxIngredientsPerFormulation);
+    setCoefficientValues(
+      reconcileCoefficientValues(
+        c.coefficientValues ?? {},
+        loadedCoefOutputs.map(({ id }) => id),
+        loadedCoefInputs.map(({ id }) => id),
+      ),
+    );
     setSchemaDropdownOpen(false);
     setError("");
   };
@@ -887,6 +950,19 @@ const DatasetGeneratorPage = () => {
     );
   };
 
+  const setAllCoefficientsToValue = (value: string) => {
+    setCoefficientValues(() =>
+      Object.fromEntries(
+        visibleCoefficientOutputIds.map((outputId) => [
+          outputId,
+          Object.fromEntries(
+            visibleCoefficientInputIds.map((inputId) => [inputId, value]),
+          ),
+        ]),
+      ),
+    );
+  };
+
 
   return (
     <div className="flex min-h-screen">
@@ -914,13 +990,11 @@ const DatasetGeneratorPage = () => {
 
 
 
-        {/* <div> */}
-        <div className="text-red-600">
+
+        {/* <div className="text-red-600">
           <h3>TODOs:</h3>
           
           <ol className="list-decimal ml-6">
-            <li>Coefficients Table: Actually hook this stuff up to the backend!! But maybe separate out the random-number generation of the coefficients from a button that will "confirm/submit" the table's coefficients and then run the rest of the math...?</li>
-            {/* <li>Coefficients Table: </li> */}
           </ol>
           <br></br>
 
@@ -930,13 +1004,13 @@ const DatasetGeneratorPage = () => {
             <li>(someday) Allow users to add noise to the functions generating their data, on an output-by-output level (i.e. one noise value for each output)</li>
             <li>(someday) allow users to preview rows of generated data (include interactive table somehow?)</li>
           </ol>
-        </div>
+        </div> */}
 
 
 
 
         <div>
-          <label className="mr-2">Show coefficients</label>
+          <label className="mr-2">Advanced: Show Coefficients</label>
           <Switch
             checked={showCoefficientsToggle}
             onChange={setShowCoefficientsToggle}
@@ -1023,6 +1097,7 @@ const DatasetGeneratorPage = () => {
               values={coefficientValues}
               onCellChange={updateCoefficientValue}
               onRandomize={randomizeCoefficients}
+              onSetAllToValue={setAllCoefficientsToValue}
               preventWheelChange={preventWheelChange}
             />
           </div>

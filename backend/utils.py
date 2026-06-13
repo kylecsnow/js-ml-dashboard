@@ -1005,7 +1005,7 @@ def build_synthetic_demo_dataset(
     num_rows=10,
     noise=0,
     coefs=None,
-    output_format="compact",  # SOMEDAY: let's give users the option (with a toggle?) whether they want to export in compact or wide table format.
+    output_format="compact",
     min_ingredients_per_formulation: Optional[int] = None,
     max_ingredients_per_formulation: Optional[int] = None,
     formulation_groups: Optional[List[dict]] = None,

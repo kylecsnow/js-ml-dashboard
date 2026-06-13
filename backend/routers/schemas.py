@@ -37,6 +37,7 @@ async def list_schemas(db: Session = Depends(get_db)) -> dict:
 
 @router.post("/api/schemas", status_code=status.HTTP_201_CREATED)
 async def create_schema(body: dict = Body(...), db: Session = Depends(get_db)) -> dict:
+    """Create a saved schema. `config` is opaque JSON; it may include coefficientValues."""
     name = body.get("name")
     config = body.get("config")
 
