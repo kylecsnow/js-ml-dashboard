@@ -1,5 +1,8 @@
 # js-ml-dashboard
 
+![Badge test](https://img.shields.io/badge/any_text-you_like-blue)
+
+
 This repository contains the code for a collection of Machine Learning tools - primarily a set of quick data visualizations useful 
 for EDA and model explainability when training ML models on tabular datasets. This is a Next.js web application, using a frontend
 built with React/Typescript and a backend built with FastAPI/Python. You can run the app locally, or access it live on my personal
