@@ -79,11 +79,11 @@ const CoefficientsTable = ({
           <h2 className="text-lg font-bold">Coefficients for data generation</h2>
           <p className="text-sm text-gray-600">
             (Optional) Edit the coefficient values below. The coefficients can range from -1 to 1. The coefficient
-            values in this table will influence the direction & magnitude whith which a given input variable will 
+            values in this table will influence the direction & magnitude with which a given input variable will 
             influence the corresponding output variable. Positive values indicate a positively-correlated influence
             of an input variable on the output, while negative values indicate a negatively-correlated influence. 
             Small absolute-value entries will reduce the strength of this effect, but be wary that sufficiently small
-            coefficient values may mean that the influnece of that variable may become "washed out" by noise, 
+            coefficient values may mean that the influence of that variable may become "washed out" by noise, 
             depending on the noise value used for synthetic data generation.
           </p>
         </div>
