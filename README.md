@@ -1,6 +1,6 @@
 # js-ml-dashboard
 
-![Badge test](https://img.shields.io/badge/codecov-48%-blue)
+![codecov](https://img.shields.io/badge/codecov-47%25-blue)
 
 
 This repository contains the code for a collection of Machine Learning tools - primarily a set of quick data visualizations useful 
