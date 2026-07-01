@@ -6,6 +6,7 @@ import ChatIcon from '@mui/icons-material/Chat';
 import CloseIcon from '@mui/icons-material/Close';
 import SendIcon from '@mui/icons-material/Send';
 import CircularProgress from '@mui/material/CircularProgress';
+import { renderAssistantMarkdown } from '../../utils/renderAssistantMarkdown';
 
 export interface DescriptorGroup {
   id: string;
@@ -396,13 +397,20 @@ export default function ChatSidebar({
               className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[85%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap ${
+                className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
                   msg.role === 'user'
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-blue-600 text-white whitespace-pre-wrap'
                     : 'bg-white border border-gray-200 text-gray-800'
                 }`}
               >
-                {msg.content}
+                {msg.role === 'assistant' ? (
+                  <div
+                    className="assistant-markdown"
+                    dangerouslySetInnerHTML={{ __html: renderAssistantMarkdown(msg.content) }}
+                  />
+                ) : (
+                  msg.content
+                )}
                 {msg.formUpdateSummary && (
                   <div className="mt-2 pt-2 border-t border-gray-200 text-xs text-green-700 font-medium">
                     <div className="mb-0.5">Updated:</div>

@@ -16,6 +16,8 @@
     "@mui/icons-material": "^7.1.0",
     "@mui/material": "^7.1.0",
     "@types/plotly.js": "^2.33.5",
+    "dompurify": "^3.4.11",
+    "marked": "^18.0.5",
     "next": "14.2.14",
     "plotly.js-dist-min": "^2.35.2",
     "react": "^18",
@@ -25,6 +27,7 @@
     "react-virtuoso": "^4.12.3"
   },
   "devDependencies": {
+    "@types/dompurify": "^3.2.0",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
