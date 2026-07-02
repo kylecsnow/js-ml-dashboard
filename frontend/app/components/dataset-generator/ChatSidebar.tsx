@@ -105,18 +105,34 @@ export default function ChatSidebar({
   const [textareaHeight, setTextareaHeight] = useState(154);
   const dragRef = useRef<{ startY: number; startHeight: number } | null>(null);
 
+  const MIN_PANEL_WIDTH = 420;
+  const [panelWidth, setPanelWidth] = useState(MIN_PANEL_WIDTH);
+  const widthDragRef = useRef<{ startX: number; startWidth: number } | null>(null);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   useEffect(() => {
     function onMove(e: MouseEvent | TouchEvent) {
-      if (!dragRef.current) return;
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
       const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      if (widthDragRef.current) {
+        const delta = widthDragRef.current.startX - clientX;
+        const maxWidth = window.innerWidth;
+        setPanelWidth(
+          Math.min(maxWidth, Math.max(MIN_PANEL_WIDTH, widthDragRef.current.startWidth + delta)),
+        );
+        return;
+      }
+      if (!dragRef.current) return;
       const delta = dragRef.current.startY - clientY;
       setTextareaHeight(Math.min(300, Math.max(60, dragRef.current.startHeight + delta)));
     }
-    function onUp() { dragRef.current = null; }
+    function onUp() {
+      dragRef.current = null;
+      widthDragRef.current = null;
+    }
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
     window.addEventListener('touchmove', onMove);
@@ -365,10 +381,22 @@ export default function ChatSidebar({
       )}
 
       <div
-        className={`fixed top-0 right-0 h-full w-[420px] max-w-full flex flex-col bg-white border-l-2 border-gray-300 shadow-xl z-[1200] transition-transform duration-300 ease-in-out ${
+        style={{ width: panelWidth }}
+        className={`fixed top-0 right-0 h-full max-w-full flex flex-col bg-white border-l-2 border-gray-300 shadow-xl z-[1200] transition-transform duration-300 ease-in-out ${
           open ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
+        {/* Horizontal resize handle */}
+        <div
+          className="absolute top-0 left-0 h-full w-1.5 cursor-ew-resize z-10 hover:bg-blue-400/40 active:bg-blue-500/50"
+          onMouseDown={e => {
+            widthDragRef.current = { startX: e.clientX, startWidth: panelWidth };
+            e.preventDefault();
+          }}
+          onTouchStart={e => {
+            widthDragRef.current = { startX: e.touches[0].clientX, startWidth: panelWidth };
+          }}
+        />
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white">
           <h2 className="text-base font-semibold">Dataset Generator AI Assistant</h2>
