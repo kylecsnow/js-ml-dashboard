@@ -7,6 +7,13 @@ from fastapi import APIRouter, Body, HTTPException
 # from openai import OpenAI
 from groq import Groq
 
+from chemistry_search import (
+    build_search_queries,
+    format_sources_for_prompt,
+    search_chemistry_sources,
+    should_search_for_sources,
+)
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -195,6 +202,15 @@ has the following sections:
   ranges, and units.
 - Be concise but informative in your message.
 
+**Citing sources:**
+- When a "Reference sources (web search)" section is included below, cite relevant sources \
+  inline in your message using markdown links: [short title](url).
+- Prefer citing sources when stating specific chemistry facts: ingredient roles, typical \
+  concentration or composition ranges, property ranges, or domain-specific usage.
+- Only cite URLs that appear in the Reference sources section. Never invent citations.
+- If no reference sources are provided or none apply, answer from general knowledge without \
+  fabricating links.
+
 ### Response format:
 You MUST respond with valid JSON matching this schema exactly:
 {
@@ -374,8 +390,20 @@ async def chat_dataset_generator(body: dict = Body(...)) -> dict[str, Any]:
         + "\n```"
     )
 
+    sources: list[dict[str, str]] = []
+    sources_block = ""
+    if should_search_for_sources(user_message):
+        queries = build_search_queries(user_message, form_state)
+        sources = search_chemistry_sources(queries)
+        sources_block = format_sources_for_prompt(sources)
+
     messages = [
-        {"role": "system", "content": DATASET_GENERATOR_CHAT_SYSTEM_PROMPT + current_state_block},
+        {
+            "role": "system",
+            "content": DATASET_GENERATOR_CHAT_SYSTEM_PROMPT
+            + current_state_block
+            + sources_block,
+        },
     ]
     for entry in conversation_history:
         messages.append({"role": entry["role"], "content": entry["content"]})
@@ -412,6 +440,8 @@ async def chat_dataset_generator(body: dict = Body(...)) -> dict[str, Any]:
         result: dict[str, Any] = {"message": response_message}
         if form_updates is not None:
             result["form_updates"] = form_updates
+        if sources:
+            result["sources"] = sources
 
         return result
 

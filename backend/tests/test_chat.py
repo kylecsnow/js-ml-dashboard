@@ -199,6 +199,7 @@ def test_chat_dataset_generator_ignores_updates_when_no_form_changes(client, mon
         }
     )
     monkeypatch.setattr("routers.chat.Groq", lambda api_key: _FakeGroq(api_key=api_key, content=llm_json))
+    monkeypatch.setattr("routers.chat.should_search_for_sources", lambda _msg: False)
 
     response = client.post(
         "/api/chat/dataset-generator",
@@ -223,6 +224,7 @@ def test_chat_dataset_generator_returns_only_changed_form_updates(client, monkey
         }
     )
     monkeypatch.setattr("routers.chat.Groq", lambda api_key: _FakeGroq(api_key=api_key, content=llm_json))
+    monkeypatch.setattr("routers.chat.should_search_for_sources", lambda _msg: False)
 
     response = client.post(
         "/api/chat/dataset-generator",
@@ -241,4 +243,39 @@ def test_chat_dataset_generator_returns_only_changed_form_updates(client, monkey
     assert response.json() == {
         "message": "Updated the form.",
         "form_updates": {"noise": 0.05},
+    }
+
+
+def test_chat_dataset_generator_includes_sources_when_search_runs(client, monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "test-key")
+    llm_json = json.dumps(
+        {
+            "message": "See [guide](https://example.com/guide) for typical ranges.",
+            "form_changes_intended": False,
+        }
+    )
+    fake_sources = [
+        {
+            "title": "UV Resin Guide",
+            "url": "https://example.com/guide",
+            "snippet": "Typical photoinitiator loading is low.",
+        }
+    ]
+    monkeypatch.setattr("routers.chat.Groq", lambda api_key: _FakeGroq(api_key=api_key, content=llm_json))
+    monkeypatch.setattr("routers.chat.should_search_for_sources", lambda _msg: True)
+    monkeypatch.setattr("routers.chat.build_search_queries", lambda _msg, _state: ["uv resin"])
+    monkeypatch.setattr("routers.chat.search_chemistry_sources", lambda _queries: fake_sources)
+
+    response = client.post(
+        "/api/chat/dataset-generator",
+        json={
+            "message": "What are typical photoinitiator loadings for UV resins?",
+            "conversation_history": [],
+            "form_state": {},
+        },
+    )
+    assert response.status_code == 200
+    assert response.json() == {
+        "message": "See [guide](https://example.com/guide) for typical ranges.",
+        "sources": fake_sources,
     }

@@ -55,6 +55,13 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   formUpdateSummary?: string;
+  sources?: ChatSource[];
+}
+
+interface ChatSource {
+  title: string;
+  url: string;
+  snippet?: string;
 }
 
 interface LLMFormulationGroup {
@@ -336,6 +343,9 @@ export default function ChatSidebar({
         role: 'assistant',
         content: data.message || 'Done.',
         formUpdateSummary: summary || undefined,
+        sources: Array.isArray(data.sources) && data.sources.length > 0
+          ? data.sources
+          : undefined,
       };
       setMessages(prev => [...prev, assistantMsg]);
     } catch (err: unknown) {
@@ -445,6 +455,28 @@ export default function ChatSidebar({
                     <ul className="list-disc list-inside space-y-0.5">
                       {msg.formUpdateSummary.split('\n').map((item, j) => (
                         <li key={j}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {msg.sources && msg.sources.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-gray-200">
+                    <div className="text-xs font-medium text-gray-500 mb-1">Sources</div>
+                    <ul className="assistant-sources space-y-1.5">
+                      {msg.sources.map((source, j) => (
+                        <li key={j} className="text-xs">
+                          <a
+                            href={source.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline font-medium"
+                          >
+                            {source.title || source.url}
+                          </a>
+                          {source.snippet && (
+                            <p className="text-gray-500 mt-0.5 line-clamp-2">{source.snippet}</p>
+                          )}
+                        </li>
                       ))}
                     </ul>
                   </div>
