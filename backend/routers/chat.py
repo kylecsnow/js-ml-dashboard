@@ -9,6 +9,7 @@ from groq import Groq
 
 from chemistry_search import (
     build_search_queries,
+    filter_cited_sources,
     format_sources_for_prompt,
     search_chemistry_sources,
     should_search_for_sources,
@@ -207,7 +208,11 @@ has the following sections:
   inline in your message using markdown links: [short title](url).
 - Prefer citing sources when stating specific chemistry facts: ingredient roles, typical \
   concentration or composition ranges, property ranges, or domain-specific usage.
-- Only cite URLs that appear in the Reference sources section. Never invent citations.
+- Only cite URLs that appear in the Reference sources section. Never invent citations, and \
+  only cite the ones you actually relied on — citing none is fine when nothing is relevant.
+- Do NOT add your own "Sources", "References", or "Citations" list or section anywhere in \
+  your message. The application automatically displays the sources you cite inline, so a \
+  separate list would be duplicated. Use inline links only.
 - If no reference sources are provided or none apply, answer from general knowledge without \
   fabricating links.
 
@@ -440,8 +445,11 @@ async def chat_dataset_generator(body: dict = Body(...)) -> dict[str, Any]:
         result: dict[str, Any] = {"message": response_message}
         if form_updates is not None:
             result["form_updates"] = form_updates
-        if sources:
-            result["sources"] = sources
+        # Only surface the sources the assistant actually cited inline, not every
+        # hit the search returned.
+        cited_sources = filter_cited_sources(response_message, sources)
+        if cited_sources:
+            result["sources"] = cited_sources
 
         return result
 

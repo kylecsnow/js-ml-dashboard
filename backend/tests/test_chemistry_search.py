@@ -1,5 +1,7 @@
 from chemistry_search import (
     build_search_queries,
+    extract_cited_urls,
+    filter_cited_sources,
     format_sources_for_prompt,
     search_chemistry_sources,
     should_search_for_sources,
@@ -9,15 +11,39 @@ from chemistry_search import (
 def test_should_search_for_sources_skips_short_and_acknowledgements():
     assert should_search_for_sources("ok") is False
     assert should_search_for_sources("thanks!") is False
+    assert should_search_for_sources("great, perfect.") is False
     assert should_search_for_sources(
         "Set up a DLP 3D printing resin dataset with UDMA and HDDA"
     ) is True
 
 
-def test_build_search_queries_uses_user_message_and_mentioned_ingredients():
+def test_should_search_for_sources_skips_structural_and_settings_edits():
+    # Structural / settings-only edits: no factual grounding needed.
+    assert should_search_for_sources("remove the surfactant group") is False
+    assert should_search_for_sources("rename it to my_dataset") is False
+    assert should_search_for_sources("set the noise to 0.05") is False
+    assert should_search_for_sources("change the number of rows to 200") is False
+
+
+def test_should_search_for_sources_allows_informational_and_domain_messages():
+    # Informational questions and domain setup should still search.
+    assert should_search_for_sources("what are typical emulsifier loadings?") is True
+    assert should_search_for_sources("ice cream emulsifier dataset") is True
+    # A removal that also asks for information still searches on the info signal.
+    assert should_search_for_sources(
+        "remove PGPR and explain which emulsifier is best instead"
+    ) is True
+
+
+def test_should_search_for_sources_skips_non_chemistry_smalltalk():
+    assert should_search_for_sources("can you undo that last change?") is False
+
+
+def test_build_search_queries_is_domain_anchored_and_ingredient_focused():
     queries = build_search_queries(
         "Add more photoinitiators like TPO alongside Irganox 819",
         {
+            "filename": "dlp_resin_photoinitiators.csv",
             "formulation_groups": [
                 {
                     "name": "Photoinitiator",
@@ -26,12 +52,16 @@ def test_build_search_queries_uses_user_message_and_mentioned_ingredients():
                         {"name": "TPO", "min": "0.01", "max": "0.03"},
                     ],
                 }
-            ]
+            ],
         },
     )
-    assert len(queries) >= 1
-    assert "formulation chemistry materials" in queries[0]
+    assert 1 <= len(queries) <= 2
+    # No more generic keyword-soup suffix.
+    assert all("formulation chemistry materials" not in q for q in queries)
+    # Mentioned ingredients drive the focused query.
     assert any("Irganox 819" in q or "TPO" in q for q in queries)
+    # Domain anchor derived from the filename appears in the queries.
+    assert any("dlp resin photoinitiators" in q.lower() for q in queries)
 
 
 def test_format_sources_for_prompt_includes_urls_and_citation_guidance():
@@ -48,6 +78,43 @@ def test_format_sources_for_prompt_includes_urls_and_citation_guidance():
     assert "https://example.com/resin" in block
     assert "UV Resin Formulation Guide" in block
     assert "do not invent citations" in block.lower()
+    # Instructs the model not to append its own duplicate references list.
+    assert "references" in block.lower()
+
+
+def test_extract_cited_urls_parses_markdown_links():
+    message = (
+        "Lecithin is a common emulsifier [Emulsifier guide](https://example.com/guide). "
+        "See also [ranges](https://example.com/ranges/) and (https://example.com/bare)."
+    )
+    cited = extract_cited_urls(message)
+    assert "https://example.com/guide" in cited
+    # Trailing slash is normalized away.
+    assert "https://example.com/ranges" in cited
+    # A bare URL not in markdown-link form is not treated as a citation.
+    assert "https://example.com/bare" not in cited
+
+
+def test_filter_cited_sources_keeps_only_cited_and_preserves_order():
+    sources = [
+        {"title": "A", "url": "https://example.com/a", "snippet": ""},
+        {"title": "B", "url": "https://example.com/b", "snippet": ""},
+        {"title": "C", "url": "https://example.com/c", "snippet": ""},
+    ]
+    message = (
+        "Only two matter: [C](https://example.com/c) and "
+        "[A](https://example.com/a/)."  # trailing slash still matches
+    )
+    filtered = filter_cited_sources(message, sources)
+    assert [s["url"] for s in filtered] == [
+        "https://example.com/a",
+        "https://example.com/c",
+    ]
+
+
+def test_filter_cited_sources_returns_empty_when_nothing_cited():
+    sources = [{"title": "A", "url": "https://example.com/a", "snippet": ""}]
+    assert filter_cited_sources("No links here at all.", sources) == []
 
 
 def test_search_chemistry_sources_deduplicates_and_maps_fields(monkeypatch):
