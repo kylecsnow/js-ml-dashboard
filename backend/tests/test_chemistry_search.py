@@ -1,4 +1,6 @@
 from chemistry_search import (
+    _domain_hint,
+    _select_group_names_for_hint,
     build_search_queries,
     extract_cited_urls,
     filter_cited_sources,
@@ -37,6 +39,62 @@ def test_should_search_for_sources_allows_informational_and_domain_messages():
 
 def test_should_search_for_sources_skips_non_chemistry_smalltalk():
     assert should_search_for_sources("can you undo that last change?") is False
+
+
+def test_select_group_names_for_hint_skips_generic_roles():
+    groups = [
+        "Water",
+        "Milk Solids",
+        "Fat",
+        "Sweetener",
+        "Emulsifier",
+        "Stabilizer",
+        "Flavor",
+        "Color",
+    ]
+    selected = _select_group_names_for_hint(groups)
+    assert "Water" not in selected
+    assert selected == [
+        "Milk Solids",
+        "Fat",
+        "Sweetener",
+        "Emulsifier",
+        "Stabilizer",
+    ]
+
+
+def test_select_group_names_for_hint_uses_all_when_few_distinctive():
+    groups = ["Monomer", "Photoinitiator", "Oligomer"]
+    assert _select_group_names_for_hint(groups) == groups
+
+
+def test_select_group_names_for_hint_keeps_all_when_only_generic_names():
+    groups = ["Water", "Diluent", "Base"]
+    assert _select_group_names_for_hint(groups) == groups
+
+
+def test_domain_hint_prefers_filename_over_groups():
+    hint = _domain_hint(
+        {
+            "filename": "ice_cream_emulsifiers.csv",
+            "formulation_groups": [{"name": "Emulsifier", "ingredients": []}],
+        }
+    )
+    assert hint == "ice cream emulsifiers"
+
+
+def test_domain_hint_falls_back_to_selected_group_names():
+    hint = _domain_hint(
+        {
+            "filename": "dataset.csv",
+            "formulation_groups": [
+                {"name": "Water", "ingredients": []},
+                {"name": "Emulsifier", "ingredients": []},
+                {"name": "Stabilizer", "ingredients": []},
+            ],
+        }
+    )
+    assert hint == "Emulsifier Stabilizer"
 
 
 def test_build_search_queries_is_domain_anchored_and_ingredient_focused():

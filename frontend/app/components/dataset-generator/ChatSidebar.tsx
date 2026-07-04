@@ -113,7 +113,7 @@ export default function ChatSidebar({
   const dragRef = useRef<{ startY: number; startHeight: number } | null>(null);
 
   const MIN_PANEL_WIDTH = 420;
-  const [panelWidth, setPanelWidth] = useState(MIN_PANEL_WIDTH);
+  const [panelWidth, setPanelWidth] = useState(500);
   const widthDragRef = useRef<{ startX: number; startWidth: number } | null>(null);
 
   useEffect(() => {
@@ -461,8 +461,8 @@ export default function ChatSidebar({
                 )}
                 {msg.sources && msg.sources.length > 0 && (
                   <div className="mt-2 pt-2 border-t border-gray-200">
-                    <div className="text-xs font-medium text-gray-500 mb-1">Sources</div>
-                    <ul className="assistant-sources space-y-1.5">
+                    <div className="text-xs font-medium text-gray-500 mb-1">References</div>
+                    <ol className="assistant-sources space-y-1.5">
                       {msg.sources.map((source, j) => (
                         <li key={j} className="text-xs">
                           <a
@@ -478,7 +478,7 @@ export default function ChatSidebar({
                           )}
                         </li>
                       ))}
-                    </ul>
+                    </ol>
                   </div>
                 )}
               </div>

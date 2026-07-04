@@ -94,19 +94,64 @@ def _ingredient_names(form_state: dict[str, Any]) -> list[str]:
     return names
 
 
+_GENERIC_FILENAME_BASES = {"dataset", "data", "untitled", "demo"}
+
+# Bulk/carrier roles that rarely help scope a web search.
+_GENERIC_GROUP_NAMES = {
+    "aqueous",
+    "base",
+    "bulk",
+    "carrier",
+    "diluent",
+    "filler",
+    "fillers",
+    "general",
+    "liquid",
+    "main",
+    "matrix",
+    "medium",
+    "misc",
+    "other",
+    "phase",
+    "primary",
+    "vehicle",
+    "water",
+}
+
+_MAX_FALLBACK_GROUP_NAMES = 5
+_USE_ALL_FALLBACK_GROUPS_IF_AT_MOST = 5
+
+
+def _is_generic_group_name(name: str) -> bool:
+    return name.strip().lower() in _GENERIC_GROUP_NAMES
+
+
+def _select_group_names_for_hint(group_names: list[str]) -> list[str]:
+    """Pick formulation group names worth using as a search domain hint.
+
+    Drops generic bulk/carrier roles (e.g. water, base, diluent). Uses every remaining
+    name when there are few; otherwise keeps up to five in form order.
+    """
+    distinctive = [name for name in group_names if not _is_generic_group_name(name)]
+    candidates = distinctive if distinctive else group_names
+
+    if len(candidates) <= _USE_ALL_FALLBACK_GROUPS_IF_AT_MOST:
+        return candidates
+    return candidates[:_MAX_FALLBACK_GROUP_NAMES]
+
+
 def _domain_hint(form_state: dict[str, Any]) -> str:
     """Infer the formulation domain from form state for search query scoping.
 
-    Uses the dataset filename (e.g. ice_cream_emulsifiers.csv) or, if that's
-    generic, the first few formulation group names. Returned as a prefix so
-    follow-up prompts stay on-topic (e.g. "compare emulsifiers" → ice cream).
+    Prefers an informative filename; otherwise joins selected formulation group
+    names (skipping generic roles like bater/base/diluent). Used as a query prefix so
+    follow-up prompts stay on-topic.
     """
     filename = (form_state.get("filename") or "").strip()
     if filename:
         base = re.sub(r"\.[a-z0-9]+$", "", filename, flags=re.IGNORECASE)
         base = re.sub(r"[_\-]+", " ", base).strip()
-        # Ignore uninformative default-ish names.
-        if base and base.lower() not in {"dataset", "data", "untitled", "demo"}:
+        if base and base.lower() not in _GENERIC_FILENAME_BASES:
             return base
 
     group_names = [
@@ -114,8 +159,9 @@ def _domain_hint(form_state: dict[str, Any]) -> str:
         for group in form_state.get("formulation_groups") or []
     ]
     group_names = [name for name in group_names if name]
-    if group_names:
-        return " ".join(group_names[:3])
+    selected = _select_group_names_for_hint(group_names)
+    if selected:
+        return " ".join(selected)
     return ""
 
 
