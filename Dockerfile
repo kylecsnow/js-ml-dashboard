@@ -30,13 +30,16 @@ RUN npm run build
 WORKDIR /app/backend
 # COPY backend/ ./
 COPY backend/main.py ./
+COPY backend/chemistry_search.py ./
+COPY backend/database.py ./
 COPY backend/utils.py ./
 COPY backend/modeling.py ./
 COPY backend/model_training.py ./
 COPY backend/molecule_viz.py ./
 COPY backend/requirements.txt ./
-COPY backend/models/ ./models/
 COPY backend/datasets/ ./datasets/
+COPY backend/models/ ./models/
+COPY backend/routers/ ./routers/
 
 # Create a virtual environment and install Python dependencies
 WORKDIR /app

@@ -62,3 +62,57 @@ pytest --cov=./backend --cov-report=term-missing
 ## Adding Datasets & Models
 
 NOTE: Dataset filenames **must** be in the format `{dataset-name}_dataset.pkl`, where `{dataset-name}` CANNOT contain underscores!
+
+## Environment variables
+
+The Dataset Generator AI chat requires a Groq API key. Create a `.env` file in the repo root (gitignored):
+
+```bash
+GROQ_API_KEY=your_key_here
+```
+
+Get a key from the [Groq console](https://console.groq.com/). For local Docker, `docker-compose.yml` loads this file via `env_file`. In production on AWS, set `GROQ_API_KEY` as a runtime environment variable or secret.
+
+
+## Deploying the app to AWS
+
+The app is deployed as a single Docker image to [Amazon ECR](https://aws.amazon.com/ecr/) and run on [AWS App Runner](https://aws.amazon.com/apprunner/). Replace `<AWS-account-ID>` with your AWS account ID and adjust the region if needed.
+
+### 1. Build and test locally
+
+```bash
+docker-compose up --build
+```
+
+Verify the app works at [http://localhost:8777](http://localhost:8777) before pushing.
+
+### 2. Log in to ECR
+
+```bash
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <AWS-account-ID>.dkr.ecr.us-east-1.amazonaws.com
+```
+
+### 3. Tag the image
+
+```bash
+docker tag js-ml-dashboard-app:latest <AWS-account-ID>.dkr.ecr.us-east-1.amazonaws.com/js-ml-dashboard:latest
+```
+
+### 4. (NOTE: only needed the 1st time, then SKIP this step in future runs) Create the ECR repository
+
+```bash
+aws ecr create-repository --repository-name js-ml-dashboard
+```
+
+### 5. Push to ECR
+
+```bash
+docker push <AWS-account-ID>.dkr.ecr.us-east-1.amazonaws.com/js-ml-dashboard:latest
+```
+
+### 6. Deploy on App Runner
+
+In the AWS console, go to **App Runner** → **Services** → `js-ml-dashboard` → **Deploy**. If the service is configured to use the `latest` tag, it will pull the new image automatically.
+
+You will need to set the `GROQ_API_KEY` in order for the AI Assistant in the dataset-generator page to function. In AWS, go to App Runner > Services > 
+js-ml-dashboard, then click the "Configuration" tab. Go to the "Configure service" section and click "Edit", then add your API key & value and click Save.
