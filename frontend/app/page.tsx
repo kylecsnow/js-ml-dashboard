@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useModel } from './contexts/ModelContext';
+import AsciiFlowBackground from './components/AsciiFlowBackground';
 
 
 export default function Home() {
@@ -29,9 +30,13 @@ export default function Home() {
 
 
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <h1>Kyle's ML Dashboard</h1>
+    <div className="relative grid min-h-screen grid-rows-[20px_1fr_20px] items-center justify-items-center overflow-hidden bg-[radial-gradient(circle_at_20%_15%,#ffffff_0%,#f7f9fb_43%,#eff1f5_100%)] p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
+      <AsciiFlowBackground />
+      <main className="relative z-10 row-start-2 flex flex-col items-center gap-8 rounded-3xl border border-white/80 bg-white/65 px-9 py-10 shadow-[0_24px_80px_rgba(87,102,129,0.12)] backdrop-blur-[3px] sm:items-start sm:px-12">
+        <div className="space-y-2">
+          <p className="font-[family-name:var(--font-geist-mono)] text-xs uppercase tracking-[0.22em] text-slate-500">Model workbench</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-slate-800 sm:text-4xl">Kyle&apos;s ML Dashboard</h1>
+        </div>
         <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
           <li>Select a model...</li>
           <li>Click Analyze!</li>
@@ -64,7 +69,7 @@ export default function Home() {
           </Link>
         </div>
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
+      <footer className="relative z-10 row-start-3 flex gap-6 flex-wrap items-center justify-center">
       </footer>
     </div>
   );

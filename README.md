@@ -65,7 +65,7 @@ NOTE: Dataset filenames **must** be in the format `{dataset-name}_dataset.pkl`, 
 
 ## Environment variables
 
-The Dataset Generator AI chat requires a Groq API key. Create a `.env` file in the repo root (gitignored):
+The Dataset Generator AI chat requires a Groq API key. Create a `.env` file in the repo root:
 
 ```bash
 GROQ_API_KEY=your_key_here
@@ -112,7 +112,7 @@ docker push <AWS-account-ID>.dkr.ecr.us-east-1.amazonaws.com/js-ml-dashboard:lat
 
 ### 6. Deploy on App Runner
 
-In the AWS console, go to **App Runner** → **Services** → `js-ml-dashboard` → **Deploy**. If the service is configured to use the `latest` tag, it will pull the new image automatically.
+In the AWS console, go to **App Runner** → **Services** → js-ml-dashboard → **Deploy**. If the service is configured to use the `latest` tag, it will pull the new image automatically.
 
 You will need to set the `GROQ_API_KEY` in order for the AI Assistant in the dataset-generator page to function. In AWS, go to App Runner > Services > 
 js-ml-dashboard, then click the "Configuration" tab. Go to the "Configure service" section and click "Edit", then add your API key & value and click Save.
