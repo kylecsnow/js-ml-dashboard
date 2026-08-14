@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { useModel } from './contexts/ModelContext';
 import AsciiFlowBackground from './components/AsciiFlowBackground';
 
+const DEFAULT_MODEL = 'pharma-tablets_RF';
 
 export default function Home() {
   const [models, setModels] = useState<string[]>([]);
@@ -18,7 +19,10 @@ export default function Home() {
         const data = await response.json();
         setModels(data.models);
         if (data.models.length > 0 && !selectedModel && !localStorage.getItem('selectedModel')) {
-          setSelectedModel(data.models[0]);
+          const defaultModel = data.models.includes(DEFAULT_MODEL)
+            ? DEFAULT_MODEL
+            : data.models[0];
+          setSelectedModel(defaultModel);
         }
       } catch (error) {
         console.error('Error fetching models:', error);
@@ -35,7 +39,7 @@ export default function Home() {
       <main className="relative z-10 row-start-2 flex flex-col items-center gap-8 rounded-3xl border border-white/80 bg-white/65 px-9 py-10 shadow-[0_24px_80px_rgba(87,102,129,0.12)] backdrop-blur-[3px] sm:items-start sm:px-12">
         <div className="space-y-2">
           <p className="font-[family-name:var(--font-geist-mono)] text-xs uppercase tracking-[0.22em] text-slate-500">Model workbench</p>
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-800 sm:text-4xl">Kyle&apos;s ML Dashboard</h1>
+          <h1 className="text-3xl font-semibold tracking-tight text-slate-800 sm:text-4xl">Kyle&apos;s AI/ML Dashboard</h1>
         </div>
         <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
           <li>Select a model...</li>
