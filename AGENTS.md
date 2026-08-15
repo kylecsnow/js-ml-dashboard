@@ -1,5 +1,15 @@
 # Agent instructions
 
+## Communication
+
+- Be concise by default. Answer the question directly; skip preamble and
+  unnecessary elaboration.
+- Match response length to task complexity. Simple questions get short
+  answers; code changes need only enough context to understand what changed.
+- If the user asks for more detail — e.g. "be more detailed", "in more
+  depth", "be verbose", or similar — expand with fuller explanations,
+  trade-offs, and background.
+
 ## Python environment
 
 Always use the **`ml-dashboard`** conda environment when running Python in this repo (backend server, pytest, scripts, one-off commands, etc.). Do not use the system Python or other conda envs unless the user explicitly asks otherwise.
