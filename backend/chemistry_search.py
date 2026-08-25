@@ -1,4 +1,9 @@
-"""DuckDuckGo search helpers for chemistry-related dataset generator citations."""
+"""DuckDuckGo search helpers for chemistry-related dataset generator citations.
+
+The decision of *whether* to search lives with the LLM itself (it calls the
+`web_search` tool in `routers.chat`); this module only executes searches and
+handles the citation bookkeeping around them.
+"""
 
 from __future__ import annotations
 
@@ -13,68 +18,6 @@ _MAX_QUERY_LEN = 180
 _MAX_QUERIES = 2
 _MAX_RESULTS_PER_QUERY = 3
 _MAX_TOTAL_SOURCES = 5
-_MIN_MESSAGE_LEN = 12
-
-# Bare acknowledgements / chit-chat that never warrant a web search.
-_ACK_PATTERN = re.compile(
-    r"^(thanks?|thank you|thx|ok(ay)?|k|yes|yep|yeah|no|nope|sure|got it|cool|"
-    r"nice|great|awesome|perfect|hi|hello|hey|done|good)\b[\s.!?]*$",
-    re.IGNORECASE,
-)
-
-# Purely structural / settings operations on the form. These don't introduce new
-# factual chemistry claims, so grounding them with a web search adds no value.
-_FORM_CONTROL_PATTERN = re.compile(
-    r"\b(rename|delete|remove|drop|clear|reset|undo|redo|move|reorder|reorganiz(e|ing)|"
-    r"start over|start from scratch|set (the )?noise|noise to|num[_ ]?rows|"
-    r"number of rows|rows? to|file ?name|filename|units? to|rename it|call it)\b",
-    re.IGNORECASE,
-)
-
-# Positive signal that the user wants factual/domain information worth grounding.
-_INFO_SIGNAL_PATTERN = re.compile(
-    r"\b(what|which|why|how|when|explain|describe|compare|contrast|difference|"
-    r"differ|versus|vs\.?|recommend|suggest|advice|advise|best|typical|common|"
-    r"usual|realistic|range|ranges|concentration|loading|dosage|dose|amount|"
-    r"role|function|purpose|effect|benefit|drawback|alternative|option|example|"
-    r"tell me|more about|list|is (it|there)|are there|should i|help me understand|"
-    r"reasonable|valid|correct)\b",
-    re.IGNORECASE,
-)
-
-# Positive signal that the message is about formulation chemistry / materials.
-_CHEM_SIGNAL_PATTERN = re.compile(
-    r"\b(dataset|formulat\w*|recipe|mixture|blend|ingredient\w*|component\w*|"
-    r"monomer\w*|oligomer\w*|polymer\w*|resin\w*|additive\w*|photoinitiator\w*|"
-    r"initiator\w*|emulsifier\w*|surfactant\w*|solvent\w*|filler\w*|catalyst\w*|"
-    r"binder\w*|plasticizer\w*|pigment\w*|stabiliz\w*|coating\w*|adhesive\w*|"
-    r"composite\w*|electrolyte\w*|curing|cure|crosslink\w*|chemical\w*|compound\w*|"
-    r"material\w*|wt ?%|weight fraction|mole fraction|synthes\w*)\b",
-    re.IGNORECASE,
-)
-
-
-def should_search_for_sources(user_message: str) -> bool:
-    """Return True only when a web search is likely to usefully ground the reply.
-
-    Skips trivial/short messages, acknowledgements, and purely structural form
-    operations (rename/remove/settings tweaks). Otherwise requires a positive
-    informational or chemistry-domain signal before spending a network call.
-    """
-    msg = user_message.strip()
-    if len(msg) < _MIN_MESSAGE_LEN:
-        return False
-    if _ACK_PATTERN.match(msg):
-        return False
-
-    has_info = bool(_INFO_SIGNAL_PATTERN.search(msg))
-    has_chem = bool(_CHEM_SIGNAL_PATTERN.search(msg))
-
-    # Structural/settings-only edits with no informational intent: skip.
-    if _FORM_CONTROL_PATTERN.search(msg) and not has_info:
-        return False
-
-    return has_info or has_chem
 
 
 def _truncate_query(text: str, max_len: int = _MAX_QUERY_LEN) -> str:
@@ -277,6 +220,17 @@ def format_sources_for_prompt(sources: list[dict[str, str]]) -> str:
 
 
 _MARKDOWN_LINK_PATTERN = re.compile(r"\]\(\s*<?(https?://[^\s)]+?)>?\s*\)")
+# Some models (e.g. gpt-oss on Groq) cite with numbered markers that echo the
+# index of the source block they were given, e.g. 【1†Title】, instead of
+# markdown links. Map those indices back onto the source list.
+_NUMBERED_CITATION_PATTERN = re.compile(r"【\s*(\d+)\s*†")
+
+
+def _cited_indexes(message: str) -> set[int]:
+    """Return 1-based source indexes the message cites via 【N†...】 markers."""
+    if not message:
+        return set()
+    return {int(idx) for idx in _NUMBERED_CITATION_PATTERN.findall(message)}
 
 
 def _normalize_url(url: str) -> str:
@@ -301,13 +255,26 @@ def extract_cited_urls(message: str) -> set[str]:
 def filter_cited_sources(
     message: str, sources: list[dict[str, str]]
 ) -> list[dict[str, str]]:
-    """Keep only the sources whose URL the assistant actually cited in its message.
+    """Keep only the sources the assistant actually cited in its message.
 
+    Handles both citation styles: markdown links ``[title](url)`` and numbered
+    markers ``【N†...】`` (where N is the index in the source block).
     Preserves the original ordering of ``sources``.
     """
     if not sources:
         return []
-    cited = extract_cited_urls(message)
-    if not cited:
+    cited_urls = extract_cited_urls(message)
+    cited_indexes = _cited_indexes(message)
+    if not cited_urls and not cited_indexes:
         return []
-    return [source for source in sources if _normalize_url(source.get("url", "")) in cited]
+
+    def _included(source: dict[str, str], index: int) -> bool:
+        if index in cited_indexes:
+            return True
+        return _normalize_url(source.get("url", "")) in cited_urls
+
+    return [
+        source
+        for index, source in enumerate(sources, start=1)
+        if _included(source, index)
+    ]
