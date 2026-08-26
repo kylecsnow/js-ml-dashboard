@@ -1,11 +1,11 @@
-import json
-import logging
-import os
-from typing import Any
-
 from fastapi import APIRouter, Body, HTTPException
 from groq import Groq
+import json
+from langsmith import traceable
+import logging
+import os
 from pydantic import ValidationError
+from typing import Any
 
 from chemistry_search import (
     filter_cited_sources,
@@ -14,6 +14,7 @@ from chemistry_search import (
 )
 from form_contracts import ChatReply
 from form_validation import validate_form_updates
+
 
 logger = logging.getLogger(__name__)
 
@@ -352,6 +353,7 @@ def _extract_query(arguments: str | None) -> str:
     return str(query).strip()
 
 
+@traceable(run_type="tool")
 def _run_web_search(query: str) -> list[dict[str, str]]:
     """Execute the web_search tool: search and format the results block."""
     if not query:
@@ -421,7 +423,13 @@ def _validation_feedback(errors: list[str]) -> str:
     )
 
 
+@traceable(run_type="llm")
+def _create_chat_completion(client: Groq, **kwargs: Any) -> Any:
+    return client.chat.completions.create(**kwargs)
+
+
 @router.post("/api/chat/dataset-generator")
+@traceable(name="dataset-generator-chat")
 async def chat_dataset_generator(body: dict = Body(...)) -> dict[str, Any]:
     api_key = os.environ.get("GROQ_API_KEY")
     if not api_key:
@@ -469,7 +477,8 @@ async def chat_dataset_generator(body: dict = Body(...)) -> dict[str, Any]:
     correction_attempts = 0
     while True:
         try:
-            completion = client.chat.completions.create(
+            completion = _create_chat_completion(
+                client,
                 model=CHAT_MODEL,
                 messages=messages,
                 temperature=0.2,
