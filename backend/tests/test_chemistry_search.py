@@ -4,7 +4,10 @@ from chemistry_search import (
     build_search_queries,
     extract_cited_urls,
     filter_cited_sources,
+    format_sources_for_finalization,
     format_sources_for_prompt,
+    prepare_cited_sources_for_display,
+    renumber_source_citations,
     search_chemistry_sources,
 )
 
@@ -108,6 +111,21 @@ def test_format_sources_for_prompt_includes_urls_and_citation_guidance():
     assert "references" in block.lower()
 
 
+def test_format_sources_for_finalization_is_compact_and_disallows_numeric_citations():
+    block = format_sources_for_finalization(
+        [
+            {
+                "title": "UV Resin Formulation Guide",
+                "url": "https://example.com/resin",
+                "snippet": "Typical photoinitiator loadings are 0.5-3 wt%.",
+            }
+        ]
+    )
+    assert "https://example.com/resin" in block
+    assert "Typical photoinitiator loadings" not in block
+    assert "Never use numeric citation markers" in block
+
+
 def test_extract_cited_urls_parses_markdown_links():
     message = (
         "Lecithin is a common emulsifier [Emulsifier guide](https://example.com/guide). "
@@ -157,6 +175,46 @@ def test_filter_cited_sources_handles_numbered_citations():
         "https://basf.com/irganox",
         "https://basf.com/ps800",
     ]
+
+
+def test_filter_cited_sources_handles_plain_numeric_citations():
+    sources = [
+        {"title": "Source A", "url": "https://example.com/a", "snippet": ""},
+        {"title": "Source B", "url": "https://example.com/b", "snippet": ""},
+    ]
+    filtered = filter_cited_sources(
+        "EDTA can help [1] and may stabilize emulsions [2].", sources
+    )
+    assert [s["url"] for s in filtered] == [
+        "https://example.com/a",
+        "https://example.com/b",
+    ]
+
+
+def test_renumber_source_citations_rewrites_skipped_indexes():
+    message = (
+        "Lecithin is common (source 1). Quora was skipped. "
+        "Blends help too (source 3)."
+    )
+    renumbered = renumber_source_citations(message, {1: 1, 3: 2})
+    assert "(source 1)" in renumbered
+    assert "(source 3)" not in renumbered
+    assert "(source 2)" in renumbered
+
+
+def test_prepare_cited_sources_for_display_filters_and_renumbers():
+    sources = [
+        {"title": "Paper A", "url": "https://example.com/a", "snippet": "A"},
+        {"title": "Quora", "url": "https://example.com/b", "snippet": "B"},
+        {"title": "Paper C", "url": "https://example.com/c", "snippet": "C"},
+    ]
+    message = "See (source 1) and (source 3) for details."
+    display_message, cited = prepare_cited_sources_for_display(message, sources)
+    assert [s["url"] for s in cited] == [
+        "https://example.com/a",
+        "https://example.com/c",
+    ]
+    assert display_message == "See (source 1) and (source 2) for details."
 
 
 def test_search_chemistry_sources_deduplicates_and_maps_fields(monkeypatch):

@@ -208,3 +208,29 @@ def test_only_validates_changed_category():
         }
     )
     assert any("lower bound cannot exceed its upper bound" in e for e in errors)
+
+
+def test_accepts_group_sum_min_max_keys():
+    errors = _validate(
+        {
+            "formulation_groups": [
+                {
+                    "name": "Oligomer",
+                    "group_sum_min": "0.3",
+                    "group_sum_max": "0.7",
+                    "ingredients": [
+                        {"name": "UDMA", "min": "0.1", "max": "0.5", "required": True}
+                    ],
+                },
+                {
+                    "name": "Monomer",
+                    "group_sum_min": "0.3",
+                    "group_sum_max": "0.7",
+                    "ingredients": [
+                        {"name": "IBOA", "min": "0.0", "max": "0.5", "required": False}
+                    ],
+                },
+            ]
+        }
+    )
+    assert errors == []

@@ -108,7 +108,9 @@ def _domain_hint(form_state: dict[str, Any]) -> str:
     return ""
 
 
-def build_search_queries(user_message: str, form_state: dict[str, Any] | None = None) -> list[str]:
+def build_search_queries(
+    user_message: str, form_state: dict[str, Any] | None = None
+) -> list[str]:
     """Build a small set of targeted, domain-anchored search queries.
 
     Prefers queries centered on specifically named ingredients and the dataset's
@@ -158,7 +160,9 @@ def search_chemistry_sources(
     try:
         from ddgs import DDGS
     except ImportError:
-        logger.warning("ddgs package is not installed; skipping chemistry source search")
+        logger.warning(
+            "ddgs package is not installed; skipping chemistry source search"
+        )
         return []
 
     seen_urls: set[str] = set()
@@ -203,7 +207,7 @@ def format_sources_for_prompt(sources: list[dict[str, str]]) -> str:
         "The following results were retrieved to help ground chemistry-related claims. "
         "When you state specific facts about ingredients, typical concentration ranges, "
         "roles, or measured properties, cite the relevant source inline in your message "
-        'using markdown links: [short title](url). Only cite URLs from this list; do not '
+        "using markdown links: [short title](url). Only cite URLs from this list; do not "
         "invent citations, and only cite the ones you actually relied on (it is fine to "
         "cite none). Do NOT add your own 'Sources', 'References', or 'Citations' list/"
         "section anywhere in your message — the app renders the sources you cite inline "
@@ -219,18 +223,58 @@ def format_sources_for_prompt(sources: list[dict[str, str]]) -> str:
     return "\n".join(lines)
 
 
+def format_sources_for_finalization(sources: list[dict[str, str]]) -> str:
+    """Provide the finalizer only the source identities it may cite.
+
+    Snippets are useful when deciding whether to search, but needlessly inflate
+    the final structured-output request. The finalizer needs only a compact,
+    allowlisted set of URLs to cite.
+    """
+    if not sources:
+        return (
+            "\n\n### Allowed reference sources\n"
+            "No web sources were retrieved for this request. Do not include citations."
+        )
+
+    lines = [
+        "\n\n### Allowed reference sources",
+        "Cite only a source below, using a markdown link: [short title](url). "
+        "Never use numeric citation markers such as [1] or [2].",
+    ]
+    for source in sources:
+        title = source.get("title") or source.get("url") or "Source"
+        url = source.get("url", "")
+        lines.append(f"- [{title}]({url})")
+    return "\n".join(lines)
+
+
 _MARKDOWN_LINK_PATTERN = re.compile(r"\]\(\s*<?(https?://[^\s)]+?)>?\s*\)")
 # Some models (e.g. gpt-oss on Groq) cite with numbered markers that echo the
 # index of the source block they were given, e.g. 【1†Title】, instead of
 # markdown links. Map those indices back onto the source list.
-_NUMBERED_CITATION_PATTERN = re.compile(r"【\s*(\d+)\s*†")
+_NUMBERED_CITATION_PATTERN = re.compile(r"【\s*(\d+)\s*†([^】]*)】")
+# Prose references like "(source 1)" that echo the numbered source block.
+_SOURCE_REF_PATTERN = re.compile(r"\(source\s+(\d+)\)", re.IGNORECASE)
+# Plain numeric footnotes are another common gpt-oss citation style. They are
+# not markdown links, so detect them and ensure the UI receives References.
+_PLAIN_NUMBERED_CITATION_PATTERN = re.compile(r"(?<![\w\]])\[(\d+)\](?!\()")
 
 
 def _cited_indexes(message: str) -> set[int]:
-    """Return 1-based source indexes the message cites via 【N†...】 markers."""
+    """Return 1-based source indexes cited via 【N†...】 or (source N) markers."""
     if not message:
         return set()
-    return {int(idx) for idx in _NUMBERED_CITATION_PATTERN.findall(message)}
+    indexes = {
+        int(match.group(1)) for match in _NUMBERED_CITATION_PATTERN.finditer(message)
+    }
+    indexes.update(
+        int(match.group(1)) for match in _SOURCE_REF_PATTERN.finditer(message)
+    )
+    indexes.update(
+        int(match.group(1))
+        for match in _PLAIN_NUMBERED_CITATION_PATTERN.finditer(message)
+    )
+    return indexes
 
 
 def _normalize_url(url: str) -> str:
@@ -252,15 +296,10 @@ def extract_cited_urls(message: str) -> set[str]:
     return {_normalize_url(match) for match in _MARKDOWN_LINK_PATTERN.findall(message)}
 
 
-def filter_cited_sources(
+def _filter_cited_source_pairs(
     message: str, sources: list[dict[str, str]]
-) -> list[dict[str, str]]:
-    """Keep only the sources the assistant actually cited in its message.
-
-    Handles both citation styles: markdown links ``[title](url)`` and numbered
-    markers ``【N†...】`` (where N is the index in the source block).
-    Preserves the original ordering of ``sources``.
-    """
+) -> list[tuple[int, dict[str, str]]]:
+    """Return (original 1-based index, source) pairs for cited sources only."""
     if not sources:
         return []
     cited_urls = extract_cited_urls(message)
@@ -274,7 +313,67 @@ def filter_cited_sources(
         return _normalize_url(source.get("url", "")) in cited_urls
 
     return [
-        source
+        (index, source)
         for index, source in enumerate(sources, start=1)
         if _included(source, index)
     ]
+
+
+def filter_cited_sources(
+    message: str, sources: list[dict[str, str]]
+) -> list[dict[str, str]]:
+    """Keep only the sources the assistant actually cited in its message.
+
+    Handles both citation styles: markdown links ``[title](url)`` and numbered
+    markers ``【N†...】`` (where N is the index in the source block).
+    Preserves the original ordering of ``sources``.
+    """
+    return [source for _, source in _filter_cited_source_pairs(message, sources)]
+
+
+def renumber_source_citations(message: str, index_map: dict[int, int]) -> str:
+    """Rewrite inline source indexes so displayed citations are contiguous."""
+    if not message or not index_map:
+        return message
+
+    def _renumber_bracket_marker(match: re.Match[str]) -> str:
+        old_index = int(match.group(1))
+        new_index = index_map.get(old_index)
+        if new_index is None:
+            return match.group(0)
+        return f"【{new_index}†{match.group(2)}】"
+
+    def _renumber_source_ref(match: re.Match[str]) -> str:
+        old_index = int(match.group(1))
+        new_index = index_map.get(old_index)
+        if new_index is None:
+            return match.group(0)
+        return f"(source {new_index})"
+
+    updated = _NUMBERED_CITATION_PATTERN.sub(_renumber_bracket_marker, message)
+    updated = _SOURCE_REF_PATTERN.sub(_renumber_source_ref, updated)
+
+    def _renumber_plain_marker(match: re.Match[str]) -> str:
+        old_index = int(match.group(1))
+        new_index = index_map.get(old_index)
+        if new_index is None:
+            return match.group(0)
+        return f"[{new_index}]"
+
+    return _PLAIN_NUMBERED_CITATION_PATTERN.sub(_renumber_plain_marker, updated)
+
+
+def prepare_cited_sources_for_display(
+    message: str, sources: list[dict[str, str]]
+) -> tuple[str, list[dict[str, str]]]:
+    """Filter to cited sources and renumber inline citations for the UI."""
+    pairs = _filter_cited_source_pairs(message, sources)
+    if not pairs:
+        return message, []
+
+    index_map = {
+        old_index: new_index for new_index, (old_index, _) in enumerate(pairs, start=1)
+    }
+    cited_sources = [source for _, source in pairs]
+    display_message = renumber_source_citations(message, index_map)
+    return display_message, cited_sources
