@@ -18,13 +18,13 @@ from langchain_groq import ChatGroq
 from langgraph.graph import END, START, StateGraph
 from pydantic import ValidationError
 
-from chemistry_search import (
+from .chemistry_search import (
     format_sources_for_finalization,
     prepare_cited_sources_for_display,
     search_chemistry_sources,
 )
-from form_contracts import ChatReply, parse_chat_reply, payload_from_parse_error
-from form_validation import validate_form_updates
+from .form_contracts import ChatReply, parse_chat_reply, payload_from_parse_error
+from .form_validation import validate_form_updates
 
 _payload_from_parse_error = payload_from_parse_error
 

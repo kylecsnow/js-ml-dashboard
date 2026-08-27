@@ -15,7 +15,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from form_contracts import FormUpdates
+from .form_contracts import FormUpdates
 from routers.dataset_generator import (
     _default_global_ingredient_counts,
     _normalize_formulation_groups,

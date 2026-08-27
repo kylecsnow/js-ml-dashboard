@@ -3,7 +3,7 @@ from langsmith import traceable
 import os
 from typing import Any
 
-from chat_agent import run_dataset_generator_chat
+from chat.chat_agent import run_dataset_generator_chat
 
 router = APIRouter()
 

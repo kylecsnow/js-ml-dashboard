@@ -1,7 +1,7 @@
 from langchain_core.messages import AIMessage
 import json
 
-from chat_agent import (
+from chat.chat_agent import (
     SEARCH_PROMPT,
     _is_capacity_error,
     _normalize_formulation_groups,
@@ -10,8 +10,8 @@ from chat_agent import (
     compact_history,
     strip_unchanged_updates,
 )
-from form_contracts import ChatReply, FormUpdates, parse_chat_reply
-from form_validation import validate_form_updates
+from chat.form_contracts import ChatReply, FormUpdates, parse_chat_reply
+from chat.form_validation import validate_form_updates
 
 
 def test_search_prompt_does_not_request_json():
@@ -357,8 +357,8 @@ class _FakeLLM:
 
 
 def _patch_llms(monkeypatch, search, reply):
-    monkeypatch.setattr("chat_agent._search_llm", lambda: search)
-    monkeypatch.setattr("chat_agent._reply_llm", lambda: reply)
+    monkeypatch.setattr("chat.chat_agent._search_llm", lambda: search)
+    monkeypatch.setattr("chat.chat_agent._reply_llm", lambda: reply)
 
 
 def test_chat_dataset_generator_requires_api_key(client, monkeypatch):
@@ -487,7 +487,7 @@ def test_chat_dataset_generator_runs_web_search_tool_when_requested(
     )
     _patch_llms(monkeypatch, search, reply)
     monkeypatch.setattr(
-        "chat_agent.search_chemistry_sources", lambda queries: fake_sources
+        "chat.chat_agent.search_chemistry_sources", lambda queries: fake_sources
     )
 
     response = client.post(
@@ -522,7 +522,7 @@ def test_chat_dataset_generator_skips_tool_for_pure_form_edit(client, monkeypatc
     _patch_llms(monkeypatch, search, reply)
     search_calls: list = []
     monkeypatch.setattr(
-        "chat_agent.search_chemistry_sources",
+        "chat.chat_agent.search_chemistry_sources",
         lambda queries: search_calls.append(queries) or [],
     )
 

@@ -1,4 +1,4 @@
-from chemistry_search import (
+from chat.chemistry_search import (
     _domain_hint,
     _select_group_names_for_hint,
     build_search_queries,

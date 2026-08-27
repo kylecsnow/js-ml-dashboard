@@ -1,7 +1,7 @@
 """DuckDuckGo search helpers for chemistry-related dataset generator citations.
 
 The decision of *whether* to search lives with the LLM itself (it calls the
-`web_search` tool in `routers.chat`); this module only executes searches and
+`web_search` tool in `chat.chat_agent`); this module only executes searches and
 handles the citation bookkeeping around them.
 """
 

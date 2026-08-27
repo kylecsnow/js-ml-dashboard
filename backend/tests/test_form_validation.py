@@ -1,5 +1,5 @@
-from form_contracts import FormUpdates
-from form_validation import validate_form_updates
+from chat.form_contracts import FormUpdates
+from chat.form_validation import validate_form_updates
 
 
 def _group(name, lo, hi, ingredients, min_count=None, max_count=None):
