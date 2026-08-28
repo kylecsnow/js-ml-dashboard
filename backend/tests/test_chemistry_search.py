@@ -1,44 +1,15 @@
-from chemistry_search import (
+from chat.chemistry_search import (
     _domain_hint,
     _select_group_names_for_hint,
     build_search_queries,
     extract_cited_urls,
     filter_cited_sources,
+    format_sources_for_finalization,
     format_sources_for_prompt,
+    prepare_cited_sources_for_display,
+    renumber_source_citations,
     search_chemistry_sources,
-    should_search_for_sources,
 )
-
-
-def test_should_search_for_sources_skips_short_and_acknowledgements():
-    assert should_search_for_sources("ok") is False
-    assert should_search_for_sources("thanks!") is False
-    assert should_search_for_sources("great, perfect.") is False
-    assert should_search_for_sources(
-        "Set up a DLP 3D printing resin dataset with UDMA and HDDA"
-    ) is True
-
-
-def test_should_search_for_sources_skips_structural_and_settings_edits():
-    # Structural / settings-only edits: no factual grounding needed.
-    assert should_search_for_sources("remove the surfactant group") is False
-    assert should_search_for_sources("rename it to my_dataset") is False
-    assert should_search_for_sources("set the noise to 0.05") is False
-    assert should_search_for_sources("change the number of rows to 200") is False
-
-
-def test_should_search_for_sources_allows_informational_and_domain_messages():
-    # Informational questions and domain setup should still search.
-    assert should_search_for_sources("what are typical emulsifier loadings?") is True
-    assert should_search_for_sources("ice cream emulsifier dataset") is True
-    # A removal that also asks for information still searches on the info signal.
-    assert should_search_for_sources(
-        "remove PGPR and explain which emulsifier is best instead"
-    ) is True
-
-
-def test_should_search_for_sources_skips_non_chemistry_smalltalk():
-    assert should_search_for_sources("can you undo that last change?") is False
 
 
 def test_select_group_names_for_hint_skips_generic_roles():
@@ -140,6 +111,21 @@ def test_format_sources_for_prompt_includes_urls_and_citation_guidance():
     assert "references" in block.lower()
 
 
+def test_format_sources_for_finalization_is_compact_and_disallows_numeric_citations():
+    block = format_sources_for_finalization(
+        [
+            {
+                "title": "UV Resin Formulation Guide",
+                "url": "https://example.com/resin",
+                "snippet": "Typical photoinitiator loadings are 0.5-3 wt%.",
+            }
+        ]
+    )
+    assert "https://example.com/resin" in block
+    assert "Typical photoinitiator loadings" not in block
+    assert "Never use numeric citation markers" in block
+
+
 def test_extract_cited_urls_parses_markdown_links():
     message = (
         "Lecithin is a common emulsifier [Emulsifier guide](https://example.com/guide). "
@@ -173,6 +159,62 @@ def test_filter_cited_sources_keeps_only_cited_and_preserves_order():
 def test_filter_cited_sources_returns_empty_when_nothing_cited():
     sources = [{"title": "A", "url": "https://example.com/a", "snippet": ""}]
     assert filter_cited_sources("No links here at all.", sources) == []
+
+
+def test_filter_cited_sources_handles_numbered_citations():
+    # gpt-oss on Groq cites with 【N†Title】 markers (N = index in the source
+    # block) instead of markdown links; map those back onto the source list.
+    sources = [
+        {"title": "IRGANOX", "url": "https://basf.com/irganox", "snippet": ""},
+        {"title": "PS 800", "url": "https://basf.com/ps800", "snippet": ""},
+        {"title": "Unrelated", "url": "https://example.com/x", "snippet": ""},
+    ]
+    message = "The IRGANOX family【1†IRGANOX®】 and PS 800【2†ps 800】 fit here."
+    filtered = filter_cited_sources(message, sources)
+    assert [s["url"] for s in filtered] == [
+        "https://basf.com/irganox",
+        "https://basf.com/ps800",
+    ]
+
+
+def test_filter_cited_sources_handles_plain_numeric_citations():
+    sources = [
+        {"title": "Source A", "url": "https://example.com/a", "snippet": ""},
+        {"title": "Source B", "url": "https://example.com/b", "snippet": ""},
+    ]
+    filtered = filter_cited_sources(
+        "EDTA can help [1] and may stabilize emulsions [2].", sources
+    )
+    assert [s["url"] for s in filtered] == [
+        "https://example.com/a",
+        "https://example.com/b",
+    ]
+
+
+def test_renumber_source_citations_rewrites_skipped_indexes():
+    message = (
+        "Lecithin is common (source 1). Quora was skipped. "
+        "Blends help too (source 3)."
+    )
+    renumbered = renumber_source_citations(message, {1: 1, 3: 2})
+    assert "(source 1)" in renumbered
+    assert "(source 3)" not in renumbered
+    assert "(source 2)" in renumbered
+
+
+def test_prepare_cited_sources_for_display_filters_and_renumbers():
+    sources = [
+        {"title": "Paper A", "url": "https://example.com/a", "snippet": "A"},
+        {"title": "Quora", "url": "https://example.com/b", "snippet": "B"},
+        {"title": "Paper C", "url": "https://example.com/c", "snippet": "C"},
+    ]
+    message = "See (source 1) and (source 3) for details."
+    display_message, cited = prepare_cited_sources_for_display(message, sources)
+    assert [s["url"] for s in cited] == [
+        "https://example.com/a",
+        "https://example.com/c",
+    ]
+    assert display_message == "See (source 1) and (source 2) for details."
 
 
 def test_search_chemistry_sources_deduplicates_and_maps_fields(monkeypatch):

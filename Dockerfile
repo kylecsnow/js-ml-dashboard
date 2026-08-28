@@ -30,7 +30,7 @@ RUN npm run build
 WORKDIR /app/backend
 # COPY backend/ ./
 COPY backend/main.py ./
-COPY backend/chemistry_search.py ./
+COPY backend/chat/ ./chat/
 COPY backend/database.py ./
 COPY backend/utils.py ./
 COPY backend/modeling.py ./
