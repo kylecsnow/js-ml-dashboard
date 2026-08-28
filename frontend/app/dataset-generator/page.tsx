@@ -11,182 +11,34 @@ import DeleteSchemaModal from '../components/dataset-generator/DeleteSchemaModal
 import GenerationSettingsBar from '../components/dataset-generator/GenerationSettingsBar';
 import DescriptorSection from '../components/dataset-generator/DescriptorSection';
 import FormulationSection from '../components/dataset-generator/FormulationSection';
-import CoefficientsTable, {
-  type CoefficientTableAxisItem,
-  type CoefficientTableValue,
-} from '../components/dataset-generator/CoefficientsTable';
+import CoefficientsTable from '../components/dataset-generator/CoefficientsTable';
 import { Switch } from '@headlessui/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  buildCoefficientAxes,
+  randomCoefficient,
+  reconcileCoefficientValues,
+} from './coefficients';
+import { buildGenerateRequest, defaultGlobalIngredientCounts } from './generate';
+import {
+  buildSchemaConfig,
+  createEmptyFormulationGroup,
+  createEmptyIngredient,
+  hydrateSchemaConfig,
+} from './schema';
+import type {
+  CoefficientTableValue,
+  DescriptorGroup,
+  FormulationGroup,
+  SavedSchemaEntry,
+} from './types';
 
-export interface DescriptorGroup {
-  id: string;
-  name: string;
-  min: string;
-  max: string;
-  units: string;
-}
-
-export interface FormulationDescriptorGroup extends DescriptorGroup {
-  required: boolean;
-}
-
-export interface FormulationGroup {
-  id: string;
-  name: string;
-  min: string;            // group sum lower bound (0..1)
-  max: string;            // group sum upper bound (0..1)
-  minIngredients: string; // optional per-group min present count
-  maxIngredients: string; // optional per-group max present count
-  ingredients: FormulationDescriptorGroup[];
-}
-
-type SavedDescriptorGroup = Omit<DescriptorGroup, 'id'> & { id?: string };
-
-type SavedFormulationDescriptorGroup = Omit<FormulationDescriptorGroup, 'id'> & { id?: string };
-
-type FormulationGroupConfig = Omit<FormulationGroup, 'id' | 'ingredients'> & {
-  id?: string;
-  ingredients: SavedFormulationDescriptorGroup[];
-};
-
-interface SchemaConfig {
-  generalInputs: SavedDescriptorGroup[];
-  // New grouped structure. `formulationInputs` is still read for backwards
-  // compatibility with schemas saved before ingredient groups existed.
-  formulationGroups?: FormulationGroupConfig[];
-  formulationInputs?: SavedFormulationDescriptorGroup[];
-  outputs: SavedDescriptorGroup[];
-  numRows: number | '';
-  noise: number;
-  filename: string;
-  minIngredientsPerFormulation: string;
-  maxIngredientsPerFormulation: string;
-  coefficientValues?: CoefficientTableValue;
-}
-
-const DEFAULT_GROUP_NAME = 'Default Group';
-const DEFAULT_MIN_BOUND = '0';
-const DEFAULT_MAX_BOUND = '1';
-const COEFFICIENT_DECIMALS = 3;
-
-const randomCoefficient = () => (Math.random() * 2 - 1).toFixed(COEFFICIENT_DECIMALS);
-
-const labelWithFallback = (value: string, fallback: string) => value.trim() || fallback;
-
-const buildCoefficientAxes = (
-  generalInputs: DescriptorGroup[],
-  formulationGroups: FormulationGroup[],
-  outputs: DescriptorGroup[],
-): { inputs: CoefficientTableAxisItem[]; outputs: CoefficientTableAxisItem[] } => ({
-  inputs: [
-    ...generalInputs.map(({ id, name }, index) => ({
-      id,
-      label: labelWithFallback(name, `Input ${index + 1}`),
-    })),
-    ...formulationGroups.flatMap(({ ingredients }) =>
-      ingredients.map(({ id, name }, index) => ({
-        id,
-        label: labelWithFallback(name, `Input ${generalInputs.length + index + 1}`),
-      })),
-    ),
-  ],
-  outputs: outputs.map(({ id, name }, index) => ({
-    id,
-    label: labelWithFallback(name, `Output ${index + 1}`),
-  })),
-});
-
-const reconcileCoefficientValues = (
-  previousValues: CoefficientTableValue,
-  outputIds: string[],
-  inputIds: string[],
-): CoefficientTableValue =>
-  Object.fromEntries(
-    outputIds.map((outputId) => [
-      outputId,
-      Object.fromEntries(
-        inputIds.map((inputId) => [
-          inputId,
-          previousValues[outputId]?.[inputId] ?? randomCoefficient(),
-        ]),
-      ),
-    ]),
-  );
-
-const parseCoefficient = (value: string | undefined): number => {
-  const num = Number(value);
-  if (!Number.isFinite(num)) return 0;
-  return Math.min(1, Math.max(-1, num));
-};
-
-const buildCoefsPayload = (
-  inputs: CoefficientTableAxisItem[],
-  outputs: CoefficientTableAxisItem[],
-  values: CoefficientTableValue,
-): number[][] | null => {
-  if (inputs.length === 0 || outputs.length === 0) return null;
-  return outputs.map((output) =>
-    inputs.map((input) => parseCoefficient(values[output.id]?.[input.id])),
-  );
-};
-
-
-
-
-const resolveMinBound = (value: string) => (value.trim() === '' ? DEFAULT_MIN_BOUND : value);
-const resolveMaxBound = (value: string) => (value.trim() === '' ? DEFAULT_MAX_BOUND : value);
-
-/** Resolved per-group min/max present-ingredient counts (matches generate/validate logic). */
-const resolveGroupIngredientCounts = (group: FormulationGroup) => {
-  const size = group.ingredients.length;
-  const min = group.minIngredients.trim() === '' ? 1 : Number(group.minIngredients);
-  const max = group.maxIngredients.trim() === '' ? size : Number(group.maxIngredients);
-  const requiredCount = group.ingredients.filter(ing => ing.required).length;
-  return { min, max, requiredCount };
-};
-
-/** Default global min/max when the top-level fields are left blank. */
-const defaultGlobalIngredientCounts = (groups: FormulationGroup[]) => {
-  let defaultMin = 0;
-  let defaultMax = 0;
-  for (const group of groups) {
-    if (group.ingredients.length === 0) continue;
-    const { min, max, requiredCount } = resolveGroupIngredientCounts(group);
-    const groupMinContrib = min === 0 && requiredCount === 0 ? 0 : Math.max(min, requiredCount);
-    defaultMin += groupMinContrib;
-    defaultMax += max;
-  }
-  if (defaultMin < 1 && defaultMax > 0) {
-    defaultMin = 1;
-  }
-  return { min: defaultMin, max: defaultMax };
-};
-
-const createEmptyIngredient = (): FormulationDescriptorGroup => ({
-  id: crypto.randomUUID(),
-  name: '',
-  min: '',
-  max: '',
-  units: '',
-  required: false,
-});
-
-const createEmptyFormulationGroup = (): FormulationGroup => ({
-  id: crypto.randomUUID(),
-  name: '',
-  min: '',
-  max: '',
-  minIngredients: '',
-  maxIngredients: '',
-  ingredients: [createEmptyIngredient()],
-});
-
-export interface SavedSchemaEntry {
-  id: number;
-  name: string;
-  config: SchemaConfig;
-  created_at: string | null;
-}
+export type {
+  DescriptorGroup,
+  FormulationDescriptorGroup,
+  FormulationGroup,
+  SavedSchemaEntry,
+} from './types';
 
 const DatasetGeneratorPage = () => {
   const [generalInputs, setGeneralInputs] = useState<DescriptorGroup[]>([]);
@@ -254,54 +106,17 @@ const DatasetGeneratorPage = () => {
       return;
     }
 
-    const { inputs: coefInputs, outputs: coefOutputs } = buildCoefficientAxes(
+    const config = buildSchemaConfig({
       generalInputs,
       formulationGroups,
       outputs,
-    );
-
-    const config: SchemaConfig = {
-      generalInputs: generalInputs.map(({ id, name, min, max, units }) => ({
-        id,
-        name,
-        min,
-        max,
-        units,
-      })),
-      formulationGroups: formulationGroups.map(({ id, name, min, max, minIngredients, maxIngredients, ingredients }) => ({
-        id,
-        name,
-        min,
-        max,
-        minIngredients,
-        maxIngredients,
-        ingredients: ingredients.map(({ id, name, min, max, units, required }) => ({
-          id,
-          name,
-          min,
-          max,
-          units,
-          required,
-        })),
-      })),
-      outputs: outputs.map(({ id, name, min, max, units }) => ({
-        id,
-        name,
-        min,
-        max,
-        units,
-      })),
       numRows,
       noise,
       filename,
       minIngredientsPerFormulation,
       maxIngredientsPerFormulation,
-      coefficientValues: reconcileCoefficientValues(
-        coefficientValues,
-        coefOutputs.map(({ id }) => id),
-        coefInputs.map(({ id }) => id),
-      ),
-    };
+      coefficientValues,
+    });
 
     try {
       const response = await fetch('./api/schemas', {
@@ -395,72 +210,16 @@ const DatasetGeneratorPage = () => {
   };
 
   const loadSchema = (schema: SavedSchemaEntry) => {
-    const c = schema.config;
-
-    const loadedGeneralInputs: DescriptorGroup[] = c.generalInputs.map((g) => ({
-      ...g,
-      id: g.id ?? crypto.randomUUID(),
-    }));
-
-    // Prefer the grouped structure; fall back to migrating a legacy flat
-    // formulationInputs list into a single default group.
-    let groupConfigs: FormulationGroupConfig[];
-    if (c.formulationGroups) {
-      groupConfigs = c.formulationGroups;
-    } else if (c.formulationInputs && c.formulationInputs.length > 0) {
-      groupConfigs = [{
-        name: DEFAULT_GROUP_NAME,
-        min: '',
-        max: '',
-        minIngredients: '',
-        maxIngredients: '',
-        ingredients: c.formulationInputs,
-      }];
-    } else {
-      groupConfigs = [];
-    }
-
-    const loadedFormulationGroups: FormulationGroup[] = groupConfigs.map((g) => ({
-      id: g.id ?? crypto.randomUUID(),
-      name: g.name ?? '',
-      min: g.min ?? '',
-      max: g.max ?? '',
-      minIngredients: g.minIngredients ?? '',
-      maxIngredients: g.maxIngredients ?? '',
-      ingredients: (g.ingredients ?? []).map((ing) => ({
-        ...ing,
-        required: ing.required ?? false,
-        units: ing.units ?? '',
-        id: ing.id ?? crypto.randomUUID(),
-      })),
-    }));
-
-    const loadedOutputs: DescriptorGroup[] = c.outputs.map((g) => ({
-      ...g,
-      id: g.id ?? crypto.randomUUID(),
-    }));
-
-    const { inputs: loadedCoefInputs, outputs: loadedCoefOutputs } = buildCoefficientAxes(
-      loadedGeneralInputs,
-      loadedFormulationGroups,
-      loadedOutputs,
-    );
-
-    setGeneralInputs(loadedGeneralInputs);
-    setFormulationGroups(loadedFormulationGroups);
-    setOutputs(loadedOutputs);
-    setNumRows(c.numRows);
-    setNoise(c.noise);
-    setFilename(c.filename);
-    setMinIngredientsPerFormulation(c.minIngredientsPerFormulation);
-    setMaxIngredientsPerFormulation(c.maxIngredientsPerFormulation);
-    setCoefficientValues(
-      reconcileCoefficientValues(
-        c.coefficientValues ?? {},
-        loadedCoefOutputs.map(({ id }) => id),
-        loadedCoefInputs.map(({ id }) => id),
-      ),
-    );
+    const loaded = hydrateSchemaConfig(schema.config);
+    setGeneralInputs(loaded.generalInputs);
+    setFormulationGroups(loaded.formulationGroups);
+    setOutputs(loaded.outputs);
+    setNumRows(loaded.numRows);
+    setNoise(loaded.noise);
+    setFilename(loaded.filename);
+    setMinIngredientsPerFormulation(loaded.minIngredientsPerFormulation);
+    setMaxIngredientsPerFormulation(loaded.maxIngredientsPerFormulation);
+    setCoefficientValues(loaded.coefficientValues);
     setSchemaDropdownOpen(false);
     setError("");
   };
@@ -594,226 +353,35 @@ const DatasetGeneratorPage = () => {
 
 
   async function generateData(outputFormat: 'compact' | 'wide') {
-    // Validate filename
-    if (!filename.trim()) {
-      setError("Filename is required.");
-      return;
-    }
-
-    // Flatten ingredients across all groups for cross-cutting checks.
-    const allIngredients = formulationGroups.flatMap(g => g.ingredients);
-    const totalIngredients = allIngredients.length;
-
-    // Validate that at least one input type exists
-    if (generalInputs.length === 0 && totalIngredients === 0) {
-      setError("At least one General Input OR one Formulation Input is required.");
-      return;
-    }
-
-    // Validate that at least one output exists
-    if (outputs.length === 0) {
-      setError("At least one Output is required.");
-      return;
-    }
-
-    // Validate general inputs and outputs (name + bounds required)
-    const namedBoundedGroups = [...generalInputs, ...outputs];
-    for (const group of namedBoundedGroups) {
-      if (!group.name.trim()) {
-        setError("Variable names cannot be left blank.");
-        return;
-      }
-      if (!group.min.trim()) {
-        setError("All lower bounds are required.");
-        return;
-      }
-      if (!group.max.trim()) {
-        setError("All upper bounds are required.");
-        return;
-      }
-    }
-
-    // Validate formulation groups + their ingredients, accumulating feasibility totals.
-    let forcedGroupMinTotal = 0; // sum of min present ingredients forced by always-present groups
-    let sumGroupMax = 0;
-    let sumForcedGroupMin = 0;
-    let sumGroupMaxCounts = 0;
-
-    for (const group of formulationGroups) {
-      if (group.ingredients.length === 0) {
-        setError(`Group "${group.name || '(unnamed)'}" must contain at least one ingredient.`);
-        return;
-      }
-      if (!group.name.trim()) {
-        setError("Group names cannot be left blank.");
-        return;
-      }
-      const gMin = parseFloat(resolveMinBound(group.min));
-      const gMax = parseFloat(resolveMaxBound(group.max));
-      if (gMin < 0 || gMin > 1 || gMax < 0 || gMax > 1) {
-        setError("Group bounds must all have values between 0 and 1.");
-        return;
-      }
-      if (gMin > gMax) {
-        setError(`Group "${group.name}" lower bound cannot exceed its upper bound.`);
-        return;
-      }
-
-      const groupSize = group.ingredients.length;
-      const { min: resolvedGroupMin, max: resolvedGroupMax, requiredCount: groupRequiredCount } =
-        resolveGroupIngredientCounts(group);
-      if (!Number.isInteger(resolvedGroupMin) || !Number.isInteger(resolvedGroupMax)) {
-        setError("Group min/max ingredients must be integers.");
-        return;
-      }
-      if (resolvedGroupMin < 0) {
-        setError("Group min ingredients cannot be negative.");
-        return;
-      }
-      if (resolvedGroupMin > resolvedGroupMax) {
-        setError(`Group "${group.name}" min ingredients cannot exceed its max ingredients.`);
-        return;
-      }
-      if (resolvedGroupMax > groupSize) {
-        setError(`Group "${group.name}" max ingredients cannot exceed the number of ingredients in the group.`);
-        return;
-      }
-
-      for (const ing of group.ingredients) {
-        if (!ing.name.trim()) {
-          setError("Variable names cannot be left blank.");
-          return;
-        }
-        const iMin = parseFloat(resolveMinBound(ing.min));
-        const iMax = parseFloat(resolveMaxBound(ing.max));
-        if (iMin < 0 || iMin > 1 || iMax < 0 || iMax > 1) {
-          setError("Formulation Input bounds must all have values between 0 and 1.");
-          return;
-        }
-        if (iMin > iMax) {
-          setError(`Ingredient "${ing.name}" lower bound cannot exceed its upper bound.`);
-          return;
-        }
-        if (ing.required && iMin <= 0) {
-          setError(`Required ingredient "${ing.name || '(unnamed)'}" must have a lower bound greater than 0.`);
-          return;
-        }
-      }
-
-      const isForced = resolvedGroupMin > 0 || groupRequiredCount > 0;
-      sumGroupMax += gMax;
-      sumGroupMaxCounts += resolvedGroupMax;
-      if (isForced) {
-        sumForcedGroupMin += gMin;
-        forcedGroupMinTotal += Math.max(resolvedGroupMin, groupRequiredCount);
-      }
-    }
-
-    if (totalIngredients > 0) {
-      if (sumGroupMax < 1 - 1e-9) {
-        setError("The sum of all group upper bounds is less than 1.0, so ingredient amounts cannot sum to 100%.");
-        return;
-      }
-      if (sumForcedGroupMin > 1 + 1e-9) {
-        setError("The sum of lower bounds for always-present groups exceeds 1.0; no feasible formulation exists.");
-        return;
-      }
-    }
-
-    // Resolve + validate the GLOBAL min/max ingredients per formulation.
-    let resolvedMinIngredientsPerFormulation: number | null = null;
-    let resolvedMaxIngredientsPerFormulation: number | null = null;
-
-    if (totalIngredients > 0) {
-      const nIngredients = totalIngredients;
-      const { min: defaultGlobalMin, max: defaultGlobalMax } =
-        formulationGroups.length > 0
-          ? defaultGlobalIngredientCounts(formulationGroups)
-          : { min: nIngredients, max: nIngredients };
-
-      resolvedMinIngredientsPerFormulation =
-        minIngredientsPerFormulation.trim() === ""
-          ? defaultGlobalMin
-          : Number(minIngredientsPerFormulation);
-      resolvedMaxIngredientsPerFormulation =
-        maxIngredientsPerFormulation.trim() === ""
-          ? defaultGlobalMax
-          : Number(maxIngredientsPerFormulation);
-
-      if (
-        !Number.isInteger(resolvedMinIngredientsPerFormulation) ||
-        !Number.isInteger(resolvedMaxIngredientsPerFormulation)
-      ) {
-        setError("Min/Max ingredients per formulation must be integers.");
-        return;
-      }
-
-      if (resolvedMinIngredientsPerFormulation < 1) {
-        setError("Min ingredients per formulation must be at least 1.");
-        return;
-      }
-
-      if (resolvedMinIngredientsPerFormulation > resolvedMaxIngredientsPerFormulation) {
-        setError("Min ingredients per formulation cannot exceed max ingredients per formulation.");
-        return;
-      }
-
-      if (resolvedMaxIngredientsPerFormulation > nIngredients) {
-        setError("Max ingredients per formulation cannot exceed the number of formulation inputs.");
-        return;
-      }
-
-      if (forcedGroupMinTotal > resolvedMaxIngredientsPerFormulation) {
-        setError("The minimum number of ingredients forced by groups cannot exceed max ingredients per formulation.");
-        return;
-      }
-
-      if (sumGroupMaxCounts < resolvedMinIngredientsPerFormulation) {
-        setError("The total of all group max ingredient counts is less than min ingredients per formulation.");
-        return;
-      }
-    }
-
-    // Clear any existing error
-    setError("");
-
-    const { inputs: coefInputs, outputs: coefOutputs } = buildCoefficientAxes(
+    const result = buildGenerateRequest({
+      filename,
       generalInputs,
       formulationGroups,
       outputs,
-    );
-    const coefs = buildCoefsPayload(coefInputs, coefOutputs, coefficientValues);
+      numRows,
+      noise,
+      minIngredientsPerFormulation,
+      maxIngredientsPerFormulation,
+      coefficientValues,
+      outputFormat,
+    });
+
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+
+    setError("");
+    const totalIngredients = formulationGroups.flatMap(g => g.ingredients).length;
 
     try {
       const response = await fetch(
-        // `http://localhost:8000/api/dataset-generator`, {
         `./api/dataset-generator`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            general_inputs: generalInputs,
-            formulation_groups: formulationGroups.map(g => ({
-              name: g.name,
-              min: resolveMinBound(g.min),
-              max: resolveMaxBound(g.max),
-              min_ingredients: g.minIngredients.trim() === "" ? null : Number(g.minIngredients),
-              max_ingredients: g.maxIngredients.trim() === "" ? null : Number(g.maxIngredients),
-              ingredients: g.ingredients.map(ing => ({
-                ...ing,
-                min: resolveMinBound(ing.min),
-                max: resolveMaxBound(ing.max),
-              })),
-            })),
-            outputs: outputs,
-            num_rows: numRows,
-            noise: noise,
-            output_format: outputFormat,
-            min_ingredients_per_formulation: resolvedMinIngredientsPerFormulation,
-            max_ingredients_per_formulation: resolvedMaxIngredientsPerFormulation,
-            coefs,
-          }),
+          body: JSON.stringify(result.payload),
         }
       );
 

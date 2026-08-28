@@ -59,6 +59,16 @@ Run tests with a line-by-line coverage report for application code under `backen
 pytest --cov=./backend --cov-report=term-missing
 ```
 
+### Frontend tests
+
+Frontend tests use [Vitest](https://vitest.dev/) and [Testing Library](https://testing-library.com/). From the `frontend/` directory:
+
+```bash
+pnpm test
+```
+
+This is a small suite focused on dataset-generator helpers (schema loading, generate payload/validation, chat form updates, markdown sanitization) plus one page-level flow. It does not cover Plotly visualization pages.
+
 ## Adding Datasets & Models
 
 NOTE: Dataset filenames **must** be in the format `{dataset-name}_dataset.pkl`, where `{dataset-name}` CANNOT contain underscores!

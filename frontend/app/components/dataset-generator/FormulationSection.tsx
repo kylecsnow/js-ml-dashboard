@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode, WheelEvent } from 'react';
-import type { DescriptorGroup, FormulationGroup } from '../../dataset-generator/page';
+import type { DescriptorGroup, FormulationGroup } from '../../dataset-generator/types';
 
 // Placeholder defaults shown in the inputs. These mirror the resolved defaults
 // applied by the validation/generation logic in the page component.

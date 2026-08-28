@@ -39,3 +39,9 @@ cd backend && python main.py
 ```
 
 Frontend uses **pnpm** on port **8777**; backend defaults to port **8000**.
+
+Frontend tests (from `frontend/`):
+
+```bash
+pnpm test
+```

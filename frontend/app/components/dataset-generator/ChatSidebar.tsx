@@ -7,28 +7,15 @@ import CloseIcon from '@mui/icons-material/Close';
 import SendIcon from '@mui/icons-material/Send';
 import CircularProgress from '@mui/material/CircularProgress';
 import { renderAssistantMarkdown } from '../../utils/renderAssistantMarkdown';
-
-export interface DescriptorGroup {
-  id: string;
-  name: string;
-  min: string;
-  max: string;
-  units: string;
-}
-
-export interface FormulationDescriptorGroup extends DescriptorGroup {
-  required: boolean;
-}
-
-export interface FormulationGroup {
-  id: string;
-  name: string;
-  min: string;            // group quantity sum lower bound (0..1)
-  max: string;            // group quantity sum upper bound (0..1)
-  minIngredients: string; // optional per-group min present ingredients count
-  maxIngredients: string; // optional per-group max present ingredients count
-  ingredients: FormulationDescriptorGroup[];
-}
+import {
+  applyFormUpdates,
+  buildChatFormContext,
+  type LLMFormUpdates,
+} from '../../dataset-generator/formUpdates';
+import type {
+  DescriptorGroup,
+  FormulationGroup,
+} from '../../dataset-generator/types';
 
 interface ChatSidebarProps {
   open: boolean;
@@ -62,26 +49,6 @@ interface ChatSource {
   title: string;
   url: string;
   snippet?: string;
-}
-
-interface LLMFormulationGroup {
-  name: string;
-  min: string;
-  max: string;
-  min_ingredients?: number | string | null;
-  max_ingredients?: number | string | null;
-  ingredients: { name: string; min: string; max: string; required?: boolean }[];
-}
-
-interface LLMFormUpdates {
-  general_inputs?: { name: string; min: string; max: string; units?: string }[];
-  formulation_groups?: LLMFormulationGroup[];
-  outputs?: { name: string; min: string; max: string; units?: string }[];
-  num_rows?: number;
-  noise?: number;
-  filename?: string;
-  min_ingredients_per_formulation?: number | null;
-  max_ingredients_per_formulation?: number | null;
 }
 
 
@@ -152,153 +119,46 @@ export default function ChatSidebar({
     };
   }, []);
 
-  const buildFormContext = useCallback(() => ({
-    general_inputs: generalInputs.map(g => ({ name: g.name, min: g.min, max: g.max, units: g.units })),
-    formulation_groups: formulationGroups.map(group => ({
-      name: group.name,
-      min: group.min,
-      max: group.max,
-      min_ingredients: group.minIngredients || null,
-      max_ingredients: group.maxIngredients || null,
-      ingredients: group.ingredients.map(i => ({
-        name: i.name,
-        min: i.min,
-        max: i.max,
-        required: i.required,
-      })),
-    })),
-    outputs: outputs.map(g => ({ name: g.name, min: g.min, max: g.max, units: g.units })),
-    num_rows: numRows,
-    noise,
-    filename,
-    min_ingredients_per_formulation: minIngredientsPerFormulation || null,
-    max_ingredients_per_formulation: maxIngredientsPerFormulation || null,
-  }), [generalInputs, formulationGroups, outputs, numRows, noise, filename, minIngredientsPerFormulation, maxIngredientsPerFormulation]);
+  const buildFormContext = useCallback(
+    () => buildChatFormContext({
+      generalInputs,
+      formulationGroups,
+      outputs,
+      numRows,
+      noise,
+      filename,
+      minIngredientsPerFormulation,
+      maxIngredientsPerFormulation,
+    }),
+    [generalInputs, formulationGroups, outputs, numRows, noise, filename, minIngredientsPerFormulation, maxIngredientsPerFormulation],
+  );
 
-  function numEq(a: string | number, b: string | number): boolean {
-    const na = Number(a);
-    const nb = Number(b);
-    if (!isNaN(na) && !isNaN(nb)) return na === nb;
-    return String(a) === String(b);
-  }
+  function applyIncomingFormUpdates(updates: LLMFormUpdates): string {
+    const { next, summary } = applyFormUpdates({
+      generalInputs,
+      formulationGroups,
+      outputs,
+      numRows,
+      noise,
+      filename,
+      minIngredientsPerFormulation,
+      maxIngredientsPerFormulation,
+    }, updates);
 
-  function descriptorsChanged(
-    current: DescriptorGroup[],
-    incoming: { name: string; min: string; max: string; units?: string; required?: boolean }[],
-  ): boolean {
-    if (current.length !== incoming.length) return true;
-    return incoming.some((g, i) =>
-      g.name !== current[i].name ||
-      !numEq(g.min, current[i].min) ||
-      !numEq(g.max, current[i].max) ||
-      (g.units ?? '') !== (current[i] as { units?: string }).units ||
-      (g.required ?? false) !== ((current[i] as { required?: boolean }).required ?? false)
-    );
-  }
-
-  function countEq(incoming: number | string | null | undefined, current: string): boolean {
-    const inc = incoming == null || incoming === '' ? '' : String(Number(incoming));
-    const cur = current.trim() === '' ? '' : String(Number(current));
-    return inc === cur;
-  }
-
-  function groupsChanged(current: FormulationGroup[], incoming: LLMFormulationGroup[]): boolean {
-    if (current.length !== incoming.length) return true;
-    return incoming.some((g, i) => {
-      const c = current[i];
-      if (
-        g.name !== c.name ||
-        !numEq(g.min, c.min) ||
-        !numEq(g.max, c.max) ||
-        !countEq(g.min_ingredients, c.minIngredients) ||
-        !countEq(g.max_ingredients, c.maxIngredients)
-      ) {
-        return true;
-      }
-      return descriptorsChanged(c.ingredients, g.ingredients);
-    });
-  }
-
-  function applyFormUpdates(updates: LLMFormUpdates): string {
-    const parts: string[] = [];
-
-    if (updates.general_inputs !== undefined && descriptorsChanged(generalInputs, updates.general_inputs)) {
-      const items = updates.general_inputs.map(g => ({
-        id: crypto.randomUUID(),
-        name: g.name,
-        min: String(g.min),
-        max: String(g.max),
-        units: g.units ?? '',
-      }));
-      setGeneralInputs(items);
-      parts.push(`${items.length} general input${items.length !== 1 ? 's' : ''}`);
+    if (next.generalInputs !== generalInputs) setGeneralInputs(next.generalInputs);
+    if (next.formulationGroups !== formulationGroups) setFormulationGroups(next.formulationGroups);
+    if (next.outputs !== outputs) setOutputs(next.outputs);
+    if (next.numRows !== numRows) setNumRows(next.numRows);
+    if (next.noise !== noise) setNoise(next.noise);
+    if (next.filename !== filename) setFilename(next.filename);
+    if (next.minIngredientsPerFormulation !== minIngredientsPerFormulation) {
+      setMinIngredientsPerFormulation(next.minIngredientsPerFormulation);
+    }
+    if (next.maxIngredientsPerFormulation !== maxIngredientsPerFormulation) {
+      setMaxIngredientsPerFormulation(next.maxIngredientsPerFormulation);
     }
 
-    if (updates.formulation_groups !== undefined && groupsChanged(formulationGroups, updates.formulation_groups)) {
-      const groups: FormulationGroup[] = updates.formulation_groups.map(g => ({
-        id: crypto.randomUUID(),
-        name: g.name,
-        min: String(g.min),
-        max: String(g.max),
-        minIngredients: g.min_ingredients == null ? '' : String(g.min_ingredients),
-        maxIngredients: g.max_ingredients == null ? '' : String(g.max_ingredients),
-        ingredients: (g.ingredients ?? []).map(i => ({
-          id: crypto.randomUUID(),
-          name: i.name,
-          min: String(i.min),
-          max: String(i.max),
-          units: '',
-          required: i.required ?? false,
-        })),
-      }));
-      setFormulationGroups(groups);
-      const ingredientCount = groups.reduce((n, grp) => n + grp.ingredients.length, 0);
-      parts.push(
-        `${groups.length} formulation group${groups.length !== 1 ? 's' : ''} ` +
-        `(${ingredientCount} ingredient${ingredientCount !== 1 ? 's' : ''})`
-      );
-    }
-
-    if (updates.outputs !== undefined && descriptorsChanged(outputs, updates.outputs)) {
-      const items = updates.outputs.map(g => ({
-        id: crypto.randomUUID(),
-        name: g.name,
-        min: String(g.min),
-        max: String(g.max),
-        units: g.units ?? '',
-      }));
-      setOutputs(items);
-      parts.push(`${items.length} output${items.length !== 1 ? 's' : ''}`);
-    }
-
-    if (updates.num_rows !== undefined && updates.num_rows !== numRows) {
-      setNumRows(updates.num_rows);
-      parts.push('num_rows');
-    }
-    if (updates.noise !== undefined && updates.noise !== noise) {
-      setNoise(updates.noise);
-      parts.push('noise');
-    }
-    if (updates.filename !== undefined && updates.filename !== filename) {
-      setFilename(updates.filename);
-      parts.push('filename');
-    }
-    const newMin = updates.min_ingredients_per_formulation != null
-      ? String(updates.min_ingredients_per_formulation)
-      : '';
-    if (updates.min_ingredients_per_formulation !== undefined && newMin !== minIngredientsPerFormulation) {
-      setMinIngredientsPerFormulation(newMin);
-      parts.push('min ingredients/formulation');
-    }
-    const newMax = updates.max_ingredients_per_formulation != null
-      ? String(updates.max_ingredients_per_formulation)
-      : '';
-    if (updates.max_ingredients_per_formulation !== undefined && newMax !== maxIngredientsPerFormulation) {
-      setMaxIngredientsPerFormulation(newMax);
-      parts.push('max ingredients/formulation');
-    }
-
-    return parts.length > 0 ? parts.join('\n') : '';
+    return summary;
   }
 
 
@@ -336,7 +196,7 @@ export default function ChatSidebar({
       const data = await response.json();
       let summary = '';
       if (data.form_updates) {
-        summary = applyFormUpdates(data.form_updates);
+        summary = applyIncomingFormUpdates(data.form_updates);
       }
 
       const assistantMsg: ChatMessage = {
