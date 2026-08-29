@@ -9,13 +9,18 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TextField from '@mui/material/TextField';
+import {
+  COEFFICIENT_MAX,
+  COEFFICIENT_MIN,
+  finalizeCoefficientValue,
+  sanitizeCoefficientChange,
+} from '../../dataset-generator/coefficients';
+import type {
+  CoefficientTableAxisItem,
+  CoefficientTableValue,
+} from '../../dataset-generator/types';
 
-export type CoefficientTableValue = Record<string, Record<string, string>>;
-
-export interface CoefficientTableAxisItem {
-  id: string;
-  label: string;
-}
+export type { CoefficientTableAxisItem, CoefficientTableValue };
 
 interface CoefficientsTableProps {
   inputs: CoefficientTableAxisItem[];
@@ -26,34 +31,6 @@ interface CoefficientsTableProps {
   onSetAllToValue: (value: string) => void;
   preventWheelChange: (e: WheelEvent<HTMLInputElement>) => void;
 }
-
-const COEFFICIENT_MIN = -1;
-const COEFFICIENT_MAX = 1;
-const FLOAT_INPUT_RE = /^-?\d*\.?\d*$/;
-
-const isPartialCoefficient = (value: string) =>
-  value === '' || value === '-' || value === '.' || value === '-.';
-
-const sanitizeCoefficientChange = (value: string): string | null => {
-  if (!FLOAT_INPUT_RE.test(value)) return null;
-  if (isPartialCoefficient(value)) return value;
-
-  const num = Number(value);
-  if (Number.isNaN(num)) return null;
-  if (num < COEFFICIENT_MIN) return String(COEFFICIENT_MIN);
-  if (num > COEFFICIENT_MAX) return String(COEFFICIENT_MAX);
-  return value;
-};
-
-const finalizeCoefficientValue = (value: string): string => {
-  if (isPartialCoefficient(value)) return '0';
-
-  const num = Number(value);
-  if (Number.isNaN(num)) return '0';
-  if (num < COEFFICIENT_MIN) return String(COEFFICIENT_MIN);
-  if (num > COEFFICIENT_MAX) return String(COEFFICIENT_MAX);
-  return value;
-};
 
 const CoefficientsTable = ({
   inputs,

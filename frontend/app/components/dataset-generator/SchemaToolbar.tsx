@@ -1,7 +1,7 @@
 'use client';
 
 import type { RefObject } from 'react';
-import type { SavedSchemaEntry } from '../../dataset-generator/page';
+import type { SavedSchemaEntry } from '../../dataset-generator/types';
 
 interface SchemaToolbarProps {
   savedSchemas: SavedSchemaEntry[];

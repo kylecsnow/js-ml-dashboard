@@ -20,7 +20,7 @@ COPY pyproject.toml ./
 # Copy and install frontend dependencies, then build frontend
 WORKDIR /app/frontend
 COPY frontend/ ./
-RUN npm install
+RUN npm ci
 RUN npm run build
 
 

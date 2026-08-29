@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode, WheelEvent } from 'react';
-import type { DescriptorGroup } from '../../dataset-generator/page';
+import type { DescriptorGroup } from '../../dataset-generator/types';
 
 interface DescriptorSectionProps {
   title: string;
