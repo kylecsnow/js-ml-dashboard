@@ -5,13 +5,13 @@ import {
   resolveGroupIngredientCounts,
   resolveMaxBound,
   resolveMinBound,
-} from './generate';
+} from '../../app/dataset-generator/generate';
 import type {
   CoefficientTableValue,
   DescriptorGroup,
   FormulationGroup,
-} from './types';
-import type { GenerateFormInput } from './generate';
+} from '../../app/dataset-generator/types';
+import type { GenerateFormInput } from '../../app/dataset-generator/generate';
 
 const general = (overrides: Partial<DescriptorGroup> = {}): DescriptorGroup => ({
   id: 'gen-1',

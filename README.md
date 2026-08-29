@@ -65,7 +65,7 @@ From the `frontend/` directory, run:
 npm test
 ```
 
-This is a small suite focused on dataset-generator helpers (schema loading, generate payload/validation, chat form updates, markdown sanitization) plus one page-level flow. It does not cover Plotly visualization pages.
+Tests live in `frontend/tests/`. This is a small suite focused on dataset-generator helpers (schema loading, generate payload/validation, chat form updates, markdown sanitization) plus one page-level flow. It does not cover Plotly visualization pages.
 
 ## Adding Datasets & Models
 

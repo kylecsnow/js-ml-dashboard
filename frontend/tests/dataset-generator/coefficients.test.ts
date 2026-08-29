@@ -7,8 +7,8 @@ import {
   parseCoefficient,
   reconcileCoefficientValues,
   sanitizeCoefficientChange,
-} from './coefficients';
-import type { DescriptorGroup, FormulationGroup } from './types';
+} from '../../app/dataset-generator/coefficients';
+import type { DescriptorGroup, FormulationGroup } from '../../app/dataset-generator/types';
 
 const descriptor = (id: string, name: string): DescriptorGroup => ({
   id,

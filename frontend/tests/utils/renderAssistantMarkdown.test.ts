@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { renderAssistantMarkdown } from './renderAssistantMarkdown';
+import { renderAssistantMarkdown } from '../../app/utils/renderAssistantMarkdown';
 
 describe('renderAssistantMarkdown', () => {
   it('renders markdown and forces links to open in a new tab', () => {

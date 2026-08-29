@@ -5,8 +5,8 @@ import {
   countEq,
   descriptorsChanged,
   groupsChanged,
-} from './formUpdates';
-import type { DatasetGeneratorFormState, FormulationGroup } from './types';
+} from '../../app/dataset-generator/formUpdates';
+import type { DatasetGeneratorFormState, FormulationGroup } from '../../app/dataset-generator/types';
 
 const emptyState = (): DatasetGeneratorFormState => ({
   generalInputs: [],

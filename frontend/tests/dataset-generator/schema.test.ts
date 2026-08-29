@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_GROUP_NAME, hydrateSchemaConfig } from './schema';
-import type { SchemaConfig } from './types';
+import { DEFAULT_GROUP_NAME, hydrateSchemaConfig } from '../../app/dataset-generator/schema';
+import type { SchemaConfig } from '../../app/dataset-generator/types';
 
 const createId = (() => {
   let n = 0;

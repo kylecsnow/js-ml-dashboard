@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
-import DatasetGeneratorPage from './page';
-import type { SavedSchemaEntry } from './types';
+import DatasetGeneratorPage from '../../app/dataset-generator/page';
+import type { SavedSchemaEntry } from '../../app/dataset-generator/types';
 
 vi.mock('next/image', () => ({
   default: ({ alt }: { alt: string }) => <span>{alt}</span>,
@@ -15,11 +15,11 @@ vi.mock('next/link', () => ({
   ),
 }));
 
-vi.mock('../components/Sidebar', () => ({
+vi.mock('../../app/components/Sidebar', () => ({
   default: () => <nav aria-label="Sidebar" />,
 }));
 
-vi.mock('../components/dataset-generator/ChatSidebar', () => ({
+vi.mock('../../app/components/dataset-generator/ChatSidebar', () => ({
   default: () => null,
 }));
 
