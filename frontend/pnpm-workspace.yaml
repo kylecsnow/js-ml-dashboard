@@ -1,5 +1,0 @@
-allowBuilds:
-  '@parcel/watcher': true
-  es5-ext: false
-  bufferutil: false
-  msw: false

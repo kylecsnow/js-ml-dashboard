@@ -3,10 +3,7 @@
 ![codecov](https://img.shields.io/badge/codecov-47%25-blue)
 
 
-This repository contains the code for a collection of Machine Learning tools - primarily a set of quick data visualizations useful 
-for EDA and model explainability when training ML models on tabular datasets. This is a Next.js web application, using a frontend
-built with React/Typescript and a backend built with FastAPI/Python. You can run the app locally, or access it live on my personal
-website [kylecsnow.com](https://kylecsnow.com), where it has been deployed as a containerized application using Docker and AWS.
+This repository contains the code for a collection of Machine Learning tools - primarily a set of quick data visualizations useful for EDA and model explainability when training ML models on tabular datasets. This is a Next.js web application, using a frontend built with React/Typescript and a backend built with FastAPI/Python. You can run the app locally, or access it live on my personal website [kylecsnow.com](https://kylecsnow.com), where it has been deployed as a containerized application using Docker and AWS.
 
 ## Getting Started
 
@@ -14,25 +11,25 @@ website [kylecsnow.com](https://kylecsnow.com), where it has been deployed as a 
 
 cd into the `frontend` directory, then follow the steps below:
 
-Set up pnpm:
-```bash
-npm install -g pnpm
-```
 Install packages:
 ```bash
-pnpm install
+npm install
 ```
-Then run the development server:
+Then run the development server (defaults to port 8777):
 ```bash
-pnpm run dev -p 8777
+npm run dev
+```
+Alternatively, run the frontend on any port you want:
+```bash
+npm run dev -- -p 8700
 ```
 
+
 ### Backend
-Install python dependencies, cd into the `backend` directory, and run:
+Install python dependencies, cd into the `backend` directory, and run the following (defaults to port 8000):
 ```bash
 python main.py
 ```
-This will run on port 8000 by default.
 
 
 With both the frontend and backend running, open [http://localhost:8777](http://localhost:8777) with your browser to see the result.
@@ -61,10 +58,11 @@ pytest --cov=./backend --cov-report=term-missing
 
 ### Frontend tests
 
-Frontend tests use [Vitest](https://vitest.dev/) and [Testing Library](https://testing-library.com/). From the `frontend/` directory:
+Frontend tests use [Vitest](https://vitest.dev/) and [Testing Library](https://testing-library.com/). 
+From the `frontend/` directory, run:
 
 ```bash
-pnpm test
+npm test
 ```
 
 This is a small suite focused on dataset-generator helpers (schema loading, generate payload/validation, chat form updates, markdown sanitization) plus one page-level flow. It does not cover Plotly visualization pages.
@@ -82,6 +80,12 @@ GROQ_API_KEY=your_key_here
 ```
 
 Get a key from the [Groq console](https://console.groq.com/). For local Docker, `docker-compose.yml` loads this file via `env_file`. In production on AWS, set `GROQ_API_KEY` as a runtime environment variable or secret.
+
+Optionally, to enable langsmith tracing:
+```bash
+LANGSMITH_TRACING="true"
+LANGSMITH_API_KEY=your_key_here
+```
 
 
 ## Deploying the app to AWS
@@ -124,5 +128,4 @@ docker push <AWS-account-ID>.dkr.ecr.us-east-1.amazonaws.com/js-ml-dashboard:lat
 
 In the AWS console, go to **App Runner** → **Services** → js-ml-dashboard → **Deploy**. If the service is configured to use the `latest` tag, it will pull the new image automatically.
 
-You will need to set the `GROQ_API_KEY` in order for the AI Assistant in the dataset-generator page to function. In AWS, go to App Runner > Services > 
-js-ml-dashboard, then click the "Configuration" tab. Go to the "Configure service" section and click "Edit", then add your API key & value and click Save.
+You will need to set environment variables `GROQ_API_KEY` in order for the AI Assistant in the dataset-generator page to function (as well as `LANGSMITH_API_KEY` `LANGSMITH_TRACING="true"` optionally, to enable LLM chat tracing). In AWS, go to App Runner > Services > js-ml-dashboard, then click the "Configuration" tab. Go to the "Configure service" section and click "Edit", then add your API key & value and click Save.
