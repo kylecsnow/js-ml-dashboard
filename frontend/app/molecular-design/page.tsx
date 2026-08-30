@@ -9,8 +9,6 @@ import Spinner from '../components/Spinner';
 import { PlotDataType } from '@/types/types';
 // import SmilesDrawer from 'smiles-drawer';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useModel } from '@/app/contexts/ModelContext';
-
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
 
@@ -64,7 +62,6 @@ const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
 const MolecularDesignPage = () => {
   const [molgenResults, setMolgenResults] = useState<any[]>([]);
-  const { selectedModel } = useModel();
   const [plotData, setPlotData] = useState<PlotDataType | null>(null);
   const [selectedSMILES, setSelectedSMILES] = useState<string | null>(null);
   const [selectedMoleculeImage, setSelectedMoleculeImage] = useState<string | null>(null);
@@ -82,10 +79,10 @@ const MolecularDesignPage = () => {
       try {
         // First fetch molgen results
         const molgenResponse = await fetch(
-          `./api/molecular-design/${selectedModel}`, {
+          './api/molecular-design', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({}), // Add empty body to satisfy POST request
+            body: JSON.stringify({}),
           }
         );
         
@@ -100,22 +97,21 @@ const MolecularDesignPage = () => {
         console.error('Failed to fetch initial data:', err);
         setHasError(true);
         setErrorMessage('Failed to load molecular data. Please try again later.');
+        setIsLoading(false);
       }
     };
 
-    if (selectedModel) {
-      fetchInitialData();
-    }
-  }, [selectedModel]); // Only run when selectedModel changes
+    fetchInitialData();
+  }, []);
 
 
   useEffect(() => {
-    if (!selectedModel || !molgenResults.length) return;
+    if (!molgenResults.length) return;
     
     async function fetchMolecularSpacePlotData() {
       try {
         const response = await fetch(
-          `./api/molecular-space-map/${selectedModel}`, {
+          './api/molecular-space-map', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -137,11 +133,12 @@ const MolecularDesignPage = () => {
         console.error('Error fetching scatter plot data:', error);
         setHasError(true);
         setErrorMessage('Failed to load plot data. Please try again later.');
+        setIsLoading(false);
       }
     };
 
     fetchMolecularSpacePlotData();
-  }, [molgenResults, selectedModel, colorProp]);
+  }, [molgenResults, colorProp]);
 
 
   const handlePointClick = async (pointData: any) => {
@@ -376,7 +373,11 @@ const MolecularDesignPage = () => {
               </div>
             </div>
             <div className="rounded-xl border bg-card text-card-foreground shadow w-full max-w-4xl">
-            {isLoading ? <Spinner /> : 
+            {hasError ? (
+              <div className="flex items-center justify-center h-[600px] px-8 text-center text-red-600">
+                {errorMessage}
+              </div>
+            ) : isLoading ? <Spinner /> : 
               plotData && (
                 <Plot
                 data={[

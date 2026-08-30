@@ -17,8 +17,8 @@ router = APIRouter()
 
 
 ### TODO: finish this code!
-@router.post("/api/molecular-design/{model_name}")
-async def get_molecular_design_results(model_name: str) -> dict[str, Any]:
+@router.post("/api/molecular-design")
+async def get_molecular_design_results() -> dict[str, Any]:
 
     print('calling backend function...')
 
@@ -64,8 +64,8 @@ async def display_molecule_image(body: dict = Body(...)) -> dict[str, str]:
 
 
 ### TODO: finish this code!
-@router.post("/api/molecular-space-map/{model_name}")
-async def get_plotly_molecular_space_map(model_name: str, body: dict = Body(...)) -> dict[str, Any]:
+@router.post("/api/molecular-space-map")
+async def get_plotly_molecular_space_map(body: dict = Body(...)) -> dict[str, Any]:
     """Create a Plotly molecular space map"""
     molgen_results_dict = body.get("molgen_results", [])
     # color_property = body.get("color_property", [])
