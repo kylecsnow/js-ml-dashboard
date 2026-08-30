@@ -5,77 +5,123 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SidebarTooltip from './SidebarTooltip';
 
 const MIN_SIDEBAR_WIDTH = 180;
 const DEFAULT_SIDEBAR_WIDTH = 256;
 const MAX_SIDEBAR_WIDTH = 480;
 
-const NAV_ITEMS = [
+type NavItem = {
+  href: string;
+  label: string;
+  tooltip: string;
+};
+
+type NavSection = {
+  id: 'ml-dashboard' | 'bonus';
+  label: string;
+  items: readonly NavItem[];
+};
+
+const HOME_ITEM: NavItem = {
+  href: '/',
+  label: 'Home',
+  tooltip: 'Return to the home page, where you can select a different model to analyze.',
+};
+
+const NAV_SECTIONS: readonly NavSection[] = [
   {
-    href: '/',
-    label: 'Home',
-    tooltip: 'Return to the home page, where you can select a different model to analyze.',
+    id: 'ml-dashboard',
+    label: 'ML Dashboard',
+    items: [
+      {
+        href: '/overview',
+        label: 'Overview',
+        tooltip: 'View model details and test-set performance metrics for the selected model.',
+      },
+      {
+        href: '/violin-plots',
+        label: 'Violin Plots',
+        tooltip:
+          'View violin plots of all input & output variables to quickly inspect their distributions (useful for assessing normality, detecting outliers, etc).',
+      },
+      {
+        href: '/scatter-plots',
+        label: 'Scatter Plots',
+        tooltip:
+          'Create scatter plots comparing any input or output features of the selected model, including interactive 3D scatter plots.',
+      },
+      {
+        href: '/correlation-heatmaps',
+        label: 'Correlation Heatmaps',
+        tooltip:
+          'View heatmaps of the correlation coefficients between features (on an input-to-input, input-to-output, or output-to-output basis).',
+      },
+      {
+        href: '/shap-summary-plots',
+        label: 'SHAP Summary Plots',
+        tooltip:
+          'SHAP-based model interpretability plots illustrating the directional influence of each feature on a given output, highlighting global trends across the entire dataset.',
+      },
+      {
+        href: '/shap-waterfall-plots',
+        label: 'SHAP Waterfall Plots',
+        tooltip:
+          'SHAP-based model interpretability plots illustrating the directional influence of each feature on a given output, focusing on individual predictions given by the model.',
+      },
+    ],
   },
   {
-    href: '/overview',
-    label: 'Overview',
-    tooltip: 'View model details and test-set performance metrics for the selected model.',
+    id: 'bonus',
+    label: 'Bonus',
+    items: [
+      {
+        href: '/molecular-design',
+        label: 'Molecular Design',
+        tooltip:
+          "Visualize chemical structures resulting from a molecular design task. Similar molecules are grouped closer together, acting as a 'molecular space map'. (NOTE: Independent of the selected model.)",
+      },
+      {
+        href: '/dataset-generator',
+        label: 'Dataset Generator',
+        tooltip:
+          'Quickly generate synthetic datasets for ML modeling, derived from randomly-defined trends between input and output variables. (NOTE: Independent of the selected model.)',
+      },
+      {
+        href: '/object-detection',
+        label: 'Object Detection',
+        tooltip:
+          'A fine-tuned computer vision model trained to identify red blood cells, white blood cells, and platelets in microscope images. (NOTE: Independent of the selected model.)',
+      },
+    ],
   },
-  {
-    href: '/violin-plots',
-    label: 'Violin Plots',
-    tooltip:
-      'View violin plots of all input & output variables to quickly inspect their distributions (useful for assessing normality, detecting outliers, etc).',
-  },
-  {
-    href: '/scatter-plots',
-    label: 'Scatter Plots',
-    tooltip:
-      'Create scatter plots comparing any input or output features of the selected model, including interactive 3D scatter plots.',
-  },
-  {
-    href: '/correlation-heatmaps',
-    label: 'Correlation Heatmaps',
-    tooltip:
-      'View heatmaps of the correlation coefficients between features (on an input-to-input, input-to-output, or output-to-output basis).',
-  },
-  {
-    href: '/shap-summary-plots',
-    label: 'SHAP Summary Plots',
-    tooltip:
-      'SHAP-based model interpretability plots illustrating the directional influence of each feature on a given output, highlighting global trends across the entire dataset.',
-  },
-  {
-    href: '/shap-waterfall-plots',
-    label: 'SHAP Waterfall Plots',
-    tooltip:
-      'SHAP-based model interpretability plots illustrating the directional influence of each feature on a given output, focusing on individual predictions given by the model.',
-  },
-  {
-    href: '/molecular-design',
-    label: 'Molecular Design',
-    tooltip:
-      "Visualize chemical structures resulting from a molecular design task. Similar molecules are grouped closer together, acting as a 'molecular space map'. (NOTE: Independent of the selected model.)",
-  },
-  {
-    href: '/dataset-generator',
-    label: 'Dataset Generator',
-    tooltip:
-      'Quickly generate synthetic datasets for ML modeling, derived from randomly-defined trends between input and output variables. (NOTE: Independent of the selected model.)',
-  },
-  {
-    href: '/object-detection',
-    label: 'Object Detection',
-    tooltip:
-      'A fine-tuned computer vision model trained to identify red blood cells, white blood cells, and platelets in microscope images. (NOTE: Independent of the selected model.)',
-  },
-] as const;
+];
+
+const DEFAULT_OPEN_SECTIONS: Record<NavSection['id'], boolean> = {
+  'ml-dashboard': true,
+  bonus: true,
+};
+
+function NavLink({ item, active }: { item: NavItem; active: boolean }) {
+  return (
+    <Link
+      href={item.href}
+      className={`flex items-center gap-2 rounded-lg p-1 pl-2 text-[14.5px] ${
+        active ? 'bg-black text-white' : 'hover:bg-gray-200'
+      }`}
+    >
+      {item.label}
+      <SidebarTooltip title={item.tooltip} />
+    </Link>
+  );
+}
 
 export default function Sidebar() {
   const pathName = usePathname();
   const [width, setWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
   const [collapsed, setCollapsed] = useState(false);
+  const [openSections, setOpenSections] = useState(DEFAULT_OPEN_SECTIONS);
   const widthDragRef = useRef<{ startX: number; startWidth: number } | null>(null);
   const widthRef = useRef(width);
   widthRef.current = width;
@@ -90,7 +136,23 @@ export default function Sidebar() {
       }
     }
     if (savedCollapsed === 'true') setCollapsed(true);
-  }, []);
+
+    const savedSections = localStorage.getItem('sidebarSections');
+    let next = { ...DEFAULT_OPEN_SECTIONS };
+    if (savedSections) {
+      try {
+        const parsed = JSON.parse(savedSections) as Partial<Record<NavSection['id'], boolean>>;
+        next = { ...next, ...parsed };
+      } catch {
+        // keep defaults if storage is invalid
+      }
+    }
+    const activeSection = NAV_SECTIONS.find((section) =>
+      section.items.some((item) => item.href === pathName),
+    );
+    if (activeSection) next[activeSection.id] = true;
+    setOpenSections(next);
+  }, [pathName]);
 
   useEffect(() => {
     function onMove(e: MouseEvent | TouchEvent) {
@@ -126,6 +188,14 @@ export default function Sidebar() {
     setCollapsed((prev) => {
       const next = !prev;
       localStorage.setItem('sidebarCollapsed', String(next));
+      return next;
+    });
+  };
+
+  const toggleSection = (id: NavSection['id']) => {
+    setOpenSections((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      localStorage.setItem('sidebarSections', JSON.stringify(next));
       return next;
     });
   };
@@ -167,19 +237,37 @@ export default function Sidebar() {
           </button>
         </div>
 
-        <nav className="flex flex-col gap-[6px]">
-          {NAV_ITEMS.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-2 rounded-lg p-1 pl-2 text-[14.5px] ${
-                pathName === item.href ? 'bg-black text-white' : 'hover:bg-gray-200'
-              }`}
-            >
-              {item.label}
-              <SidebarTooltip title={item.tooltip} />
-            </Link>
-          ))}
+        <nav aria-label="Sidebar" className="flex flex-col gap-[6px]">
+          <NavLink item={HOME_ITEM} active={pathName === HOME_ITEM.href} />
+
+          {NAV_SECTIONS.map((section) => {
+            const isOpen = openSections[section.id];
+            const panelId = `sidebar-section-${section.id}`;
+            return (
+              <div key={section.id} className="mt-2 flex flex-col gap-[6px] border-t border-black/10 pt-2">
+                <button
+                  type="button"
+                  onClick={() => toggleSection(section.id)}
+                  aria-expanded={isOpen}
+                  aria-controls={panelId}
+                  className="flex w-full appearance-none items-center justify-between border-0 bg-transparent px-2 py-0.5 text-left text-[11px] font-semibold tracking-[0.06em] text-neutral-800 hover:text-black"
+                >
+                  {section.label}
+                  <ExpandMoreIcon
+                    fontSize="inherit"
+                    className={`text-[16px] text-neutral-600 transition-transform ${isOpen ? '' : '-rotate-90'}`}
+                  />
+                </button>
+                {isOpen && (
+                  <div id={panelId} className="flex flex-col gap-[6px]">
+                    {section.items.map((item) => (
+                      <NavLink key={item.href} item={item} active={pathName === item.href} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </nav>
 
         <div

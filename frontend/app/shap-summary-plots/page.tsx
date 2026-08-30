@@ -6,8 +6,9 @@ import Link from 'next/link';
 import { PlotDataType } from '@/types/types';
 import Select from 'react-select';
 import Sidebar from '../components/Sidebar';
+import SelectedModelPicker from '../components/SelectedModelPicker';
 import Spinner from '../components/Spinner';
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useModel } from '../contexts/ModelContext';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
@@ -20,52 +21,74 @@ const ShapSummaryPlotsPage = () => {
   const [selectedOutputVariable, setSelectedOutputVariable] = useState<string>();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>("");
-
+  const optionsModelRef = useRef('');
 
   useEffect(() => {
-    const fetchOutputVariableOptions = async () => {
-      if (selectedModel) {
-        try {
-          setIsLoading(true);
-          const response = await fetch(`./api/output-variable-options/${selectedModel}`);
-          const data = await response.json();
-          const options = data.output_variable_options.map((option: string) => ({ value: option, label: option }));
-          setOutputVariableOptions(options);
+    optionsModelRef.current = '';
+    setOutputVariableOptions([]);
+    setSelectedOutputVariable(undefined);
+    setPlotData(null);
+    setError('');
 
-          // Set the first option as selected by default
-          if (options.length >= 1) {
-            setSelectedOutputVariable(options[0].value);
-          }
-          setIsLoading(false);
-        } catch (error) {
-          console.error('Error fetching variable options:', error);
-        }
+    if (!selectedModel) {
+      setIsLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setIsLoading(true);
+
+    const fetchOutputVariableOptions = async () => {
+      try {
+        const response = await fetch(`./api/output-variable-options/${selectedModel}`, {
+          signal: controller.signal,
+        });
+        const data = await response.json();
+        const options = data.output_variable_options.map((option: string) => ({
+          value: option,
+          label: option,
+        }));
+        optionsModelRef.current = selectedModel;
+        setOutputVariableOptions(options);
+        setSelectedOutputVariable(options[0]?.value);
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        console.error('Error fetching variable options:', err);
+        setIsLoading(false);
       }
     };
 
     fetchOutputVariableOptions();
+    return () => controller.abort();
   }, [selectedModel]);
 
-  
   useEffect(() => {
-    async function fetchShapSummaryPlotData() {
-      if (!selectedModel || !selectedOutputVariable) {
-        return;
-      }
+    if (
+      !selectedModel ||
+      !selectedOutputVariable ||
+      optionsModelRef.current !== selectedModel ||
+      !outputVariableOptions.some((option) => option.value === selectedOutputVariable)
+    ) {
+      return;
+    }
 
-      // Clear any existing error
-      setError("");
+    const controller = new AbortController();
+    // Clear any existing error
+    setError('');
+    setIsLoading(true);
 
+    const fetchShapSummaryPlotData = async () => {
       try {
-        setIsLoading(true);
         const response = await fetch(
-          `./api/shap-summary-plots/${selectedModel}`, {
+          `./api/shap-summary-plots/${selectedModel}`,
+          {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({ selected_output: selectedOutputVariable }),
-          }
+            signal: controller.signal,
+          },
         );
 
         if (!response.ok) {
@@ -75,44 +98,44 @@ const ShapSummaryPlotsPage = () => {
           } else if (response.status === 500) {
             setError("An error occurred. Please double-check to make sure you're not selecting a categorical output. Also, double-check that you didn't select a Neural Network model; the SHAP pages do not yet support these. If you've verified that the prior scenarios don't apply to you, this may be an internal server error.");
           } else {
-            setError(errorData.detail || "An unexpected error occurred");
+            setError(errorData.detail || 'An unexpected error occurred');
           }
+          setIsLoading(false);
           return;
         }
 
         const data = await response.json();
-
-
+        setError('');
         setPlotData(data.plot_data);
         setIsLoading(false);
-      } catch (error) {
-        console.error('Error fetching shap summary plot data:', error);
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        console.error('Error fetching shap summary plot data:', err);
         setIsLoading(false);
       }
     };
 
     fetchShapSummaryPlotData();
-  }, [selectedModel, selectedOutputVariable]);
+    return () => controller.abort();
+  }, [selectedModel, selectedOutputVariable, outputVariableOptions]);
 
 
   // TODO: someday, figure out how to pull this out as a function that can be imported to any page
   // handle plot rendering detection
   useEffect(() => {
     if (plotData) {
-      // Add a small delay to ensure the plot is fully rendered
       const timer = setTimeout(() => {
         setIsLoading(false);
-      }, 300); // Adjust this delay if needed
-      
+      }, 300);  // Adjust this delay if needed
+
       return () => clearTimeout(timer);
     }
   }, [plotData]);
 
-
   return (
     <div className="flex min-h-screen">
       <Sidebar />
-      
+
       <div className="flex-1 flex flex-col items-center p-8 gap-4">
         <div className="flex gap-4 items-center flex-col sm:flex-row">
           <Link
@@ -129,14 +152,7 @@ const ShapSummaryPlotsPage = () => {
           </Link>
 
         </div>
-        <div>
-          <h2>
-            {selectedModel
-              ? `Selected model: ${selectedModel}`
-              : 'No model selected'
-            }
-          </h2>
-        </div>
+        <SelectedModelPicker />
         <div className="relative">
         <label>{"Selected output variable:"}</label>
         <Select
@@ -146,7 +162,7 @@ const ShapSummaryPlotsPage = () => {
                 setSelectedOutputVariable(selected.value);
               }
             }}
-            value={outputVariableOptions.filter(option => selectedOutputVariable?.includes(option.value))}
+            value={outputVariableOptions.filter((option) => option.value === selectedOutputVariable)}
             name="selected-variables"
             classNamePrefix="select"
           />
@@ -163,7 +179,7 @@ const ShapSummaryPlotsPage = () => {
               {error}
             </div>
           )}
-          {isLoading ? <Spinner /> : 
+          {isLoading ? <Spinner /> :
             plotData && (
               <Plot
                 data={plotData.data}

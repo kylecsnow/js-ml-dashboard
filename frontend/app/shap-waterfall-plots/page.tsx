@@ -6,8 +6,9 @@ import Link from 'next/link';
 import { PlotDataType } from '@/types/types';
 import Select from 'react-select';
 import Sidebar from '../components/Sidebar';
+import SelectedModelPicker from '../components/SelectedModelPicker';
 import Spinner from '../components/Spinner';
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useModel } from '../contexts/ModelContext';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
@@ -22,86 +23,89 @@ const ShapWaterfallPlotsPage = () => {
   const [selectedSample, setSelectedSample] = useState<string[]>();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>("");
-
+  const optionsModelRef = useRef('');
 
   useEffect(() => {
-    const fetchOutputVariableOptions = async () => {
-      if (!selectedModel) {
-        setIsLoading(false);
-        return;
-      }
+    optionsModelRef.current = '';
+    setOutputVariableOptions([]);
+    setSelectedOutputVariable(undefined);
+    setSampleOptions([]);
+    setSelectedSample(undefined);
+    setPlotData(null);
+    setError('');
 
+    if (!selectedModel) {
+      setIsLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setIsLoading(true);
+
+    const fetchPageOptions = async () => {
       try {
-        setIsLoading(true);
-        const response = await fetch(`./api/output-variable-options/${selectedModel}`);
-        const data = await response.json();
-        const options = data.output_variable_options.map((option: string) => ({ value: option, label: option }));
-        setOutputVariableOptions(options);
-
-        // Set the first option as selected by default
-        if (options.length >= 1) {
-          setSelectedOutputVariable(options[0].value);
-        }
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Error fetching variable options:', error);
+        const [outputResponse, sampleResponse] = await Promise.all([
+          fetch(`./api/output-variable-options/${selectedModel}`, { signal: controller.signal }),
+          fetch(`./api/sample-options/${selectedModel}`, { signal: controller.signal }),
+        ]);
+        const outputData = await outputResponse.json();
+        const sampleData = await sampleResponse.json();
+        const outputs = outputData.output_variable_options.map((option: string) => ({
+          value: option,
+          label: option,
+        }));
+        const samples = sampleData.sample_options.map((option: string) => ({
+          value: option,
+          label: option,
+        }));
+        optionsModelRef.current = selectedModel;
+        setOutputVariableOptions(outputs);
+        setSampleOptions(samples);
+        setSelectedOutputVariable(outputs[0]?.value);
+        setSelectedSample(samples[0] ? [samples[0].value] : undefined);
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        console.error('Error fetching waterfall options:', err);
         setIsLoading(false);
       }
     };
 
-    fetchOutputVariableOptions();
+    fetchPageOptions();
+    return () => controller.abort();
   }, [selectedModel]);
 
 
   useEffect(() => {
-    const fetchSampleOptions = async () => {
-      if (!selectedModel) {
-        setIsLoading(false);
-        return;
-      }
+    if (
+      !selectedModel ||
+      !selectedOutputVariable ||
+      !selectedSample ||
+      optionsModelRef.current !== selectedModel ||
+      !outputVariableOptions.some((option) => option.value === selectedOutputVariable) ||
+      !sampleOptions.some((option) => selectedSample.includes(option.value))
+    ) {
+      return;
+    }
 
+    const controller = new AbortController();
+    setError('');
+    setIsLoading(true);
+
+    const fetchShapWaterfallPlotData = async () => {
       try {
-        setIsLoading(true);
-        const response = await fetch(`./api/sample-options/${selectedModel}`);
-        const data = await response.json();
-        const options = data.sample_options.map((option: string) => ({ value: option, label: option }));
-        setSampleOptions(options);
-
-        // Set the first option as selected by default
-        if (options.length >= 1) {
-          setSelectedSample([options[0].value]);
-        }
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Error fetching variable options:', error);
-        setIsLoading(false);
-      }
-    };
-
-    fetchSampleOptions();
-  }, [selectedModel, selectedOutputVariable]);
-  
-
-  useEffect(() => {
-    async function fetchShapWaterfallPlotData() {
-      if (!selectedModel || !selectedOutputVariable || !selectedSample) {
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        setIsLoading(true);
         const response = await fetch(
-          `./api/shap-waterfall-plots/${selectedModel}`, {
+          `./api/shap-waterfall-plots/${selectedModel}`,
+          {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ 
-              selected_output: selectedOutputVariable, 
-              selected_sample: selectedSample 
+            body: JSON.stringify({
+              selected_output: selectedOutputVariable,
+              selected_sample: selectedSample,
             }),
-          }
+            signal: controller.signal,
+          },
         );
 
         if (!response.ok) {
@@ -111,23 +115,26 @@ const ShapWaterfallPlotsPage = () => {
           } else if (response.status === 500) {
             setError("An error occurred. Please double-check to make sure you're not selecting a categorical output. Also, double-check that you didn't select a Neural Network model; the SHAP pages do not yet support these. If you've verified that the prior scenarios don't apply to you, this may be an internal server error.");
           } else {
-            setError(errorData.detail || "An unexpected error occurred");
+            setError(errorData.detail || 'An unexpected error occurred');
           }
+          setIsLoading(false);
           return;
         }
 
         const data = await response.json();
+        setError('');
         setPlotData(data.plot_data);
         setIsLoading(false);
-      } catch (error) {
-        console.error('Error fetching waterfall plot data:', error);
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        console.error('Error fetching waterfall plot data:', err);
         setIsLoading(false);
       }
     };
 
     fetchShapWaterfallPlotData();
-  }, [selectedModel, selectedOutputVariable, selectedSample]);
-
+    return () => controller.abort();
+  }, [selectedModel, selectedOutputVariable, selectedSample, outputVariableOptions, sampleOptions]);
 
   // TODO: someday, figure out how to pull this out as a function that can be imported to any page
   // handle plot rendering detection
@@ -162,14 +169,7 @@ const ShapWaterfallPlotsPage = () => {
           </Link>
 
         </div>
-        <div>
-          <h2>
-            {selectedModel
-              ? `Selected model: ${selectedModel}`
-              : 'No model selected'
-            }
-          </h2>
-        </div>
+        <SelectedModelPicker />
         <div className="relative">
         <label>{"Selected output variable:"}</label>
         <Select
@@ -179,7 +179,7 @@ const ShapWaterfallPlotsPage = () => {
                 setSelectedOutputVariable(selected.value);
               }
             }}
-            value={outputVariableOptions.filter(option => selectedOutputVariable?.includes(option.value))} // Set selected values
+            value={outputVariableOptions.filter((option) => option.value === selectedOutputVariable)}  // Set selected values
             name="selected-variables"
             classNamePrefix="select"
           />
@@ -191,8 +191,7 @@ const ShapWaterfallPlotsPage = () => {
                 setSelectedSample([selected.value]);
               }
             }}
-            // value={selectedSample} // Set selected values
-            value={sampleOptions.filter(option => selectedSample?.includes(option.value))} // Set selected values
+            value={sampleOptions.filter((option) => selectedSample?.includes(option.value))}  // Set selected values
             name="selected-sample"
             classNamePrefix="select"
           />        
@@ -209,7 +208,7 @@ const ShapWaterfallPlotsPage = () => {
               {error}
             </div>
           )}
-          {isLoading ? <Spinner /> : 
+          {isLoading ? <Spinner /> :
             plotData && (
               <Plot
                 data={plotData.data}
@@ -223,6 +222,5 @@ const ShapWaterfallPlotsPage = () => {
     </div>
   );
 };
-
 
 export default ShapWaterfallPlotsPage;

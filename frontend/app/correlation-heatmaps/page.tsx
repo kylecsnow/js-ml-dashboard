@@ -6,6 +6,7 @@ import Link from 'next/link';
 import React, { useState, useEffect } from 'react';
 import { PlotDataType } from '@/types/types';
 import Sidebar from '../components/Sidebar';
+import SelectedModelPicker from '../components/SelectedModelPicker';
 // import { Switch } from '@headlessui/react';
 import { useModel } from '../contexts/ModelContext';
 
@@ -84,14 +85,7 @@ const CorrelationHeatmapsPage = () => {
 
 
         </div>
-        <div>
-          <h2>
-            {selectedModel 
-              ? `Selected model: ${selectedModel}`
-              : 'No model selected'
-            }
-          </h2>
-        </div>
+        <SelectedModelPicker />
         <div className="flex gap-4 items-center">
           <select
             value={selectedHeatmapType}

@@ -1,0 +1,96 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import type { ReactNode } from 'react';
+import Sidebar from '../../app/components/Sidebar';
+
+const navState = vi.hoisted(() => ({ pathname: '/overview' }));
+
+vi.mock('next/navigation', () => ({
+  usePathname: () => navState.pathname,
+}));
+
+vi.mock('next/link', () => ({
+  default: ({
+    children,
+    href,
+    className,
+  }: {
+    children: ReactNode;
+    href: string;
+    className?: string;
+  }) => (
+    <a href={href} className={className}>
+      {children}
+    </a>
+  ),
+}));
+
+const hidden = { hidden: true } as const;
+
+function nav() {
+  return screen.getByRole('navigation', { name: 'Sidebar', ...hidden });
+}
+
+describe('Sidebar', () => {
+  beforeEach(() => {
+    navState.pathname = '/overview';
+    localStorage.clear();
+  });
+
+  it('renders Home, then ML Dashboard, then Bonus', () => {
+    render(<Sidebar />);
+
+    const sidebar = nav();
+    const labels = within(sidebar)
+      .getAllByRole('link', hidden)
+      .map((link) => link.textContent?.replace(/\s+/g, ' ').trim());
+
+    expect(labels[0]).toBe('Home');
+    expect(labels.slice(1, 7)).toEqual([
+      'Overview',
+      'Violin Plots',
+      'Scatter Plots',
+      'Correlation Heatmaps',
+      'SHAP Summary Plots',
+      'SHAP Waterfall Plots',
+    ]);
+    expect(labels.slice(7)).toEqual([
+      'Molecular Design',
+      'Dataset Generator',
+      'Object Detection',
+    ]);
+
+    const sectionButtons = within(sidebar).getAllByRole('button', hidden)
+      .filter((button) => button.getAttribute('aria-controls')?.startsWith('sidebar-section-'));
+    expect(sectionButtons.map((button) => button.textContent?.trim())).toEqual([
+      'ML Dashboard',
+      'Bonus',
+    ]);
+  });
+
+  it('collapses and expands a section', async () => {
+    const user = userEvent.setup();
+    render(<Sidebar />);
+
+    const bonusToggle = screen.getByRole('button', { name: 'Bonus', ...hidden });
+    expect(screen.getByRole('link', { name: /Molecular Design/, ...hidden })).toBeInTheDocument();
+
+    await user.click(bonusToggle);
+    expect(screen.queryByRole('link', { name: /Molecular Design/, ...hidden })).not.toBeInTheDocument();
+    expect(bonusToggle).toHaveAttribute('aria-expanded', 'false');
+
+    await user.click(bonusToggle);
+    expect(screen.getByRole('link', { name: /Molecular Design/, ...hidden })).toBeInTheDocument();
+    expect(bonusToggle).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('marks the current page as selected', () => {
+    navState.pathname = '/dataset-generator';
+    render(<Sidebar />);
+
+    const current = screen.getByRole('link', { name: /Dataset Generator/, ...hidden });
+    expect(current.className).toContain('bg-black');
+    expect(screen.getByRole('link', { name: /Home/, ...hidden }).className).not.toContain('bg-black');
+  });
+});

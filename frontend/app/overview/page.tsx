@@ -5,6 +5,7 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { PlotDataType } from '@/types/types';
 import Sidebar from '../components/Sidebar';
+import SelectedModelPicker from '../components/SelectedModelPicker';
 import Spinner from '../components/Spinner';
 import { useEffect, useState } from 'react';
 import { useModel } from '../contexts/ModelContext';
@@ -67,14 +68,7 @@ export default function Overview() {
             Home
           </Link>
         </div>
-        <div>
-          <h2>
-            {selectedModel 
-              ? `Selected model: ${selectedModel}`
-              : 'No model selected'
-            }
-          </h2>
-        </div>
+        <SelectedModelPicker />
         <div className="items-center justify-items-center p-8 pb-20 gap-16 sm:p-8">
           {/* <div>
             <h3>TODOs:</h3>

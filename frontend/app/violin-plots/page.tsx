@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from 'next/link';
 import { PlotDataType } from '@/types/types';
 import Sidebar from '../components/Sidebar';
+import SelectedModelPicker from '../components/SelectedModelPicker';
 import Spinner from '../components/Spinner';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useModel } from '../contexts/ModelContext';
@@ -27,6 +28,11 @@ const ViolinPlotsPage = () => {
   const [tempPageNumber, setTempPageNumber] = useState(1); // Temporary state for page number input
 
   
+  useEffect(() => {
+    setCurrentPage(1);
+    setTempPageNumber(1);
+  }, [selectedModel]);
+
   useEffect(() => {
     async function fetchViolinPlotData() {
       if (!selectedModel) {
@@ -177,14 +183,7 @@ const ViolinPlotsPage = () => {
           </Link>
 
         </div>
-        <div>
-          <h2>
-            {selectedModel
-              ? `Selected model: ${selectedModel}`
-              : 'No model selected'
-            }
-          </h2>
-        </div>
+        <SelectedModelPicker />
         <div className="flex gap-2">
           <div>
             <label className="mr-2">Show Box Plot</label>

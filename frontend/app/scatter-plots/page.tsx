@@ -7,6 +7,7 @@ import { PlotDataType } from '@/types/types';
 import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
 import Sidebar from '../components/Sidebar';
+import SelectedModelPicker from '../components/SelectedModelPicker';
 import { useModel } from '../contexts/ModelContext';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
@@ -126,14 +127,7 @@ const ScatterPlotsPage = () => {
           </Link>
 
         </div>
-        <div>
-          <h2>
-            {selectedModel 
-              ? `Selected model: ${selectedModel}`
-              : 'No model selected'
-            }
-          </h2>
-        </div>
+        <SelectedModelPicker />
         <div className="relative">
           <Select
             isMulti
