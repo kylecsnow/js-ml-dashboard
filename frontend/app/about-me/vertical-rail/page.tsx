@@ -4,17 +4,20 @@ import AboutMeChrome from '../components/AboutMeChrome';
 import EntryCopy from '../components/EntryCopy';
 import EntryVisual from '../components/EntryVisual';
 import KindBadge from '../components/KindBadge';
-import { TIMELINE, TIMELINE_IDS } from '../data';
+import { TIMELINE } from '../data';
 import { KIND_META } from '../types';
 import { useTimelineNavigation } from '../useTimelineNavigation';
 
 const CARD_CLASS =
   'overflow-hidden rounded-3xl border border-white/80 bg-white/65 shadow-[0_24px_80px_rgba(87,102,129,0.12)] backdrop-blur-[3px]';
 
+const ENTRIES = [...TIMELINE].sort((a, b) => b.startYear - a.startYear);
+const ENTRY_IDS = ENTRIES.map((entry) => entry.id);
+
 export default function VerticalRailPage() {
-  const { activeId, goTo } = useTimelineNavigation(TIMELINE_IDS);
-  const activeIndex = Math.max(0, TIMELINE.findIndex((entry) => entry.id === activeId));
-  const progress = TIMELINE.length > 1 ? activeIndex / (TIMELINE.length - 1) : 0;
+  const { activeId, goTo } = useTimelineNavigation(ENTRY_IDS);
+  const activeIndex = Math.max(0, ENTRIES.findIndex((entry) => entry.id === activeId));
+  const progress = ENTRIES.length > 1 ? activeIndex / (ENTRIES.length - 1) : 0;
 
   return (
     <AboutMeChrome
@@ -24,7 +27,7 @@ export default function VerticalRailPage() {
       subnav={
         <nav aria-label="Timeline years" className="border-t border-white/60 px-4 py-2 md:hidden">
           <ol className="flex gap-2 overflow-x-auto">
-            {TIMELINE.map((entry) => {
+            {ENTRIES.map((entry) => {
               const active = entry.id === activeId;
               return (
                 <li key={entry.id}>
@@ -60,7 +63,7 @@ export default function VerticalRailPage() {
               style={{ height: `calc(${progress} * (100% - 1.5rem))` }}
             />
             <ol className="relative space-y-1">
-              {TIMELINE.map((entry) => {
+              {ENTRIES.map((entry) => {
                 const active = entry.id === activeId;
                 const meta = KIND_META[entry.kind];
                 return (
@@ -101,7 +104,7 @@ export default function VerticalRailPage() {
 
         <div className="min-w-0 flex-1">
           <div className="space-y-10">
-            {TIMELINE.map((entry) => (
+            {ENTRIES.map((entry) => (
               <article key={entry.id} id={entry.id} className={`${CARD_CLASS} scroll-mt-36 md:scroll-mt-28`}>
                 <div className="grid gap-0 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
                   <EntryVisual entry={entry} className="aspect-[4/3] md:aspect-auto md:min-h-[280px]" />
