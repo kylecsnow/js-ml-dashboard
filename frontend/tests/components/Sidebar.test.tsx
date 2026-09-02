@@ -47,7 +47,8 @@ describe('Sidebar', () => {
       .map((link) => link.textContent?.replace(/\s+/g, ' ').trim());
 
     expect(labels[0]).toBe('Home');
-    expect(labels.slice(1, 7)).toEqual([
+    expect(labels[1]).toBe('About Me');
+    expect(labels.slice(2, 8)).toEqual([
       'Overview',
       'Violin Plots',
       'Scatter Plots',
@@ -55,7 +56,7 @@ describe('Sidebar', () => {
       'SHAP Summary Plots',
       'SHAP Waterfall Plots',
     ]);
-    expect(labels.slice(7)).toEqual([
+    expect(labels.slice(8)).toEqual([
       'Molecular Design',
       'Dataset Generator',
       'Object Detection',
@@ -83,6 +84,14 @@ describe('Sidebar', () => {
     await user.click(bonusToggle);
     expect(screen.getByRole('link', { name: /Molecular Design/, ...hidden })).toBeInTheDocument();
     expect(bonusToggle).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('marks About Me as selected on variant routes', () => {
+    navState.pathname = '/about-me/spine';
+    render(<Sidebar />);
+
+    expect(screen.getByRole('link', { name: /About Me/, ...hidden }).className).toContain('bg-black');
+    expect(screen.getByRole('link', { name: /Home/, ...hidden }).className).not.toContain('bg-black');
   });
 
   it('marks the current page as selected', () => {

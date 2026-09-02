@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 640" role="img">
+  <defs>
+    <linearGradient id="g" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#f3eef9"/>
+      <stop offset="100%" stop-color="#d7cce8"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="640" fill="url(#g)"/>
+  <rect x="160" y="120" width="420" height="430" rx="8" fill="#fbfafd" stroke="#8a48cd" stroke-width="5"/>
+  <rect x="200" y="170" width="340" height="18" fill="#8a48cd" opacity="0.35"/>
+  <rect x="200" y="210" width="300" height="10" fill="#5c6a7e" opacity="0.2"/>
+  <rect x="200" y="230" width="280" height="10" fill="#5c6a7e" opacity="0.15"/>
+  <rect x="200" y="250" width="310" height="10" fill="#5c6a7e" opacity="0.15"/>
+  <rect x="200" y="290" width="220" height="10" fill="#5c6a7e" opacity="0.2"/>
+  <rect x="200" y="310" width="260" height="10" fill="#5c6a7e" opacity="0.15"/>
+  <rect x="200" y="350" width="180" height="90" rx="6" fill="#8a48cd" opacity="0.12"/>
+  <rect x="430" y="160" width="280" height="360" rx="8" fill="#f7f4fb" stroke="#5c6a7e" stroke-width="4" transform="rotate(8 570 340)"/>
+  <text x="620" y="330" fill="#8a48cd" font-family="ui-serif, Georgia, serif" font-size="88" font-style="italic"></text>
+</svg>
