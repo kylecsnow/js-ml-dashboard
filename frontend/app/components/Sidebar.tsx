@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import MenuIcon from '@mui/icons-material/Menu';
 import SidebarTooltip from './SidebarTooltip';
 
 const MIN_SIDEBAR_WIDTH = 180;
@@ -117,10 +118,14 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   );
 }
 
+const TOGGLE_TAB_CLASS =
+  'fixed left-0 top-[max(1.5rem,env(safe-area-inset-top))] z-40 items-center justify-center rounded-r-md border border-l-0 border-gray-300 bg-[#dbdbdb] shadow-md hover:bg-gray-200';
+
 export default function Sidebar() {
   const pathName = usePathname();
   const [width, setWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [openSections, setOpenSections] = useState(DEFAULT_OPEN_SECTIONS);
   const widthDragRef = useRef<{ startX: number; startWidth: number } | null>(null);
   const widthRef = useRef(width);
@@ -155,6 +160,10 @@ export default function Sidebar() {
   }, [pathName]);
 
   useEffect(() => {
+    setMobileOpen(false);
+  }, [pathName]);
+
+  useEffect(() => {
     function onMove(e: MouseEvent | TouchEvent) {
       if (!widthDragRef.current) return;
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
@@ -184,6 +193,20 @@ export default function Sidebar() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!mobileOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setMobileOpen(false);
+    }
+    window.addEventListener('keydown', onKey);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileOpen]);
+
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
       const next = !prev;
@@ -200,87 +223,122 @@ export default function Sidebar() {
     });
   };
 
-  if (collapsed) {
-    return (
-      <div className="hidden sm:block flex-shrink-0 w-0">
+  return (
+    <>
+      {!mobileOpen && (
         <button
           type="button"
-          onClick={toggleCollapsed}
-          aria-label="Expand sidebar"
+          onClick={() => setMobileOpen(true)}
+          aria-label="Open sidebar"
           aria-expanded={false}
-          className="fixed left-0 top-6 z-40 flex h-7 w-7 items-center justify-center rounded-r-md border border-l-0 border-gray-300 bg-[#dbdbdb] shadow-md hover:bg-gray-200"
+          className={`${TOGGLE_TAB_CLASS} flex h-10 w-10 sm:hidden`}
         >
-          <ChevronRightIcon fontSize="small" />
+          <MenuIcon fontSize="small" />
         </button>
-      </div>
-    );
-  }
+      )}
 
-  return (
-    <div
-      className="relative hidden sm:block flex-shrink-0"
-      style={{ width }}
-    >
-      <aside
-        style={{ backgroundColor: '#dbdbdbff', width }}
-        className="relative h-full min-h-screen overflow-hidden p-6 dark:bg-gray-800"
-      >
-        <div className="mb-3 flex items-center justify-end">
+      {collapsed && (
+        <div className="hidden w-0 flex-shrink-0 sm:block">
           <button
             type="button"
             onClick={toggleCollapsed}
-            aria-label="Collapse sidebar"
-            aria-expanded={true}
-            className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-gray-200"
+            aria-label="Expand sidebar"
+            aria-expanded={false}
+            className={`${TOGGLE_TAB_CLASS} hidden h-7 w-7 sm:flex`}
           >
-            <ChevronLeftIcon fontSize="small" />
+            <ChevronRightIcon fontSize="small" />
           </button>
         </div>
+      )}
 
-        <nav aria-label="Sidebar" className="flex flex-col gap-[6px]">
-          <NavLink item={HOME_ITEM} active={pathName === HOME_ITEM.href} />
-
-          {NAV_SECTIONS.map((section) => {
-            const isOpen = openSections[section.id];
-            const panelId = `sidebar-section-${section.id}`;
-            return (
-              <div key={section.id} className="mt-2 flex flex-col gap-[6px] border-t border-black/10 pt-2">
-                <button
-                  type="button"
-                  onClick={() => toggleSection(section.id)}
-                  aria-expanded={isOpen}
-                  aria-controls={panelId}
-                  className="flex w-full appearance-none items-center justify-between border-0 bg-transparent px-2 py-0.5 text-left text-[11px] font-semibold tracking-[0.06em] text-neutral-800 hover:text-black"
-                >
-                  {section.label}
-                  <ExpandMoreIcon
-                    fontSize="inherit"
-                    className={`text-[16px] text-neutral-600 transition-transform ${isOpen ? '' : '-rotate-90'}`}
-                  />
-                </button>
-                {isOpen && (
-                  <div id={panelId} className="flex flex-col gap-[6px]">
-                    {section.items.map((item) => (
-                      <NavLink key={item.href} item={item} active={pathName === item.href} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </nav>
-
-        <div
-          className="absolute top-0 right-0 z-10 h-full w-1.5 cursor-ew-resize hover:bg-blue-400/40 active:bg-blue-500/50"
-          onMouseDown={(e) => {
-            widthDragRef.current = { startX: e.clientX, startWidth: width };
-            e.preventDefault();
-          }}
-          onTouchStart={(e) => {
-            widthDragRef.current = { startX: e.touches[0].clientX, startWidth: width };
-          }}
+      {mobileOpen && (
+        <button
+          type="button"
+          aria-label="Dismiss sidebar"
+          onClick={() => setMobileOpen(false)}
+          className="fixed inset-0 z-40 bg-black/40 sm:hidden"
         />
-      </aside>
-    </div>
+      )}
+
+      <div
+        className={[
+          'flex-shrink-0',
+          mobileOpen ? 'fixed inset-y-0 left-0 z-50' : 'hidden',
+          collapsed ? 'sm:hidden' : 'sm:relative sm:block',
+        ].join(' ')}
+        style={{ width }}
+      >
+        <aside
+          style={{ backgroundColor: '#dbdbdbff', width }}
+          className="relative h-full min-h-screen overflow-y-auto overflow-x-hidden p-6 shadow-xl sm:shadow-none dark:bg-gray-800"
+        >
+          <div className="mb-3 flex items-center justify-end">
+            {mobileOpen && (
+              <button
+                type="button"
+                onClick={() => setMobileOpen(false)}
+                aria-label="Close sidebar"
+                className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-gray-200 sm:hidden"
+              >
+                <ChevronLeftIcon fontSize="small" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              aria-label="Collapse sidebar"
+              aria-expanded={true}
+              className="hidden h-7 w-7 items-center justify-center rounded-md hover:bg-gray-200 sm:flex"
+            >
+              <ChevronLeftIcon fontSize="small" />
+            </button>
+          </div>
+
+          <nav aria-label="Sidebar" className="flex flex-col gap-[6px]">
+            <NavLink item={HOME_ITEM} active={pathName === HOME_ITEM.href} />
+
+            {NAV_SECTIONS.map((section) => {
+              const isOpen = openSections[section.id];
+              const panelId = `sidebar-section-${section.id}`;
+              return (
+                <div key={section.id} className="mt-2 flex flex-col gap-[6px] border-t border-black/10 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleSection(section.id)}
+                    aria-expanded={isOpen}
+                    aria-controls={panelId}
+                    className="flex w-full appearance-none items-center justify-between border-0 bg-transparent px-2 py-0.5 text-left text-[11px] font-semibold tracking-[0.06em] text-neutral-800 hover:text-black"
+                  >
+                    {section.label}
+                    <ExpandMoreIcon
+                      fontSize="inherit"
+                      className={`text-[16px] text-neutral-600 transition-transform ${isOpen ? '' : '-rotate-90'}`}
+                    />
+                  </button>
+                  {isOpen && (
+                    <div id={panelId} className="flex flex-col gap-[6px]">
+                      {section.items.map((item) => (
+                        <NavLink key={item.href} item={item} active={pathName === item.href} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </nav>
+
+          <div
+            className="absolute top-0 right-0 z-10 hidden h-full w-1.5 cursor-ew-resize hover:bg-blue-400/40 active:bg-blue-500/50 sm:block"
+            onMouseDown={(e) => {
+              widthDragRef.current = { startX: e.clientX, startWidth: width };
+              e.preventDefault();
+            }}
+            onTouchStart={(e) => {
+              widthDragRef.current = { startX: e.touches[0].clientX, startWidth: width };
+            }}
+          />
+        </aside>
+      </div>
+    </>
   );
 }

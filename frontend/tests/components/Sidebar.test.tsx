@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import Sidebar from '../../app/components/Sidebar';
@@ -92,5 +92,46 @@ describe('Sidebar', () => {
     const current = screen.getByRole('link', { name: /Dataset Generator/, ...hidden });
     expect(current.className).toContain('bg-black');
     expect(screen.getByRole('link', { name: /Home/, ...hidden }).className).not.toContain('bg-black');
+  });
+
+  it('opens and closes the mobile drawer', async () => {
+    const user = userEvent.setup();
+    render(<Sidebar />);
+
+    const openButton = screen.getByRole('button', { name: 'Open sidebar' });
+    expect(openButton.className).toContain('sm:hidden');
+
+    await user.click(openButton);
+    expect(screen.queryByRole('button', { name: 'Open sidebar' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close sidebar' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Dismiss sidebar' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Close sidebar' }));
+    expect(screen.getByRole('button', { name: 'Open sidebar' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Close sidebar' })).not.toBeInTheDocument();
+  });
+
+  it('still offers a mobile open control after the sidebar was collapsed', async () => {
+    localStorage.setItem('sidebarCollapsed', 'true');
+    render(<Sidebar />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Expand sidebar' })).toBeInTheDocument();
+    });
+    expect(screen.getByRole('button', { name: 'Open sidebar' })).toBeInTheDocument();
+  });
+
+  it('closes the mobile drawer after navigation', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<Sidebar />);
+
+    await user.click(screen.getByRole('button', { name: 'Open sidebar' }));
+    expect(screen.getByRole('button', { name: 'Close sidebar' })).toBeInTheDocument();
+
+    navState.pathname = '/violin-plots';
+    rerender(<Sidebar />);
+
+    expect(screen.getByRole('button', { name: 'Open sidebar' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Close sidebar' })).not.toBeInTheDocument();
   });
 });
