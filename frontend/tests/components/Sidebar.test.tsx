@@ -86,8 +86,8 @@ describe('Sidebar', () => {
     expect(bonusToggle).toHaveAttribute('aria-expanded', 'true');
   });
 
-  it('marks About Me as selected on variant routes', () => {
-    navState.pathname = '/about-me/spine';
+  it('marks About Me as selected', () => {
+    navState.pathname = '/about-me';
     render(<Sidebar />);
 
     expect(screen.getByRole('link', { name: /About Me/, ...hidden }).className).toContain('bg-black');

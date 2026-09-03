@@ -1,11 +1,10 @@
 import type { TimelineEntry } from './types';
 
 /**
- * Shared timeline content for every About Me layout.
+ * About Me timeline content.
  *
  * To add an item: append an object (unique `id`), drop an image in
- * `frontend/public/about-me/`, and point `image.src` at it. All three
- * page variants pick the list up automatically.
+ * `frontend/public/about-me/`, and point `image.src` at it.
  */
 export const TIMELINE: TimelineEntry[] = [
   {
@@ -145,5 +144,3 @@ export const TIMELINE: TimelineEntry[] = [
     },
   },
 ];
-
-export const TIMELINE_IDS = TIMELINE.map((entry) => entry.id);
