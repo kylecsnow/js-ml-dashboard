@@ -83,6 +83,14 @@ export default function AboutMePage() {
   return (
     <AboutMeShell
       title="About Me"
+      legend={
+        <p className="mt-3 flex flex-wrap items-center gap-2">
+          <KindBadge kind="work" />
+          <KindBadge kind="publication" />
+          <KindBadge kind="patent" />
+          <KindBadge kind="education" />
+        </p>
+      }
       subnav={
         <nav aria-label="Timeline years" className="border-t border-white/60 px-4 py-2 md:hidden">
           <ol className="flex gap-2 overflow-x-auto">
@@ -179,12 +187,6 @@ export default function AboutMePage() {
               </article>
             ))}
           </div>
-
-          <p className="mt-8 hidden items-center gap-3 text-xs text-slate-500 md:flex">
-            <KindBadge kind="work" />
-            <KindBadge kind="publication" />
-            <KindBadge kind="patent" />
-          </p>
         </div>
       </div>
     </AboutMeShell>

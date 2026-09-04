@@ -1,4 +1,4 @@
-export const TIMELINE_KINDS = ['work', 'publication', 'patent'] as const;
+export const TIMELINE_KINDS = ['work', 'publication', 'patent', 'education'] as const;
 
 export type TimelineKind = (typeof TIMELINE_KINDS)[number];
 
@@ -62,5 +62,13 @@ export const KIND_META: Record<
     activeText: 'text-[#129e76]',
     glow: 'shadow-[0_0_0_4px_rgba(18,158,118,0.2)]',
     bar: 'bg-[#129e76]',
+  },
+  education: {
+    label: 'Education',
+    chip: 'bg-amber-50 text-amber-900 ring-1 ring-inset ring-amber-200',
+    dot: 'bg-[#c4841d]',
+    activeText: 'text-[#b45309]',
+    glow: 'shadow-[0_0_0_4px_rgba(196,132,29,0.2)]',
+    bar: 'bg-[#c4841d]',
   },
 };
