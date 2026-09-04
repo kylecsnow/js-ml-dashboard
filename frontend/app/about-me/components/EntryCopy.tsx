@@ -19,7 +19,18 @@ export default function EntryCopy({
       </div>
       <div className="space-y-1">
         <h2 className={headingClassName}>{entry.title}</h2>
-        <p className="text-sm font-medium text-slate-600">{entry.org}</p>
+        {entry.href ? (
+          <a
+            href={entry.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm font-medium text-sky-800 underline decoration-sky-800/30 underline-offset-2 hover:decoration-sky-800"
+          >
+            {entry.org}
+          </a>
+        ) : (
+          <p className="text-sm font-medium text-slate-600">{entry.org}</p>
+        )}
       </div>
       <p className="text-base leading-relaxed text-slate-600">{entry.body}</p>
       {entry.highlights && entry.highlights.length > 0 ? (

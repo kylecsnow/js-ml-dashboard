@@ -6,13 +6,13 @@ import EntryCopy from './components/EntryCopy';
 import EntryVisual from './components/EntryVisual';
 import KindBadge from './components/KindBadge';
 import { TIMELINE } from './data';
-import { KIND_META } from './types';
+import { KIND_META, timelineSortYear } from './types';
 import { useTimelineNavigation } from './useTimelineNavigation';
 
 const CARD_CLASS =
   'overflow-hidden rounded-3xl border border-white/80 bg-white/65 shadow-[0_24px_80px_rgba(87,102,129,0.12)] backdrop-blur-[3px]';
 
-const ENTRIES = [...TIMELINE].sort((a, b) => b.startYear - a.startYear);
+const ENTRIES = [...TIMELINE].sort((a, b) => timelineSortYear(b) - timelineSortYear(a));
 const ENTRY_IDS = ENTRIES.map((entry) => entry.id);
 const SCROLL_TOP_OFFSET = 16;
 
@@ -122,7 +122,7 @@ export default function AboutMePage() {
         <nav
           ref={railRef}
           aria-label="Timeline"
-          className="hidden h-full w-52 shrink-0 overflow-y-auto self-stretch py-2 md:block"
+          className="hidden h-full w-56 shrink-0 overflow-y-auto self-stretch py-2 md:block"
         >
           <div className="relative pl-4">
             <div className="absolute bottom-3 left-[7px] top-3 w-px bg-slate-300" />
@@ -154,12 +154,12 @@ export default function AboutMePage() {
                       />
                       <span
                         className={`font-[family-name:var(--font-geist-mono)] text-[11px] uppercase tracking-[0.14em] ${
-                          active ? meta.activeText : 'text-slate-500'
+                          active ? meta.activeText : 'text-slate-600'
                         }`}
                       >
                         {entry.year}
                       </span>
-                      <span className={`text-sm leading-snug ${active ? 'font-medium text-slate-800' : 'text-slate-600'}`}>
+                      <span className={`text-sm leading-snug ${active ? 'font-medium text-slate-800' : 'text-slate-700'}`}>
                         {entry.summary}
                       </span>
                     </a>

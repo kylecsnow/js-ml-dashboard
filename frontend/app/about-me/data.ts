@@ -5,7 +5,8 @@ import type { TimelineEntry } from './types';
  *
  * To add an item: append an object (unique `id`), drop an image in
  * `frontend/public/about-me/`, and point `image.src` at it.
- * The page sorts by `startYear` (newest first).
+ * The page sorts newest-first by `endYear`, an `endYear` is set,
+ * otherwise by `startYear`. For current job, `'present'` can be set as the `endYear`.
  */
 export const TIMELINE: TimelineEntry[] = [
   {
@@ -13,9 +14,10 @@ export const TIMELINE: TimelineEntry[] = [
     kind: 'work',
     year: '2024–present',
     startYear: 2024,
+    endYear: 'present',
     title: 'Senior Solutions Engineer',
     org: 'NobleAI',
-    summary: 'Customer ML programs, de novo molecular design, and internal ML tooling.',
+    summary: 'Custom ML solutions, de novo molecular design, & synthetic demo generation',
     body: 'I build and deploy proof-of-value ML applications on AWS and Azure — for existing customers, pre-sales demos, and internal research into new markets. I own the path from incomplete industrial data through EDA and model tuning, and I work with Product on the NobleVIP roadmap, including a self-serve Model Builder and an agentic data-synthesis capability.',
     highlights: [
       'Led a de novo molecular-design program for flame retardants in low-loss semiconductor and EV uses — about $1.25–1.75M in estimated customer value, 2–3 years of R&D time saved, and three patent applications on new FR chemistries',
@@ -32,9 +34,10 @@ export const TIMELINE: TimelineEntry[] = [
     kind: 'work',
     year: '2021–2024',
     startYear: 2021,
+    endYear: 2024,
     title: 'Senior Data Scientist',
     org: 'Citrine Informatics',
-    summary: 'Materials informatics programs, active learning, and model-explainability tools.',
+    summary: 'Materials informatics, active learning, & model explainability tools',
     body: 'I was the technical owner on materials-informatics contracts — from experimental design through executive readouts that won renewals and expansions. I also stood up internal research (active-learning benchmarks, structurally constrained generative design) and a lightweight Dash app for model performance and explainability, and advised lab scientists and R&D leaders on adopting ML.',
     highlights: [
       'Drove technical success across ~$2M ARR of customer contracts',
@@ -53,7 +56,8 @@ export const TIMELINE: TimelineEntry[] = [
     startYear: 2023,
     title: 'A method of making a three-dimensional printed carbon-bonded composite article',
     org: 'USPTO · US 2023/0399520 A1',
-    summary: '3D-printed carbon-bonded composites; named inventor on a team of nine.',
+    href: 'https://patents.google.com/patent/US20230399520A1/en',
+    summary: 'Patent #3: 3D-printed carbon-bonded composites',
     body: 'Published December 2023. This Arkema application covers a method for making a 3D-printed carbon-bonded composite article — part of the photopolymer and composite printing work I did in Sartomer technical service. I am a co-inventor on a team of nine.',
     highlights: [
       'Named inventor (team of nine)',
@@ -72,7 +76,8 @@ export const TIMELINE: TimelineEntry[] = [
     startYear: 2022,
     title: 'Method of making glycerol carbonate (meth)acrylate and curable compositions based thereon',
     org: 'USPTO · US 2022/0298131 A1',
-    summary: 'Glycerol carbonate (meth)acrylate chemistry and curable compositions.',
+    href: 'https://patents.google.com/patent/US20220298131A1/en',
+    summary: 'Patent #2: Glycerol carbonate (meth)acrylate in UV-curable compositions',
     body: 'Published September 2022. Co-invented with S. Nunez. The application describes a route to glycerol carbonate (meth)acrylate and curable compositions built on that monomer — chemistry aimed at 3D-printable and other light-curable resin systems from the Sartomer work.',
     highlights: [
       'Co-inventor with S. Nunez',
@@ -91,7 +96,8 @@ export const TIMELINE: TimelineEntry[] = [
     startYear: 2022,
     title: 'Light-curable compositions useful for forming composite materials',
     org: 'USPTO · US 2022/0213245 A1',
-    summary: 'Light-curable resin compositions for composite materials.',
+    href: 'https://patents.google.com/patent/US20220213245A1/en',
+    summary: 'Patent #1: Cyanoacrylates for UV 3D printed carbon fiber composites',
     body: 'Published July 2022. Co-invented with W. Wolf. The application covers light-curable compositions for forming composite materials — the formulation side of the carbon-fiber and photopolymer printing work at Arkema.',
     highlights: [
       'Co-inventor with W. Wolf',
@@ -108,10 +114,11 @@ export const TIMELINE: TimelineEntry[] = [
     kind: 'work',
     year: '2018–2021',
     startYear: 2018,
+    endYear: 2021,
     title: '3D Printing Technical Service Engineer',
     org: 'Arkema Inc. (Sartomer)',
     location: 'Exton, PA',
-    summary: 'Photopolymer resins, structure–property ML, and three patent filings.',
+    summary: 'Photopolymer resins, structure–property ML, & application engineering',
     body: 'I sat between formulation chemistry and customers: designing high-performance 3D-printable photopolymers meant to compete with engineering plastics, and building a structure–property ML system that predicted mechanical, thermal, and rheological behavior from composition and process settings. I was technical lead on polymer materials for a carbon-fiber composite printing method aimed at aerospace, automotive, and energy parts, and I helped stand up data-management standards for the group’s formulation and property databases.',
     highlights: [
       'ML system for resin performance from chemistry and processing conditions',
@@ -130,7 +137,8 @@ export const TIMELINE: TimelineEntry[] = [
     startYear: 2017,
     title: 'Thermochemical synthesis of ammonia and syngas from natural gas at atmospheric pressure',
     org: 'Industrial & Engineering Chemistry Research',
-    summary: 'Atmospheric-pressure thermochemical route to ammonia and syngas.',
+    href: 'https://pubs.acs.org/iecred/article-abstract/56/47/14014/867703/Thermochemical-Synthesis-of-Ammonia-and-Syngas?redirectedFrom=PDF',
+    summary: 'Paper #3: Atmospheric-pressure route to ammonia and syngas',
     body: 'M.G. Heidlage, E.A. Kezar, K.C. Snow, P.H. Pfromm. Ind. Eng. Chem. Res. 2017, 56, 47, 14014–14024. Work from the University of Minnesota on making ammonia and syngas from natural gas without the usual high-pressure loop.',
     highlights: [
       'Ind. Eng. Chem. Res. 2017, 56, 47, 14014–14024',
@@ -147,10 +155,11 @@ export const TIMELINE: TimelineEntry[] = [
     kind: 'work',
     year: '2016–2018',
     startYear: 2016,
+    endYear: 2018,
     title: 'Environmental, Health, & Safety Engineer',
     org: 'Arkema Inc. (Hydrogen Peroxides)',
     location: 'Blooming Prairie, MN',
-    summary: 'Plant environmental compliance, wastewater, and capital projects.',
+    summary: 'EHS, wastewater, and chemical manufacturing',
     body: 'First industry role after graduate school: I owned environmental compliance for the hydrogen peroxide plant — wastewater-treatment performance, troubleshooting, and state and federal permits — and project-managed capital work including tank-farm secondary containment, storm-water piping, and waste-minimization projects.',
     highlights: [
       'Environmental compliance and permit performance for plant operations',
@@ -170,7 +179,7 @@ export const TIMELINE: TimelineEntry[] = [
     title: 'M.S., Chemical Engineering',
     org: 'University of Minnesota',
     location: 'Minneapolis, MN',
-    summary: 'Graduate chemical engineering, completed May 2016.',
+    summary: 'M.S. Chemical Engineering, University of Minnesota',
     body: 'Master’s in chemical engineering at the University of Minnesota–Twin Cities. The ammonia and syngas publication sits next to this stretch of the timeline.',
     highlights: ['Completed May 2016', 'Minneapolis, MN'],
     image: {
@@ -185,6 +194,7 @@ export const TIMELINE: TimelineEntry[] = [
     startYear: 2014,
     title: 'Optimization of Ni–Cr flux growth for hexagonal boron nitride single crystals',
     org: 'Journal of Crystal Growth',
+    href: 'https://www.sciencedirect.com/science/article/abs/pii/S0022024813006313',
     summary: 'Flux-growth optimization for hexagonal boron nitride crystals.',
     body: 'T.B. Hoffman, B. Clubine, Y. Zhang, K. Snow, J.H. Edgar. Journal of Crystal Growth 2014, 393, 114–118. Crystal-growth work on hexagonal boron nitride from a Ni–Cr flux, from the Kansas State years.',
     highlights: [
@@ -205,7 +215,7 @@ export const TIMELINE: TimelineEntry[] = [
     title: 'B.S., Chemical Engineering',
     org: 'Kansas State University',
     location: 'Manhattan, KS',
-    summary: 'Summa cum laude, May 2014.',
+    summary: 'B.S. Chemical Engineering, Kansas State University (summa cum laude)',
     body: 'Bachelor’s in chemical engineering at Kansas State University, summa cum laude. The hBN crystal-growth paper and the colloidal nanocrystal paper sit on either side of this degree.',
     highlights: ['Summa cum laude', 'Completed May 2014', 'Manhattan, KS'],
     image: {
@@ -220,7 +230,8 @@ export const TIMELINE: TimelineEntry[] = [
     startYear: 2013,
     title: 'A simple and generic approach for synthesizing colloidal metal and metal oxide nanocrystals',
     org: 'Nanoscale',
-    summary: 'A general route to colloidal metal and metal-oxide nanocrystals.',
+    href: 'https://pubs.rsc.org/nr/article-abstract/5/16/7368/407558/A-simple-and-generic-approach-for-synthesizing?redirectedFrom=fulltext',
+    summary: 'Paper #1: Electrochemical synthesis of colloidal metal & metal-oxide nanoparticles',
     body: 'J.E. Cloud, T.S. Yoder, N.K. Harvey, K. Snow, Y. Yang. Nanoscale 2013, 5, 7368–7378. A short, general synthesis method for colloidal metal and metal-oxide nanocrystals.',
     highlights: [
       'Nanoscale 2013, 5, 7368–7378',

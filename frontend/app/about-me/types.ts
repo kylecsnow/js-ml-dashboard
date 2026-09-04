@@ -15,10 +15,14 @@ export type TimelineEntry = {
   kind: TimelineKind;
   /** Display label, e.g. `2020–2023` or `2019`. */
   year: string;
-  /** Numeric year for sorting / scrubber position. Use the start year for ranges. */
+  /** Start of a range, or the only year for a paper / patent / degree. */
   startYear: number;
+  /** If set, ordering uses this instead of `startYear`. Use `'present'` for current roles. */
+  endYear?: number | 'present';
   title: string;
   org: string;
+  /** Optional external URL (patent filing, paper, etc). */
+  href?: string;
   location?: string;
   /** One-liner shown on compact timeline ticks. */
   summary: string;
@@ -27,6 +31,12 @@ export type TimelineEntry = {
   highlights?: string[];
   image: TimelineImage;
 };
+
+/** Newest-first sort key: `endYear` if set (`'present'` wins), otherwise `startYear`. */
+export function timelineSortYear(entry: TimelineEntry): number {
+  if (entry.endYear === 'present') return Number.POSITIVE_INFINITY;
+  return entry.endYear ?? entry.startYear;
+}
 
 export const KIND_META: Record<
   TimelineKind,
