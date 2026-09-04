@@ -52,13 +52,13 @@ RUN . venv/bin/activate && python3 -m pip install --no-deps .
 ########## RUN APP ##########
 #############################
 # Expose ports
-EXPOSE 8000 8777
+EXPOSE 8001 8778
 
 # Create a start script
 RUN echo '#!/bin/bash\n\
 . /app/venv/bin/activate\n\
-cd /app/frontend && npm run start & \n\
-cd /app/backend && python main.py' > /app/start.sh && \
+cd /app/frontend && BACKEND_PORT=8001 npm run start & \n\
+cd /app/backend && python main.py --port 8001' > /app/start.sh && \
 chmod +x /app/start.sh
 
 WORKDIR /app

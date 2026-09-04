@@ -24,7 +24,7 @@ app.include_router(schemas.router)
 # Add CORS middleware to allow requests from your Next.js frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8777"],
+    allow_origins=["http://localhost:8777", "http://localhost:8778"],
     # allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],

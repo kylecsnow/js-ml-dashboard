@@ -9,8 +9,8 @@ services:
       - .env
     platform: linux/amd64
     ports:
-      - "8777:8777"
-      - "8000:8000"
+      - "8778:8777"
+      - "8001:8000"
     volumes:
       - ./backend/models:/app/backend/models
       - ./backend/datasets:/app/backend/datasets
