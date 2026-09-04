@@ -47,7 +47,18 @@ export default function Home() {
           <div className="space-y-2">
             <p className="font-[family-name:var(--font-geist-mono)] text-xs uppercase tracking-[0.22em] text-slate-500">Kyle&apos;s Background / Bio</p>
             <h2 className="text-3xl font-semibold tracking-tight text-slate-800">About Me</h2>
-            <p className="text-sm font-[family-name:var(--font-geist-mono)]">Coming soon...</p>
+            <p className="text-sm font-[family-name:var(--font-geist-mono)]">My story: Work Experience, Patents & Publications, Education, & more.</p>
+          </div>
+          <div className="mt-auto">
+            <Link className={BUTTON_CLASS} href="/about-me">
+              <Image
+                src="/snowflake.svg"
+                alt="My snowflake logomark"
+                width={20}
+                height={20}
+              />
+              Open
+            </Link>
           </div>
         </section>
 

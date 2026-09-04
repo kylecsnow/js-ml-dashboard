@@ -31,6 +31,12 @@ const HOME_ITEM: NavItem = {
   tooltip: 'Return to the home page, where you can select a different model to analyze.',
 };
 
+const ABOUT_ITEM: NavItem = {
+  href: '/about-me',
+  label: 'About Me',
+  tooltip: 'Work history, publications, and patents on an interactive timeline.',
+};
+
 const NAV_SECTIONS: readonly NavSection[] = [
   {
     id: 'ml-dashboard',
@@ -103,6 +109,11 @@ const DEFAULT_OPEN_SECTIONS: Record<NavSection['id'], boolean> = {
   'ml-dashboard': true,
   bonus: true,
 };
+
+function isActivePath(href: string, pathName: string) {
+  if (href === '/') return pathName === '/';
+  return pathName === href || pathName.startsWith(`${href}/`);
+}
 
 function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
@@ -295,7 +306,8 @@ export default function Sidebar() {
           </div>
 
           <nav aria-label="Sidebar" className="flex flex-col gap-[6px]">
-            <NavLink item={HOME_ITEM} active={pathName === HOME_ITEM.href} />
+            <NavLink item={HOME_ITEM} active={isActivePath(HOME_ITEM.href, pathName)} />
+            <NavLink item={ABOUT_ITEM} active={isActivePath(ABOUT_ITEM.href, pathName)} />
 
             {NAV_SECTIONS.map((section) => {
               const isOpen = openSections[section.id];
@@ -318,7 +330,7 @@ export default function Sidebar() {
                   {isOpen && (
                     <div id={panelId} className="flex flex-col gap-[6px]">
                       {section.items.map((item) => (
-                        <NavLink key={item.href} item={item} active={pathName === item.href} />
+                        <NavLink key={item.href} item={item} active={isActivePath(item.href, pathName)} />
                       ))}
                     </div>
                   )}

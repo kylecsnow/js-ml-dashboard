@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 640" role="img">
+  <defs>
+    <linearGradient id="g" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e8f6f1"/>
+      <stop offset="100%" stop-color="#b7d8cc"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="640" fill="url(#g)"/>
+  <rect x="330" y="90" width="300" height="460" rx="28" fill="#f4faf7" stroke="#129e76" stroke-width="8"/>
+  <circle cx="480" cy="220" r="70" fill="none" stroke="#129e76" stroke-width="10"/>
+  <path d="M480 160 v120 M430 220 h100" stroke="#129e76" stroke-width="8"/>
+  <rect x="390" y="330" width="180" height="14" fill="#129e76" opacity="0.35"/>
+  <rect x="410" y="360" width="140" height="10" fill="#5c6a7e" opacity="0.2"/>
+  <rect x="400" y="384" width="160" height="10" fill="#5c6a7e" opacity="0.15"/>
+  <rect x="140" y="200" width="140" height="280" rx="16" fill="#dce8e3" stroke="#5c6a7e" stroke-width="5"/>
+  <rect x="160" y="240" width="100" height="8" fill="#1c76e4" opacity="0.4"/>
+  <rect x="160" y="270" width="80" height="8" fill="#1c76e4" opacity="0.25"/>
+  <polyline points="160,430 190,390 220,410 250,340" fill="none" stroke="#1c76e4" stroke-width="6"/>
+  <rect x="680" y="200" width="140" height="280" rx="16" fill="#dce8e3" stroke="#5c6a7e" stroke-width="5"/>
+  <polyline points="700,430 730,360 760,400 800,300" fill="none" stroke="#8a48cd" stroke-width="6"/>
+</svg>
