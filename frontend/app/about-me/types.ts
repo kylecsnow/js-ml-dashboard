@@ -7,7 +7,25 @@ export type TimelineImage = {
   src: string;
   alt: string;
   caption?: string;
+  /** Defaults to cover. Use contain for document page previews. */
+  fit?: 'cover' | 'contain';
+  /** Figure background; useful behind contained logos. */
+  background?: string;
+  /** Inset a contained image so a wordmark / mark is not edge-to-edge. */
+  padded?: boolean;
 };
+
+export type TimelineDownload = {
+  href: string;
+  label: string;
+};
+
+export type TimelineHighlight =
+  | string
+  | {
+      label: string;
+      href: string;
+    };
 
 export type TimelineEntry = {
   /** Unique slug; used as the section id and hash (`#northwind-labs`). */
@@ -23,12 +41,14 @@ export type TimelineEntry = {
   org: string;
   /** Optional external URL (patent filing, paper, etc). */
   href?: string;
+  /** Optional file a visitor can download (e.g. a PDF white paper). */
+  download?: TimelineDownload;
   location?: string;
   /** One-liner shown on compact timeline ticks. */
   summary: string;
   /** Longer copy for the expanded section. */
   body: string;
-  highlights?: string[];
+  highlights?: TimelineHighlight[];
   image: TimelineImage;
 };
 

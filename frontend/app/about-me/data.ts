@@ -19,14 +19,20 @@ export const TIMELINE: TimelineEntry[] = [
     org: 'NobleAI',
     summary: 'Custom ML solutions, de novo molecular design, & synthetic demo generation',
     body: 'I build and deploy proof-of-value ML applications on AWS and Azure — for existing customers, pre-sales demos, and internal research into new markets. I own the path from incomplete industrial data through EDA and model tuning, and I work with Product on the NobleVIP roadmap, including a self-serve Model Builder and an agentic data-synthesis capability.',
+    download: {
+      href: '/about-me/C_EN-whitepaper.pdf',
+      label: 'Download white paper (PDF)',
+    },
     highlights: [
-      'Led a de novo molecular-design program for flame retardants in low-loss semiconductor and EV uses — about $1.25–1.75M in estimated customer value, 2–3 years of R&D time saved, and three patent applications on new FR chemistries',
-      'Technical lead across $1.34M ARR, including shelf-life forecasting for a top-10 packaged-foods company',
+      'Led a de novo molecular-design program for flame retardants in low-loss semiconductor and EV uses — about $1.25–1.75M in estimated customer value, 2–3 years of R&D time saved, and 3 patent applications for the customer on new FR chemistries',
       'Shipped a synthetic-data app (React / TypeScript + FastAPI) that cut demo-dataset turnaround ~5× for the Solutions team',
+      'Technical lead across $1.34M ARR, including shelf-life forecasting for a top-10 packaged-foods company',
     ],
     image: {
-      src: '/about-me/dashboard.svg',
-      alt: 'Abstract dashboard cards and a scatter plot',
+      src: '/about-me/C_EN-whitepaper-cover.png',
+      alt: 'Cover of the C&EN white paper on practical AI in chemistry and materials R&D',
+      caption: 'C&EN Whitepaper',
+      fit: 'contain',
     },
   },
   {
@@ -39,14 +45,24 @@ export const TIMELINE: TimelineEntry[] = [
     org: 'Citrine Informatics',
     summary: 'Materials informatics, active learning, & model explainability tools',
     body: 'I was the technical owner on materials-informatics contracts — from experimental design through executive readouts that won renewals and expansions. I also stood up internal research (active-learning benchmarks, structurally constrained generative design) and a lightweight Dash app for model performance and explainability, and advised lab scientists and R&D leaders on adopting ML.',
+    download: {
+      href: '/about-me/semiconductor-case-study.pdf',
+      label: 'Download semiconductor case study (PDF)',
+    },
     highlights: [
       'Drove technical success across ~$2M ARR of customer contracts',
-      'Sole Citrine technical contributor on three photoresist Pareto-frontier breakthroughs via active learning, including a 20% drop in lithography roughness versus the customer’s prior best',
+      {
+        label:
+          'Lead technical contributor on three photoresist Pareto-frontier breakthroughs via active learning, including a 20% drop in lithography roughness versus the customer’s prior best',
+        href: 'https://citrine.io/better-than-traditional-methods/',
+      },
       'Led the data-science team’s interactive visualization suite for model QA and explainability',
     ],
     image: {
-      src: '/about-me/waterfall.svg',
-      alt: 'Abstract SHAP-style waterfall bars',
+      src: '/about-me/semiconductor-case-study-cover.png',
+      alt: 'Cover of the Citrine Informatics case study on AI for photolithography formulation optimization',
+      caption: 'Semiconductor case study — click to download',
+      fit: 'contain',
     },
   },
   {
@@ -59,14 +75,11 @@ export const TIMELINE: TimelineEntry[] = [
     href: 'https://patents.google.com/patent/US20230399520A1/en',
     summary: 'Patent #3: 3D-printed carbon-bonded composites',
     body: 'Published December 2023. This Arkema application covers a method for making a 3D-printed carbon-bonded composite article — part of the photopolymer and composite printing work I did in Sartomer technical service. I am a co-inventor on a team of nine.',
-    highlights: [
-      'Named inventor (team of nine)',
-      'Published Dec 2023',
-      'Filed from Arkema / Sartomer 3D-printing R&D',
-    ],
     image: {
-      src: '/about-me/patent-tablet.svg',
-      alt: 'Geometric process traces and a schematic panel',
+      src: '/about-me/us-2023-0399520-cover.png',
+      alt: 'First page of U.S. patent application US 2023/0399520 A1',
+      caption: 'US 2023/0399520 A1',
+      fit: 'contain',
     },
   },
   {
@@ -78,15 +91,12 @@ export const TIMELINE: TimelineEntry[] = [
     org: 'USPTO · US 2022/0298131 A1',
     href: 'https://patents.google.com/patent/US20220298131A1/en',
     summary: 'Patent #2: Glycerol carbonate (meth)acrylate in UV-curable compositions',
-    body: 'Published September 2022. Co-invented with S. Nunez. The application describes a route to glycerol carbonate (meth)acrylate and curable compositions built on that monomer — chemistry aimed at 3D-printable and other light-curable resin systems from the Sartomer work.',
-    highlights: [
-      'Co-inventor with S. Nunez',
-      'Published Sep 2022',
-      'Curable compositions for photopolymer systems',
-    ],
+    body: 'Published September 2022. Co-invented with S. Nunez. The application describes a route to glycerol carbonate (meth)acrylate and curable compositions built on that monomer — chemistry aimed at 3D-printable and other light-curable resin systems for best-in-class performance.',
     image: {
-      src: '/about-me/molecule.svg',
-      alt: 'Abstract molecule graph',
+      src: '/about-me/us-2022-0298131-cover.png',
+      alt: 'First page of U.S. patent application US 2022/0298131 A1',
+      caption: 'US 2022/0298131 A1',
+      fit: 'contain',
     },
   },
   {
@@ -98,15 +108,12 @@ export const TIMELINE: TimelineEntry[] = [
     org: 'USPTO · US 2022/0213245 A1',
     href: 'https://patents.google.com/patent/US20220213245A1/en',
     summary: 'Patent #1: Cyanoacrylates for UV 3D printed carbon fiber composites',
-    body: 'Published July 2022. Co-invented with W. Wolf. The application covers light-curable compositions for forming composite materials — the formulation side of the carbon-fiber and photopolymer printing work at Arkema.',
-    highlights: [
-      'Co-inventor with W. Wolf',
-      'Published Jul 2022',
-      'Light-curable composites for 3D printing',
-    ],
+    body: 'Patent published July 2022; granted June 10, 2025 as U.S. Patent 12,325,768. Co-invented with W. Wolf. The application covers light-curable cyanoacrylate compositions for forming composite materials — the formulation side of the carbon-fiber and photopolymer printing work at Arkema.',
     image: {
-      src: '/about-me/lab.svg',
-      alt: 'Abstract laboratory bench with flasks',
+      src: '/about-me/us-2022-0213245-cover.png',
+      alt: 'First page of U.S. patent application US 2022/0213245 A1',
+      caption: 'US 2022/0213245 A1',
+      fit: 'contain',
     },
   },
   {
@@ -118,12 +125,12 @@ export const TIMELINE: TimelineEntry[] = [
     title: '3D Printing Technical Service Engineer',
     org: 'Arkema Inc. (Sartomer)',
     location: 'Exton, PA',
-    summary: 'Photopolymer resins, structure–property ML, & application engineering',
-    body: 'I sat between formulation chemistry and customers: designing high-performance 3D-printable photopolymers meant to compete with engineering plastics, and building a structure–property ML system that predicted mechanical, thermal, and rheological behavior from composition and process settings. I was technical lead on polymer materials for a carbon-fiber composite printing method aimed at aerospace, automotive, and energy parts, and I helped stand up data-management standards for the group’s formulation and property databases.',
+    summary: 'Photopolymer 3D printing, structure–property ML, & application engineering',
+    body: 'I sat between formulation chemistry and customers: designing high-performance 3D-printable photopolymers to compete with engineering plastics, and building a structure–property ML system that predicted mechanical, thermal, and rheological behavior from composition and process settings. I was technical lead on polymer materials for a carbon-fiber composite printing method aimed at aerospace, automotive, and energy parts, and I helped stand up data-management standards for the group’s formulation and property databases.',
     highlights: [
       'ML system for resin performance from chemistry and processing conditions',
       'Technical lead on carbon-fiber composite 3D-printing materials',
-      'Contributing inventor on three U.S. patent applications from this work',
+      'Contributing inventor on three U.S. patent applications',
     ],
     image: {
       src: '/about-me/lab.svg',
@@ -181,10 +188,11 @@ export const TIMELINE: TimelineEntry[] = [
     location: 'Minneapolis, MN',
     summary: 'M.S. Chemical Engineering, University of Minnesota',
     body: 'Master’s in chemical engineering at the University of Minnesota–Twin Cities. The ammonia and syngas publication sits next to this stretch of the timeline.',
-    highlights: ['Completed May 2016', 'Minneapolis, MN'],
     image: {
-      src: '/about-me/campus.svg',
-      alt: 'Stylized campus buildings',
+      src: '/about-me/umn-logo.svg',
+      alt: 'University of Minnesota Block M logo',
+      fit: 'contain',
+      padded: true,
     },
   },
   {
@@ -195,7 +203,7 @@ export const TIMELINE: TimelineEntry[] = [
     title: 'Optimization of Ni–Cr flux growth for hexagonal boron nitride single crystals',
     org: 'Journal of Crystal Growth',
     href: 'https://www.sciencedirect.com/science/article/abs/pii/S0022024813006313',
-    summary: 'Flux-growth optimization for hexagonal boron nitride crystals.',
+    summary: 'Paper #2: Flux-growth optimization for boron nitride crystals.',
     body: 'T.B. Hoffman, B. Clubine, Y. Zhang, K. Snow, J.H. Edgar. Journal of Crystal Growth 2014, 393, 114–118. Crystal-growth work on hexagonal boron nitride from a Ni–Cr flux, from the Kansas State years.',
     highlights: [
       'J. Crystal Growth 2014, 393, 114–118',
@@ -216,11 +224,14 @@ export const TIMELINE: TimelineEntry[] = [
     org: 'Kansas State University',
     location: 'Manhattan, KS',
     summary: 'B.S. Chemical Engineering, Kansas State University (summa cum laude)',
-    body: 'Bachelor’s in chemical engineering at Kansas State University, summa cum laude. The hBN crystal-growth paper and the colloidal nanocrystal paper sit on either side of this degree.',
-    highlights: ['Summa cum laude', 'Completed May 2014', 'Manhattan, KS'],
+    body: 'Bachelor’s in chemical engineering at Kansas State University.',
+    highlights: ['Graduated summa cum laude', 'Honorable Mention - Goldwater Scholarship'],
     image: {
-      src: '/about-me/campus.svg',
-      alt: 'Stylized campus buildings and a quad',
+      src: '/about-me/kansas-state.svg',
+      alt: 'Kansas State University wordmark',
+      fit: 'contain',
+      padded: true,
+      background: '#512888',
     },
   },
   {
@@ -231,7 +242,7 @@ export const TIMELINE: TimelineEntry[] = [
     title: 'A simple and generic approach for synthesizing colloidal metal and metal oxide nanocrystals',
     org: 'Nanoscale',
     href: 'https://pubs.rsc.org/nr/article-abstract/5/16/7368/407558/A-simple-and-generic-approach-for-synthesizing?redirectedFrom=fulltext',
-    summary: 'Paper #1: Electrochemical synthesis of colloidal metal & metal-oxide nanoparticles',
+    summary: 'Paper #1: Synthesis of colloidal metal & metal-oxide nanoparticles',
     body: 'J.E. Cloud, T.S. Yoder, N.K. Harvey, K. Snow, Y. Yang. Nanoscale 2013, 5, 7368–7378. A short, general synthesis method for colloidal metal and metal-oxide nanocrystals.',
     highlights: [
       'Nanoscale 2013, 5, 7368–7378',

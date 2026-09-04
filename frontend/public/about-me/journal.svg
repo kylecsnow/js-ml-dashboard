@@ -15,5 +15,5 @@
   <rect x="200" y="310" width="260" height="10" fill="#5c6a7e" opacity="0.15"/>
   <rect x="200" y="350" width="180" height="90" rx="6" fill="#8a48cd" opacity="0.12"/>
   <rect x="430" y="160" width="280" height="360" rx="8" fill="#f7f4fb" stroke="#5c6a7e" stroke-width="4" transform="rotate(8 570 340)"/>
-  <text x="620" y="330" fill="#8a48cd" font-family="ui-serif, Georgia, serif" font-size="88" font-style="italic"></text>
+  <text x="620" y="330" fill="#8a48cd" font-family="ui-serif, Georgia, serif" font-size="88" font-style="italic">&#x201C;&#x201D;</text>
 </svg>
