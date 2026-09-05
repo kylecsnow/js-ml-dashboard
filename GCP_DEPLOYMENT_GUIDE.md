@@ -1,150 +1,174 @@
-# Deploying js-ml-dashboard to kylecsnow.com via Google Cloud Platform
+# Deploying js-ml-dashboard on Google Cloud Run
 
-A step-by-step migration guide from AWS (ECR + App Runner) to GCP, written for a
-GCP-beginner who is comfortable with the AWS side. Assumption: you run every
-command yourself, on the machine that has Docker (the one that currently builds
-`kylecsnow/ml-dashboard:latest`).
+End-to-end instructions for hosting this repo on Cloud Run and serving it at
+`kylecsnow.com`. Written for someone who can run Docker locally and is new to
+GCP. An AWS App Runner mental model helps for the mapping table below, but is
+not required.
 
-Run the commands in **one shell session** so the `PROJECT_ID` / `REGION` exports
-below stick. If you open a new terminal, export them again.
+Run every command in **one shell session** so the `PROJECT_ID` / `REGION`
+exports stick. In a new terminal, export them again **and** re-run
+`gcloud config set project "$PROJECT_ID"`. `gcloud` only knows a project after
+it is set in that shell.
 
 ---
 
-## TL;DR — the recommendation
+## What you will have when finished
 
-**Use Cloud Run.** It is GCP's direct App Runner equivalent:
+- The same Docker image this repo already builds (`js-ml-dashboard-app:latest`)
+  pushed to **Artifact Registry**.
+- A public **Cloud Run** service (Next.js on port 8777, FastAPI on port 8000
+  inside the container).
+- Optional: `kylecsnow.com` / `www.kylecsnow.com` pointed at that service.
+  DNS stays at **Porkbun**; Google provisions the certificate.
 
-- Push the **same Docker image** to **Artifact Registry** (GCP's ECR).
-- Deploy it as a **Cloud Run service** (GCP's App Runner).
-- Point **kylecsnow.com** at it (DNS is managed at **Porkbun**, unchanged).
-- **Zero code changes required** in this repo.
+Cloud Run is the right GCP product for this app: one container, one public URL,
+scale-to-zero when idle. Cloud Functions are the wrong model. App Engine is
+more rework. GKE is orchestration you do not need. A always-on Compute Engine
+VM would also run the image, but you would pay for idle time and manage TLS
+yourself.
 
-Why Cloud Run and not the alternatives:
-
-| GCP option | Verdict |
+| AWS (if you have used App Runner) | GCP |
 |---|---|
-| **Cloud Run** | ✅ Best fit. Runs your existing Docker image, no servers, scales to zero (cheaper than App Runner for a personal site), free tier likely covers all your traffic. |
-| Cloud Run Functions / Cloud Functions | ❌ Serverless *functions*, not container hosting — wrong model for this app. |
-| App Engine | Possible, but a different runtime model; more rework than Cloud Run. |
-| GKE (Kubernetes) | ❌ Massively overkill — you'd be learning an entire orchestration platform for one container. |
+| AWS account | GCP **project** |
+| ECR | **Artifact Registry** |
+| App Runner service | **Cloud Run** service |
+| App Runner env vars | `--set-env-vars` / Secret Manager |
+| Custom domain on App Runner | Cloud Run **domain mapping** + Porkbun DNS |
+| CloudWatch logs | Cloud Run **Logs** tab, or `gcloud run services logs read` |
+| CloudFront / ACM | Google-managed certificate after domain mapping |
 
-### Concept mapping (your existing AWS mental model → GCP)
+---
 
-| AWS (current) | GCP (new) |
-|---|---|
-| AWS account | GCP **project** (a namespace with its own billing) |
-| ECR repository | **Artifact Registry** repository |
-| App Runner service | **Cloud Run service** |
-| App Runner "Configure service" → env vars | `--set-env-vars` / Secret Manager |
-| Custom domain on App Runner | Cloud Run **domain mapping** + DNS records at Porkbun |
-| CloudWatch logs | Cloud Run → **Logs** tab (or `gcloud run services logs read`) |
-| IAM role for App Runner callers | Not needed for a public site (`--allow-unauthenticated`). Cloud Run still has a default **runtime** service account; you only touch it for secrets. |
-| CloudFront / ACM certificate | Automatic, Google-managed — once domain mapping + DNS are correct |
+## How the container runs
 
-### What I verified about your current setup (why this works with zero code changes)
+The `Dockerfile` builds **one image** with both processes:
 
-- `Dockerfile` builds **one image** containing the Next.js frontend (port 8777)
-  and the FastAPI backend (port 8000); `start.sh` runs both.
-- `frontend/next.config.mjs` rewrites `/api/*` → `http://127.0.0.1:8000/api/*`
-  **server-side**, so the browser only ever talks to port 8777. Same-origin
-  means **CORS is not involved in production** — the `localhost:8777`
-  allowlist in `backend/main.py` is irrelevant once deployed.
-- Only one env var is actually read by code: `GROQ_API_KEY`
-  (`backend/routers/chat.py`). `OPENAI_API_KEY` sits in `.env` but is unused
-  — you don't need to port it. Optional `LANGSMITH_*` from the README is also
-  unused unless you want chat tracing.
-- Nothing persists to disk in production (the `schemas.db` volume in
-  `docker-compose.yml` is local-dev only) — Cloud Run is equally stateless, so
-  behavior parity.
-- `kylecsnow.com` NS records are at **Porkbun**; the apex currently has an A
-  record (`52.20.212.203`) that is your App Runner endpoint.
-- Your image is ~2.1 GB. Cloud Run's image limit is 10 GB, so size is fine —
-  the push is slow once, and cold starts pull that whole image. Artifact
-  Registry's free storage tier is 0.5 GB, so you will pay a few cents/month
-  to store it.
+| Process | Port | Role |
+|---|---|---|
+| FastAPI (`python main.py --no-reload`) | 8000 | `/api/*` and `/health` |
+| Next.js (`npm run start`) | 8777 | Pages + server-side rewrite of `/api/*` → `http://127.0.0.1:8000/api/*` |
+
+The browser only talks to port **8777**. Cloud Run also sends public traffic to
+**8777** (`--port 8777`). FastAPI is localhost-only inside the container.
+
+The image start script:
+
+1. Starts FastAPI with `--no-reload` (local `python main.py` still defaults to
+   reload).
+2. Waits until `http://127.0.0.1:8000/health` succeeds (up to 90 seconds).
+3. Starts Next.js.
+
+That wait is required on Cloud Run. Cloud Run marks an instance ready as soon
+as port 8777 accepts connections, then may **throttle CPU** when no request is
+in flight. If Next listens before FastAPI binds 8000, every `/api/*` rewrite
+fails with `ECONNREFUSED 127.0.0.1:8000` and the browser sees a plaintext
+`Internal Server Error` (empty model dropdown, broken dataset-generator chat).
+Always-on hosts (local Docker, App Runner) hide this because CPU stays
+allocated.
+
+Nothing in production persists to disk. The `schemas.db` volume in
+`docker-compose.yml` is local-dev only.
+
+Required runtime env vars (same names as local `.env` / App Runner):
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `GROQ_API_KEY` | Yes, for AI chat | Dataset-generator assistant |
+| `LANGSMITH_API_KEY` | Optional | LLM tracing |
+| `LANGSMITH_TRACING` | Optional | Set `true` to enable tracing |
+
+`OPENAI_API_KEY` in `.env` is unused. CORS `allow_origins` in `backend/main.py`
+lists `localhost:8777` only; that does not matter in production because the
+browser is same-origin with Next.
+
+The image is ~2.1 GB. Cloud Run’s limit is 10 GB. Artifact Registry’s free
+storage tier is 0.5 GB, so image storage is a few cents per month.
 
 ---
 
 ## Prerequisites
 
-### 1. Google account + billing
+### 1. Google account and billing
 
-Sign in at <https://console.cloud.google.com> with your personal Google
-account. Create a **billing account** (credit card) and claim the
-**$300 / 90-day new-customer credit** if you are eligible.
+Sign in at <https://console.cloud.google.com>. Create a **billing account**
+(credit card) and claim the **$300 / 90-day new-customer credit** if eligible.
 
-Creating a billing account on your Google login is **not** enough by itself.
-You still have to **link that billing account to the project** in step 3b
-below, or Artifact Registry and Cloud Run will refuse to enable.
+A billing account on the Google login is not enough. The project must be
+**linked** to that account in step 3d, or Artifact Registry and Cloud Run will
+refuse to enable.
 
-### 2. gcloud CLI (GCP's `aws` CLI)
+### 2. gcloud CLI
 
-This install is the **only OS-dependent step** in the whole guide — pick the
-block for your machine. Everything after it (project, docker push, deploy,
-DNS) is identical on both.
+This is the only OS-dependent step. After install, every later command is the
+same.
 
-**🍎 macOS (Apple Silicon or Intel) — via Homebrew.** No `sudo` needed;
-Homebrew handles the `PATH`.
+**macOS (Apple Silicon or Intel) — Homebrew:**
 
 ```bash
-# one-time: install Homebrew first if you don't have it (most Macs do)
+# Install Homebrew first if needed:
 # /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 brew install --cask gcloud-cli
-gcloud --version          # prints a version → good
+gcloud --version
 ```
 
-**🐧 Linux (Debian / Ubuntu) — via the apt repo.** Uses `sudo`. Verified
-against the official Google docs. The **old one-line `install.sh` URL is dead
-— do not use it.**
+**Linux (Debian / Ubuntu):**
 
 ```bash
-# 1. one-time prereqs
 sudo apt-get update
 sudo apt-get install ca-certificates gnupg curl
 
-# 2. import the Google Cloud public key
 curl https://packages.cloud.google.com/apt/doc/apt-key.gpg \
   | sudo gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg
 
-# 3. add the gcloud package source
 echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" \
   | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
 
-# 4. update + install
 sudo apt-get update && sudo apt-get install google-cloud-cli
-gcloud --version          # prints a version → good
+gcloud --version
 ```
 
-*Other distros (RHEL/Fedora/CentOS, older Debian):* Google ships a
-`yum`/`dnf` variant on <https://cloud.google.com/sdk/docs/install>. If you're
-on a non-Ubuntu box, tell me the distro and I'll paste the exact block.
+Other distros: <https://cloud.google.com/sdk/docs/install>.
 
-### 3. Create a project, link billing, enable APIs
+### 3. Project, CLI config, billing, APIs
 
-Do project creation in one place — CLI or console, not both.
+`gcloud` does not inherit the project selected in the Cloud Console. Skipping
+`export PROJECT_ID` + `gcloud config set project` produces `could not parse
+resource []` and `Failed to find attribute [project]`.
+
+**3a. Log in (same shell you will deploy from):**
 
 ```bash
 gcloud auth login
-
-# Project IDs are *globally* unique across all of GCP. If create fails with
-# "already exists" / "project ID not available", change PROJECT_ID to
-# something like kylecsnow-ml-dashboard and use that value for the rest of
-# this guide (image URLs include the project ID).
-export PROJECT_ID=js-ml-dashboard
-export REGION=us-east1
-
-gcloud projects create "$PROJECT_ID" --name "js-ml-dashboard"
-gcloud config set project "$PROJECT_ID"
+# "Your current project is [None]" is expected until 3c
 ```
 
-> GCP beginners: in the **console**, the top-left dropdown is the project
-> switcher. Make sure it shows **this** `$PROJECT_ID` whenever you work in GCP
-> — most "it can't find my thing" confusion comes from the wrong project
-> being selected.
+**3b. Create the project:**
 
-**3b. Link billing to the new project** (required — `projects create` does
-not do this):
+Project IDs are globally unique. `gcloud projects create` sets the ID;
+`--name` is only a label. If `js-ml-dashboard` is taken, pick another ID
+(for example `kylecsnow-ml-dashboard`) and use **that** ID everywhere below.
+Image URLs include it.
+
+```bash
+export PROJECT_ID=js-ml-dashboard
+gcloud projects create "$PROJECT_ID" --name "js-ml-dashboard"
+```
+
+Confirm with `gcloud projects list` — use the **PROJECT_ID** column, not NAME.
+
+**3c. Point this shell at that project:**
+
+```bash
+export PROJECT_ID=js-ml-dashboard
+export REGION=us-east1
+gcloud config set project "$PROJECT_ID"
+gcloud config get-value project    # must print the ID, not (unset)
+```
+
+Repeat this in every new terminal. `gcloud auth login` does not restore it.
+
+**3d. Link billing and enable APIs:**
 
 ```bash
 gcloud billing accounts list
@@ -152,45 +176,34 @@ gcloud billing accounts list
 
 gcloud billing projects link "$PROJECT_ID" \
   --billing-account=YOUR_ACCOUNT_ID
-```
 
-**3c. Enable the APIs this deploy uses** (also required — a new project has
-them off):
-
-```bash
 gcloud services enable \
   artifactregistry.googleapis.com \
   run.googleapis.com
 ```
 
-Wait until that command finishes (a minute or two). If it errors about
-billing, 3b did not stick.
+Wait until enable finishes (a minute or two). A billing error means the
+project is not linked yet.
 
-`gcloud auth application-default login` is **not** needed for this guide.
-That is for local client libraries. Docker push and `gcloud run deploy` use
-the user credentials from `gcloud auth login`.
+`gcloud auth application-default login` is not needed here. Docker push and
+`gcloud run deploy` use credentials from `gcloud auth login`.
 
-### 4. Pick one region and use it everywhere: `us-east1`
+### 4. Region: `us-east1`
 
-`us-east1` is **Moncks Corner, South Carolina** — a large, well-supported
-region, and one of the regions where Cloud Run **domain mapping** is
-available.
-
-It is **not** Northern Virginia. GCP's N. Virginia region (the geographic
-cousin of AWS `us-east-1`) is `us-east4`. Either works for this app; this
-guide uses `us-east1` because domain mapping is supported there and every
-command below already names it. Do not mix regions later (registry in one
-place, service in another) — that adds latency and cross-region egress.
+This guide uses **`us-east1`** (Moncks Corner, South Carolina). Cloud Run
+**domain mapping** is available there. GCP’s Northern Virginia region is
+`us-east4`, not `us-east1`. Either region can host the service; do not mix
+them (registry in one region, service in another) — that adds latency and
+cross-region egress.
 
 ---
 
 ## Step 1 — Push the image to Artifact Registry
 
-`gcloud auth configure-docker` handles the registry login (the ECR
-`get-login-password` dance, but simpler). The argument is a **hostname**,
-not a region name.
+`gcloud auth configure-docker` logs Docker into the registry. The argument is
+a **hostname**, not a bare region name.
 
-**First time only — Docker login + create the repository:**
+**First time only — Docker login and create the repository:**
 
 ```bash
 gcloud auth configure-docker "${REGION}-docker.pkg.dev"
@@ -203,42 +216,59 @@ gcloud artifacts repositories create js-ml-dashboard \
 `us-east1`, then `docker push` to `us-east1-docker.pkg.dev` would fail with
 unauthorized / denied.
 
-**Then build, tag, and push (every deploy):**
+**Build, tag, and push (every deploy):**
 
-Cloud Run only runs **`linux/amd64`**. `docker-compose.yml` already sets
-`platform: linux/amd64` for that reason. A plain `docker build` on an
-Apple Silicon Mac produces `linux/arm64`, which Cloud Run will reject
-(`exec format error`). Always pass `--platform linux/amd64`, including on
-Intel Macs and Linux — it is the correct target.
+`docker compose` names the local image **`js-ml-dashboard-app:latest`**
+(service `app`). Cloud Run only runs **`linux/amd64`**.
+`docker-compose.yml` already sets `platform: linux/amd64`. A plain
+`docker build` on Apple Silicon produces `linux/arm64`, which Cloud Run
+rejects (`exec format error`). If you build without Compose, pass
+`--platform linux/amd64`.
+
+`docker compose up --build` builds the image and starts it locally so you can
+smoke-test (`http://localhost:8777`, model dropdown, dataset-generator chat)
+before pushing. Stop with `Ctrl+C`, then `docker compose down` if you want
+the containers removed. The image name is still `js-ml-dashboard-app:latest`.
 
 ```bash
-# Skip the build if you already have an *amd64* image locally
-docker build --platform linux/amd64 -t kylecsnow/ml-dashboard:latest .
+docker compose up --build
 
-# Safety check — must print amd64. If it prints arm64, do not push.
-docker image inspect kylecsnow/ml-dashboard:latest --format '{{.Architecture}}'
+# Must print amd64. If it prints arm64, do not push.
+docker image inspect js-ml-dashboard-app:latest --format '{{.Architecture}}'
 
-docker tag kylecsnow/ml-dashboard:latest \
+docker tag js-ml-dashboard-app:latest \
   ${REGION}-docker.pkg.dev/${PROJECT_ID}/js-ml-dashboard/app:latest
 
 docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/js-ml-dashboard/app:latest
 ```
 
-> Artifact Registry image names are
-> `<region>-docker.pkg.dev/<project>/<repository>/<image>:<tag>` —
-> different shape from ECR's `<acct>.dkr.ecr.<region>.amazonaws.com/...`, so
-> don't guess it; copy the pattern above. If you had to change `PROJECT_ID`,
-> the URL changes with it.
+Artifact Registry names look like
+`<region>-docker.pkg.dev/<project>/<repository>/<image>:<tag>`. If
+`PROJECT_ID` changed, the URL changes with it.
 
 ---
 
 ## Step 2 — Deploy the Cloud Run service
 
-One command, and this is also your **redeploy command** (it's idempotent —
-re-running it updates the service).
+This command creates the service or updates it. Re-running it is the redeploy
+path.
 
-Make sure `GROQ_API_KEY` is in this shell first (`export GROQ_API_KEY=...`
-from the repo `.env`).
+Put the keys in the shell first (copy from `.env`; do not type secrets into
+the command line history if you can avoid it):
+
+```bash
+export GROQ_API_KEY=...
+export LANGSMITH_API_KEY=...
+export LANGSMITH_TRACING=true
+```
+
+`LANGSMITH_*` may be empty / omitted if you do not want tracing. `GROQ_API_KEY`
+must be set or the dataset-generator assistant returns an error after the
+backend is up.
+
+This deploy uses 2 vCPU / 4 GiB, max 25 instances, concurrency 100, and
+**min 0** so idle time is near $0. Do **not** add `--no-cpu-throttling`
+(that bills 2 vCPU 24/7, about $110/mo).
 
 ```bash
 gcloud run deploy js-ml-dashboard \
@@ -246,80 +276,93 @@ gcloud run deploy js-ml-dashboard \
   --region "$REGION" \
   --port 8777 \
   --allow-unauthenticated \
-  --cpu 1 \
-  --memory 2Gi \
+  --cpu 2 \
+  --memory 4Gi \
   --timeout 300 \
-  --set-env-vars GROQ_API_KEY="$GROQ_API_KEY"
+  --concurrency 100 \
+  --min-instances 0 \
+  --max-instances 25 \
+  --set-env-vars "GROQ_API_KEY=${GROQ_API_KEY},LANGSMITH_API_KEY=${LANGSMITH_API_KEY},LANGSMITH_TRACING=${LANGSMITH_TRACING}"
 ```
 
-The documented flag is `--set-env-vars` (not `--set-env`). `--set-env-vars`
-**replaces** the whole env-var set on that revision — fine here because
-there is only one.
+The flag is `--set-env-vars` (not `--set-env`). A single `--set-env-vars A=1,B=2`
+**replaces** the whole set. `--update-env-vars` later patches one key.
 
-What each non-obvious flag does (these are the ones that bite beginners):
+What the less obvious flags do:
 
-- **`--port 8777`** — Cloud Run sends traffic to this port and sets `PORT`
-  to match. The default is `8080`. Your app ignores `PORT` and Next is
-  hardcoded to 8777 (`npm run start` / `package.json`), so you **must**
-  tell Cloud Run to route to 8777. Forgetting this is the #1 cause of a
-  "successful" deploy that returns 503.
-- **`--allow-unauthenticated`** — makes the service public (anyone can
-  browse it). This is what you want for a public personal site. Without it,
-  only signed-in Google users can access the URL. gcloud may prompt to bind
-  `allUsers` as `roles/run.invoker`; say yes.
-- **`--timeout 300`** — max seconds a single request may run (default 60).
-  Your slow endpoints (SHAP over many rows; Next's `proxyTimeout` is 3
-  minutes) need more than 60s, so 300 keeps Cloud Run from killing them
-  while Next still has a 180s inner timeout.
-- **`--set-env-vars GROQ_API_KEY=...`** — the App Runner "add env var in
-  Configure service" equivalent. Sourced from your shell so the key isn't
-  typed literally.
-- **`--cpu 1 --memory 2Gi`** — generous defaults for Next + FastAPI +
-  models in RAM. Do not drop to `--cpu 0.5 --memory 1Gi` without testing;
-  Cloud Run rejects some CPU/memory pairings, and 1 GiB is tight for this
-  image.
+- **`--port 8777`** — Cloud Run sends traffic here and sets `PORT` to match.
+  The default is `8080`. Next is hardcoded to 8777. Forgetting this is the
+  usual cause of a “successful” deploy that returns 503.
+- **`--allow-unauthenticated`** — public site. Without it, only signed-in
+  Google users can load the URL. gcloud may prompt to bind `allUsers` as
+  `roles/run.invoker`; say yes.
+- **`--timeout 300`** — max seconds per request (default 60). Slow endpoints
+  (SHAP over many rows) plus Next’s 180s `proxyTimeout` need more than 60s.
+- **`--cpu 2 --memory 4Gi`** — sized for this image (same ballpark as a
+  typical App Runner config for this app).
+- **`--min-instances 0 --max-instances 25 --concurrency 100`** — scale to
+  zero when idle. The first request after idle is a cold start (image pull +
+  FastAPI + Next). Use `--min-instances 1` later if that bothers you
+  (~$35–40/mo at this size).
+- **`--set-env-vars …`** — Cloud Run does **not** read the image’s `.env`.
+  Keys must be set on the service.
 
-At the end, gcloud prints your public URL, shaped like:
+gcloud prints a URL like:
 
 ```
-https://js-ml-dashboard-<random-hash>.us-east1.run.app
+https://js-ml-dashboard-<hash>.us-east1.run.app
 ```
 
-**Verify before touching DNS:**
+**Verify on that URL before changing DNS.**
 
-1. Open the URL — the dashboard should render.
-2. Hit an API route through the frontend (e.g. open a model page).
-3. Test the dataset-generator AI chat (this is the `GROQ_API_KEY` path).
-4. If something's wrong:
+1. Open the homepage — the dashboard should render.
+2. Confirm the model dropdown populates (homepage “Select a model”). That
+   is `GET /api/models` through Next. A working response looks like JSON:
+   `{"models":["pharma-tablets_RF", ...]}`.
+3. Send a message on the dataset-generator AI assistant (`GROQ_API_KEY`).
+4. If pages load but `/api/*` returns `Internal Server Error` or logs show
+   `ECONNREFUSED 127.0.0.1:8000`, FastAPI never became ready. Check that the
+   image includes the `/health` wait in the start script, then read logs:
 
    ```bash
-   gcloud run services logs read js-ml-dashboard --region "$REGION" --limit 100
+   gcloud run services logs read js-ml-dashboard --region "$REGION" --limit 200
    ```
 
-   Or: console → Cloud Run → `js-ml-dashboard` → **Logs**. That is the
-   container's stdout/stderr (uvicorn + Next).
+   For a wider window (startup tracebacks are easy to miss in the last 100
+   request lines):
+
+   ```bash
+   gcloud logging read \
+     'resource.type="cloud_run_revision" AND resource.labels.service_name="js-ml-dashboard"' \
+     --project "$PROJECT_ID" --limit 200 --freshness=2d \
+     --format='value(timestamp,textPayload,jsonPayload.message)'
+   ```
+
+   Console path: Cloud Run → `js-ml-dashboard` → **Logs**. There is no SSH /
+   `docker exec` on Cloud Run; logs and a local `docker run` of the same
+   image are the inspection tools.
+
+A FastAPI-missing-key error is JSON (`{"detail":"GROQ_API_KEY ..."}`). A
+plaintext `Internal Server Error` means Next could not reach port 8000 at all.
 
 ---
 
-## Step 3 — Point kylecsnow.com at it
+## Step 3 — Point kylecsnow.com at Cloud Run
 
-Cloud Run can serve `kylecsnow.com` in a few ways. Google's **GA /
-recommended** production path is a global external HTTPS load balancer in
-front of Cloud Run (more moving parts: IP, NEG, backend, cert, forwarding
-rule). **Firebase Hosting** in front of Cloud Run is another supported
-option.
+Google’s fully supported production path is a global HTTPS load balancer in
+front of Cloud Run (more parts: IP, NEG, backend, cert, forwarding rule).
+Firebase Hosting in front of Cloud Run is another option.
 
-This guide uses **Cloud Run domain mapping** instead: it is the closest
-App Runner equivalent (map a hostname, copy DNS records, Google manages
-the cert). It is available in `us-east1`.
+This guide uses **Cloud Run domain mapping**: map a hostname, copy DNS
+records, Google manages the cert. It is available in `us-east1`.
 
-Caveats, from [Google's current docs](https://cloud.google.com/run/docs/mapping-custom-domains):
+From [Google’s domain-mapping docs](https://cloud.google.com/run/docs/mapping-custom-domains):
 
 - Domain mapping is **Preview**, region-limited, and Google currently
   describes it as not production-ready (latency). For a personal site that
-  is the acceptable tradeoff; if Google ever withdraws it, switch to
-  Firebase Hosting or a load balancer without changing the container.
-- SSL is automatic **after** ownership verification + the right DNS
+  tradeoff is acceptable. If Google withdraws it, switch to Firebase Hosting
+  or a load balancer without changing the container.
+- SSL is automatic **after** ownership verification and the correct DNS
   records. Typical wait is ~15 minutes; it can take **up to 24 hours**.
 - You cannot bring your own certificate on this path.
 
@@ -327,21 +370,20 @@ Caveats, from [Google's current docs](https://cloud.google.com/run/docs/mapping-
 certificate is for `*.run.app`, not `kylecsnow.com`. Browsers get a name
 mismatch, and Cloud Run will not route the `Host` header unless a domain
 mapping exists. The CNAME target Google gives you is normally
-`ghs.googlehosted.com` — but copy whatever `describe` prints, do not
-invent records.
+`ghs.googlehosted.com` — copy whatever `describe` prints.
 
-### 3a. Verify you own kylecsnow.com
+### 3a. Verify domain ownership
 
-Ownership verification is a **Search Console TXT record**, and it has to
-happen **before** (or as the first part of) mapping. It is not a "click
-Verify after adding A records" step at the end.
+Ownership is a Search Console TXT record. It must exist **before** you can
+create the mapping. `gcloud domains verify` opens that flow; it does not
+buy a domain.
 
 ```bash
 gcloud domains verify kylecsnow.com
 ```
 
-That opens Search Console. Add the **TXT** record it shows at Porkbun
-(host `@`). Wait until this lists the domain:
+Add the **TXT** record at Porkbun (host `@`). Wait until this lists the
+domain:
 
 ```bash
 gcloud domains list-user-verified
@@ -363,10 +405,9 @@ gcloud beta run domain-mappings create \
   --region "$REGION"
 ```
 
-Skip the `www` command if you want www to stay broken (as it is on AWS
-today).
+Skip the `www` command if that hostname should not be mapped.
 
-### 3c. Read the DNS records Google actually wants
+### 3c. Read the DNS records Google wants
 
 ```bash
 gcloud beta run domain-mappings describe \
@@ -378,30 +419,29 @@ gcloud beta run domain-mappings describe \
   --region "$REGION"
 ```
 
-You need **every** `resourceRecords` row (`A`, `AAAA`, `CNAME`, plus any
-`TXT` still listed). Typical *shape* (confirm against the output; IPs
-change):
+Add **every** `resourceRecords` row (`A`, `AAAA`, `CNAME`, plus any `TXT`
+still listed). Typical *shape* (confirm against the output; IPs change):
 
 | Host | Type | Data |
 |---|---|---|
-| `@` | **A** | several IPv4 addresses (classically `216.239.32.21` / `.34.21` / `.36.21` / `.38.21`) |
-| `@` | **AAAA** | matching IPv6 addresses — add these too or some clients never reach you |
+| `@` | **A** | several IPv4 addresses (often `216.239.32.21` / `.34.21` / `.36.21` / `.38.21`) |
+| `@` | **AAAA** | matching IPv6 addresses — omit these and some clients never reach the site |
 | `www` | **CNAME** | `ghs.googlehosted.com.` |
 
-Console equivalent: Cloud Run → **Domain mappings** → Add mapping → pick
-the service → **Cloud Run Domain Mappings**. Then ⋮ → **DNS records**.
-Prefer the CLI output if the two disagree.
+Copy from `describe`, not from memory. An apex name cannot be a CNAME, which
+is why Google uses A/AAAA there. Those mapping IPs are stable, so later
+deploys do not require DNS edits.
 
-### 3d. Apply them at Porkbun (GCP cannot touch your DNS)
+### 3d. Apply them at Porkbun
 
-Porkbun → dashboard → `kylecsnow.com` → DNS records:
+Porkbun cannot be edited by `gcloud`. Porkbun → dashboard → `kylecsnow.com`
+→ DNS records:
 
-- **Delete** the old A record `52.20.212.203` (App Runner). If you leave
-  it, the old and new sites fight during propagation.
-- Delete any leftover parking / ALIAS / conflicting A or CNAME on `@` or
-  `www`.
-- **Add** every record from 3c. For `www`, the host is `www` and the
-  value is whatever Google printed — **not** the `run.app` URL.
+- Delete any old App Runner (or parking) **A** / **ALIAS** / conflicting
+  **CNAME** on `@` or `www`. Leaving an old A record (for example
+  `52.20.212.203`) makes the old and new sites fight during propagation.
+- Add every record from 3c. For `www`, the host is `www` and the value is
+  whatever Google printed — **not** the `run.app` URL.
 
 ### 3e. Wait for the certificate, then test
 
@@ -411,58 +451,47 @@ gcloud beta run domain-mappings describe \
   --region "$REGION"
 ```
 
-Look for `CertificateProvisioned` / `Ready` true. Then hit
+Look for `CertificateProvisioned` / `Ready` true. Then open
 `https://kylecsnow.com` and `https://www.kylecsnow.com`.
 
 DNS TTL can be minutes to a couple of hours. The cert can lag behind DNS.
-Do not delete App Runner until both the `run.app` URL **and** the custom
-domain work.
-
-> Why the apex uses A/AAAA instead of a CNAME: an apex name cannot be a
-> CNAME. Google's mapping IPs are stable, so you do not update DNS on
-> future deploys (unlike App Runner, where the endpoint IP can change).
+If an App Runner service is still live, do not delete it until both the
+`run.app` URL **and** the custom domain work.
 
 ---
 
-## Step 4 — Cut over & stop paying for AWS
+## Step 4 — Stop paying for a previous AWS host (if any)
 
-1. Let the GCP-served site run for a day; you can even bookmark both the
-   `run.app` URL and the domain to compare.
-2. When it's good: **App Runner → delete the service** (this is the
-   always-on cost center) and delete the ECR repo if you like. Keep the AWS
-   account; just stop using it.
+1. Keep the Cloud Run `run.app` URL and the custom domain bookmarked until
+   both look correct for a day.
+2. Then delete the App Runner service (that is the always-on cost) and the
+   ECR repository if it is no longer needed. The AWS account can stay; it
+   just should not be serving this site.
 
 ---
 
-## Day-2 operations (your App Runner habits → GCP equivalents)
+## Day-2 operations
 
-| You want to… | Do this |
+| Task | Command / place |
 |---|---|
-| **Redeploy** (after a code change) | Rebuild with `--platform linux/amd64`, re-tag, `docker push`, then re-run the exact `gcloud run deploy` command from Step 2. It updates the existing service. |
-| **Change an env var** | `gcloud run services update js-ml-dashboard --region "$REGION" --update-env-vars GROQ_API_KEY=new-value` (`--update-env-vars` patches one key; `--set-env-vars` would wipe any others). |
+| **Redeploy** after a code change | `docker compose up --build`, smoke-test locally, confirm `amd64`, re-tag, `docker push`, re-run the Step 2 `gcloud run deploy` (include `--port 8777` and env vars every time). |
+| **Change one env var** | `gcloud run services update js-ml-dashboard --region "$REGION" --update-env-vars GROQ_API_KEY=new-value` (`--set-env-vars` would wipe the others). |
 | **Read logs** | Console → Cloud Run → service → **Logs**. CLI: `gcloud run services logs read js-ml-dashboard --region "$REGION"` |
-| **See what's deployed** | `gcloud run services describe js-ml-dashboard --region "$REGION"` |
-| **Scale / cold starts** | Default is min-instances 0 (scale to zero). See the gotcha below before turning on a warm instance. |
-| **Move the API key to Secret Manager** | See the block under this table. `--set-env-vars` stores the value in service metadata, which is fine for a personal site; Secret Manager is the "proper" path. |
+| **Follow logs** | `gcloud run services logs tail js-ml-dashboard --region "$REGION"` |
+| **See what is deployed** | `gcloud run services describe js-ml-dashboard --region "$REGION"` |
+| **Warm instance** | `--min-instances 1` (~$35–40/mo). Do not add `--no-cpu-throttling` (~$110/mo). |
+| **Move the API key to Secret Manager** | Block below. `--set-env-vars` in service metadata is fine for a personal site. |
 
-**Warm instance (optional).** `--min-instances 1` alone keeps an instance
-resident with CPU throttled while idle (request-based billing). That skips
-the 2.1 GB image pull; the first request still pays a short unthrottle.
-To keep CPU allocated the whole time you also need instance-based billing:
+**Warm instance (optional)** if cold starts are too slow. This bills idle
+CPU + memory; it is not the $110 always-allocated-CPU option:
 
 ```bash
 gcloud run services update js-ml-dashboard \
   --region "$REGION" \
-  --min-instances 1 \
-  --no-cpu-throttling
+  --min-instances 1
 ```
 
-That second form is true always-on and costs on the order of **tens of
-dollars/month** at 1 vCPU / 2Gi, not $10. Leave min-instances at 0 unless
-cold starts bother you.
-
-**Secret Manager (optional).** Enable the API, create the secret, grant the
-Cloud Run runtime service account access, then point the service at it:
+**Secret Manager (optional):**
 
 ```bash
 gcloud services enable secretmanager.googleapis.com
@@ -486,84 +515,77 @@ gcloud run services update js-ml-dashboard \
 ```
 
 `--set-secrets` sometimes auto-grants the IAM binding; the explicit binding
-above is the reliable version. Removing the env var after the secret is
-attached avoids setting the same key twice. On later deploys, omit
-`--set-env-vars GROQ_API_KEY=...` or you will put the plaintext value back.
+above is the reliable version. After the secret is attached, omit
+`--set-env-vars GROQ_API_KEY=...` on later deploys or the plaintext value
+comes back.
 
 ---
 
-## Gotchas & known differences vs App Runner
+## Troubleshooting
 
-1. **Cold starts are real.** With min-instances 0, the first request after
-   idle has to pull ~2.1 GB and boot Next + FastAPI. That is often **well
-   over 20–60s**; Cloud Run gives the instance **4 minutes** to start
-   listening. App Runner has cold starts too, but Cloud Run's
-   scale-to-zero is more aggressive. See Day-2 for `--min-instances 1`.
-2. **`--port 8777` is mandatory** (see Step 2). Every future deploy needs
-   it too — if you copy-paste an old command and drop it, you'll get a 503.
-3. **`--platform linux/amd64` is mandatory** (especially on Apple Silicon).
-   Check with `docker image inspect … --format '{{.Architecture}}'` before
-   pushing.
+1. **Cold starts.** `--min-instances 0` means the first request after idle
+   pulls ~2+ GB and boots FastAPI + Next — often 20–60s or more. Cloud Run
+   allows **4 minutes** to start listening. Fix: `--min-instances 1`.
+2. **`--port 8777` is mandatory** on every deploy. Dropping it yields 503.
+3. **`linux/amd64` is mandatory**, especially on Apple Silicon. Inspect
+   architecture before push.
 4. **`gcloud auth configure-docker` takes `${REGION}-docker.pkg.dev`**
-   (e.g. `us-east1-docker.pkg.dev`), not the bare region name `us-east1`.
-5. **Statelessness is parity, not a regression.** `schemas.db` written by
-   the dataset-generator in production is ephemeral (same as App Runner).
-   If you ever want durable schemas/models, that's a Cloud SQL / GCS
-   project — out of scope here.
-6. **Cold-start retries:** Cloud Run may retry a request that times out
-   during boot. Harmless for a personal site; your endpoints are mostly
-   idempotent GETs (the dataset-generator POSTs are the exception — another
-   reason the optional warm instance is nice).
-7. **Optional cleanup you can skip:** `backend/main.py` runs uvicorn with
-   `reload=True` in production — it works (it works on App Runner today)
-   but burns a little CPU watching files. If you ever touch that file, set
-   `reload=False` for prod.
-8. **CORS:** no change needed today (same-origin in prod). If you ever
-   split frontend and backend onto different hosts, add that host to
-   `allow_origins` in `main.py`.
-9. **Project/region consistency:** registry, service, and domain mapping
-   should all stay in `$REGION` (`us-east1` in this guide). Mixing regions
-   "works" but adds latency and cross-region egress.
-10. **If a deploy misbehaves:** `gcloud run services logs read
-    js-ml-dashboard --region "$REGION"` (container output) and
-    `gcloud run operations list --region "$REGION"` (deploy operations).
-    This is the equivalent of App Runner's service logs page.
+   (for example `us-east1-docker.pkg.dev`), not the bare region `us-east1`.
+5. **`$PROJECT_ID` must be set in this shell.** Empty project → `could not
+   parse resource []` or `Failed to find attribute [project]`.
+6. **UI works, APIs do not.** Pages are Next. `/api/*` is a rewrite to
+   FastAPI. `ECONNREFUSED 127.0.0.1:8000` means the start script’s `/health`
+   gate failed or the image is old (backend started after Next, or uvicorn
+   ran with `reload=True` and never bound). `/health` is **not** rewritten
+   (only `/api/*` is), so `https://…/health` on the public URL is a Next 404
+   even when FastAPI is healthy. Check `/api/models` instead.
+7. **Chat JSON-parse error** (`Unexpected token 'I', "Internal S"...`) is
+   the browser parsing plaintext `Internal Server Error` — same backend-down
+   failure, not a Groq JSON body.
+8. **Missing `GROQ_API_KEY`** (backend *is* up) returns JSON
+   `{"detail":"GROQ_API_KEY environment variable is not set."}`. Set the
+   var on the Cloud Run service; it is not copied from App Runner or `.env`.
+9. **`schemas.db` in production is ephemeral** (same as App Runner). Durable
+   schemas/models would be Cloud SQL / GCS — out of scope here.
+10. **Cold-start retries.** Cloud Run may retry a request that times out
+    during boot. Most endpoints are idempotent GETs; dataset-generator POSTs
+    are the exception.
+11. **CORS** needs no change while frontend and backend share one host. If
+    they are ever split, add the frontend origin to `allow_origins` in
+    `main.py`.
+12. **Keep registry, service, and domain mapping in `$REGION`.**
+13. **Deploy operations:** `gcloud run operations list --region "$REGION"`.
 
 ---
 
 ## Cost expectations
 
-- **$300 credit** (if you claimed it) covers the first 90 days of eligible
-  usage.
-- **Steady state with min-instances 0:** Cloud Run's free tier (a couple
-  million requests/mo + generous CPU-seconds + a chunk of egress) will
-  almost certainly cover a personal site. Artifact Registry storage for a
-  2.1 GB image is a few cents/month over the 0.5 GB free storage tier.
-  Treat it as **~$0/mo**, not a hard zero.
-- **With `--min-instances 1 --no-cpu-throttling`:** on the order of **tens
-  of dollars/month** at 1 vCPU / 2Gi, because you pay for the instance
-  sitting there. `--min-instances 1` *without* `--no-cpu-throttling` is
-  cheaper (idle rate) and still avoids the image pull.
-- **Comparison:** App Runner bills for always-on time + requests even with
-  zero traffic, so GCP should be equal or cheaper at min-instances 0.
+- **This guide’s config (2 vCPU / 4 GiB, min 0):** near-zero traffic →
+  **~$0–1/mo**. Free tier covers rare requests; Artifact Registry storage
+  is a few cents (0.5 GB free, then $0.10/GB). The tradeoff is cold starts.
+- **$300 credit** (if claimed) is more than enough to try this.
+- **`--min-instances 1`** (no `--no-cpu-throttling`): **~$35–40/mo** even
+  at zero traffic (idle CPU + memory). App Runner min-1 is often cheaper
+  because it bills provisioned memory only.
+- **`--min-instances 1 --no-cpu-throttling`:** **~$110/mo**. Do not use it.
 
 ---
 
-## Full command cheat-sheet (in order)
+## Command cheat-sheet (in order)
 
-> The gcloud CLI *install* is the only OS-dependent part — see
-> **Prerequisites #2** (🍎 macOS / 🐧 Linux). Everything below is identical
-> on both. Use **one shell** so the exports survive.
+The gcloud install is the only OS-dependent part (Prerequisites §2). Use
+**one shell** so the exports survive.
 
 ```bash
-# ── one-time setup (gcloud CLI already installed, per Prereq #2) ─────
+# ── one-time setup (gcloud already installed) ──────────────────
 gcloud auth login
 
-export PROJECT_ID=js-ml-dashboard    # change this if project create says the ID is taken
+export PROJECT_ID=js-ml-dashboard    # change if this ID is taken
 export REGION=us-east1
 
-gcloud projects create "$PROJECT_ID" --name "js-ml-dashboard"   # skip if it already exists
+gcloud projects create "$PROJECT_ID" --name "js-ml-dashboard"   # skip if it exists
 gcloud config set project "$PROJECT_ID"
+gcloud config get-value project                                 # must print the ID
 
 gcloud billing accounts list
 gcloud billing projects link "$PROJECT_ID" --billing-account=YOUR_ACCOUNT_ID
@@ -572,15 +594,17 @@ gcloud services enable artifactregistry.googleapis.com run.googleapis.com
 
 gcloud auth configure-docker "${REGION}-docker.pkg.dev"
 gcloud artifacts repositories create js-ml-dashboard \
-  --repository-format=DOCKER --location="$REGION"                # skip if it already exists
+  --repository-format=DOCKER --location="$REGION"                # skip if it exists
 
 # ── every deploy ───────────────────────────────────────────────
-export GROQ_API_KEY=...   # from the repo .env, if not already in the shell
+export GROQ_API_KEY=...
+export LANGSMITH_API_KEY=...
+export LANGSMITH_TRACING=true
 
-docker build --platform linux/amd64 -t kylecsnow/ml-dashboard:latest .
-docker image inspect kylecsnow/ml-dashboard:latest --format '{{.Architecture}}'   # must be amd64
+docker compose up --build    # smoke-test localhost:8777, then Ctrl+C
+docker image inspect js-ml-dashboard-app:latest --format '{{.Architecture}}'   # must be amd64
 
-docker tag kylecsnow/ml-dashboard:latest \
+docker tag js-ml-dashboard-app:latest \
   ${REGION}-docker.pkg.dev/${PROJECT_ID}/js-ml-dashboard/app:latest
 docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/js-ml-dashboard/app:latest
 
@@ -589,12 +613,14 @@ gcloud run deploy js-ml-dashboard \
   --region "$REGION" \
   --port 8777 \
   --allow-unauthenticated \
-  --cpu 1 --memory 2Gi \
+  --cpu 2 --memory 4Gi \
   --timeout 300 \
-  --set-env-vars GROQ_API_KEY="$GROQ_API_KEY"
+  --concurrency 100 \
+  --min-instances 0 --max-instances 25 \
+  --set-env-vars "GROQ_API_KEY=${GROQ_API_KEY},LANGSMITH_API_KEY=${LANGSMITH_API_KEY},LANGSMITH_TRACING=${LANGSMITH_TRACING}"
 
 # ── custom domain (after the run.app URL works) ────────────────
-gcloud domains verify kylecsnow.com          # Search Console TXT at Porkbun first
+gcloud domains verify kylecsnow.com
 gcloud domains list-user-verified
 
 gcloud beta run domain-mappings create \
@@ -604,6 +630,6 @@ gcloud beta run domain-mappings create \
 
 gcloud beta run domain-mappings describe --domain kylecsnow.com --region "$REGION"
 gcloud beta run domain-mappings describe --domain www.kylecsnow.com --region "$REGION"
-# at Porkbun: delete A 52.20.212.203; add *exactly* the A/AAAA/CNAME rows printed
+# at Porkbun: remove old A/ALIAS/CNAME conflicts; add exactly the A/AAAA/CNAME rows printed
 # (www CNAME is ghs.googlehosted.com — never the *.run.app URL)
 ```
