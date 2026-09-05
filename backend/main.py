@@ -37,9 +37,14 @@ logging.basicConfig(level=logging.INFO)
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the FastAPI application.")
     parser.add_argument("--port", type=int, default=8000, help="Port to run the FastAPI app on.")
+    parser.add_argument(
+        "--reload",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+    )
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    uvicorn.run("main:app", host="0.0.0.0", port=args.port, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=args.port, reload=args.reload)

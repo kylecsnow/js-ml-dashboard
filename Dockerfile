@@ -57,8 +57,23 @@ EXPOSE 8000 8777
 # Create a start script
 RUN echo '#!/bin/bash\n\
 . /app/venv/bin/activate\n\
-cd /app/frontend && npm run start & \n\
-cd /app/backend && python main.py' > /app/start.sh && \
+cd /app/backend && python main.py --no-reload &\n\
+backend_pid=$!\n\
+for i in $(seq 1 90); do\n\
+  if ! kill -0 "$backend_pid" 2>/dev/null; then\n\
+    echo "Backend exited before becoming ready" >&2\n\
+    exit 1\n\
+  fi\n\
+  if curl -sf http://127.0.0.1:8000/health >/dev/null; then\n\
+    break\n\
+  fi\n\
+  sleep 1\n\
+done\n\
+if ! curl -sf http://127.0.0.1:8000/health >/dev/null; then\n\
+  echo "Backend did not become ready on :8000" >&2\n\
+  exit 1\n\
+fi\n\
+cd /app/frontend && npm run start' > /app/start.sh && \
 chmod +x /app/start.sh
 
 WORKDIR /app

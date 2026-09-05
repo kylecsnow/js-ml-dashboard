@@ -146,11 +146,10 @@ export const TIMELINE: TimelineEntry[] = [
     org: 'Industrial & Engineering Chemistry Research',
     href: 'https://pubs.acs.org/iecred/article-abstract/56/47/14014/867703/Thermochemical-Synthesis-of-Ammonia-and-Syngas?redirectedFrom=PDF',
     summary: 'Paper #3: Atmospheric-pressure route to ammonia and syngas',
-    body: 'M.G. Heidlage, E.A. Kezar, K.C. Snow, P.H. Pfromm. Ind. Eng. Chem. Res. 2017, 56, 47, 14014–14024. Work from the University of Minnesota on making ammonia and syngas from natural gas without the usual high-pressure loop.',
+    body: 'M.G. Heidlage, E.A. Kezar, K.C. Snow, P.H. Pfromm. Ind. Eng. Chem. Res. 2017, 56, 47, 14014–14024. Work from the Pfromm Group at KSU on making ammonia and syngas from natural gas without the usual high-pressure loop.',
     highlights: [
       'Ind. Eng. Chem. Res. 2017, 56, 47, 14014–14024',
       'Co-author with Heidlage, Kezar, and Pfromm',
-      'University of Minnesota',
     ],
     image: {
       src: '/about-me/journal.svg',
