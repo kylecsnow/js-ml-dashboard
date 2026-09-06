@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+    output: 'standalone',
     // Change to ~3 minutes (instead of default ~30s) timeout to avoid ECONNRESET on slow endpoints (e.g. SHAP over many rows).
     experimental: {
         proxyTimeout: 180_000,  // in milliseconds
