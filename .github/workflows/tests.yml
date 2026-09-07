@@ -41,6 +41,7 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          disable_search: true
           files: coverage.xml
           flags: backend
           name: backend
@@ -49,6 +50,7 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          disable_search: true
           files: frontend/coverage/cobertura-coverage.xml
           flags: frontend
           name: frontend
