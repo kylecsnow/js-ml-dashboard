@@ -1,6 +1,6 @@
 # Keep in sync with [project] dependencies in pyproject.toml.
-# torch is the one exception: Docker needs a CPU wheel instead of the CUDA
-# package that `torch==2.2.1` would pull from PyPI.
+# Docker no longer installs from this file; it uses `uv sync --extra cpu`
+# (see the `cpu` extra in pyproject.toml) for the Linux CPU torch wheel.
 black>=25.0.0,<26.0.0
 catboost>=1.2.7,<2.0.0
 ddgs>=9.0.0,<10.0.0

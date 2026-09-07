@@ -3,10 +3,11 @@
 ##############################
 FROM node:20-slim
 
+COPY --from=ghcr.io/astral-sh/uv:0.8.22 /uv /usr/local/bin/uv
+
 # Install Python and required system dependencies
 RUN apt-get update && apt-get install -y \
     python3 \
-    python3-pip \
     python3-venv \
     build-essential \
     libxrender1 \
@@ -15,7 +16,11 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+# don't keep downlaoded wheels in /root/.cache/uv
+ENV UV_NO_CACHE=1
 COPY pyproject.toml ./
+# install project dependencies only, but skip installing this project as a package, so that dependency installs stay in a cacheable layer of the Docker image 
+RUN uv sync --python 3.11 --extra cpu --no-dev --no-install-project
 
 # Copy and install frontend dependencies, then build frontend
 WORKDIR /app/frontend
@@ -36,16 +41,12 @@ COPY backend/utils.py ./
 COPY backend/modeling.py ./
 COPY backend/model_training.py ./
 COPY backend/molecule_viz.py ./
-COPY backend/requirements.txt ./
 COPY backend/datasets/ ./datasets/
 COPY backend/models/ ./models/
 COPY backend/routers/ ./routers/
 
-# Create a virtual environment and install Python dependencies
 WORKDIR /app
-RUN python3 -m venv venv
-RUN . venv/bin/activate && pip install --no-cache-dir -r backend/requirements.txt
-RUN . venv/bin/activate && python3 -m pip install --no-deps .
+RUN uv sync --python 3.11 --extra cpu --no-dev
 
 
 #############################
@@ -56,7 +57,7 @@ EXPOSE 8000 8777
 
 # Create a start script
 RUN echo '#!/bin/bash\n\
-. /app/venv/bin/activate\n\
+. /app/.venv/bin/activate\n\
 cd /app/backend && python main.py --no-reload &\n\
 backend_pid=$!\n\
 for i in $(seq 1 90); do\n\

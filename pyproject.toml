@@ -7,6 +7,7 @@ name = "ml_dashboard_backend"
 version = "0.1.0"
 description = "Backend code for an ML and data analysis dashboard"
 authors = [{name = "Kyle Snow", email = "kylecsnow@gmail.com"}]
+requires-python = ">=3.11,<3.12"
 dependencies = [
     "black>=25.0.0,<26.0.0",
     "catboost>=1.2.7,<2.0.0",
@@ -46,6 +47,18 @@ dev = [
     "pytest-cov>=5.0.0,<7.0.0",
     "pytest>=8.0.0,<9.0.0",
 ]
+# Docker only: `uv sync --extra cpu` pulls the CPU wheel instead of the CUDA PyPI build.
+cpu = [
+    "torch==2.2.1",
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu", extra = "cpu" }
 
 [tool.setuptools]
 package-dir = {"ml_dashboard_backend" = "backend"}
