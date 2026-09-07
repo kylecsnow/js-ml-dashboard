@@ -1,7 +1,7 @@
 # js-ml-dashboard
 
-![codecov](https://img.shields.io/badge/codecov-47%25-blue)
-[![codecov](https://codecov.io/gh/kylecsnow/js-ml-dashboard/graph/badge.svg)](https://codecov.io/gh/kylecsnow/js-ml-dashboard)
+[![Tests](https://github.com/kylecsnow/js-ml-dashboard/actions/workflows/tests.yml/badge.svg)](https://github.com/kylecsnow/js-ml-dashboard/actions/workflows/tests.yml)
+[![Backend coverage](https://img.shields.io/codecov/c/github/kylecsnow/js-ml-dashboard?flag=backend&label=backend%20coverage)](https://codecov.io/gh/kylecsnow/js-ml-dashboard)
 
 This repository contains the code for a collection of Machine Learning tools - primarily a set of quick data visualizations useful for EDA and model explainability when training ML models on tabular datasets. This is a Next.js web application, using a frontend built with React/Typescript and a backend built with FastAPI/Python. You can run the app locally, or access it live on my personal website [kylecsnow.com](https://kylecsnow.com), where it has been deployed as a containerized application using Docker and AWS.
 
@@ -63,6 +63,12 @@ From the `frontend/` directory, run:
 
 ```bash
 npm test
+```
+
+Coverage (writes `frontend/coverage/cobertura-coverage.xml` for Codecov):
+
+```bash
+npm run test:coverage
 ```
 
 Tests live in `frontend/tests/`. This is a small suite focused on dataset-generator helpers (schema loading, generate payload/validation, chat form updates, markdown sanitization) plus one page-level flow. It does not cover Plotly visualization pages.

@@ -169,6 +169,7 @@ cython_debug/
 
 # dependencies
 */node_modules/
+node_modules/
 .pnpm-store/
 /.pnp
 .pnp.js
@@ -176,6 +177,7 @@ cython_debug/
 
 # testing
 /coverage
+frontend/coverage/
 
 # next.js
 */.next/
