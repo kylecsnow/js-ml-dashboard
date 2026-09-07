@@ -1,7 +1,7 @@
 # js-ml-dashboard
 
 ![codecov](https://img.shields.io/badge/codecov-47%25-blue)
-
+[![codecov](https://codecov.io/gh/kylecsnow/js-ml-dashboard/graph/badge.svg)](https://codecov.io/gh/kylecsnow/js-ml-dashboard)
 
 This repository contains the code for a collection of Machine Learning tools - primarily a set of quick data visualizations useful for EDA and model explainability when training ML models on tabular datasets. This is a Next.js web application, using a frontend built with React/Typescript and a backend built with FastAPI/Python. You can run the app locally, or access it live on my personal website [kylecsnow.com](https://kylecsnow.com), where it has been deployed as a containerized application using Docker and AWS.
 
