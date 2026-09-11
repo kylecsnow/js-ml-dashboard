@@ -101,7 +101,7 @@ The app is deployed as a single Docker image to [Amazon ECR](https://aws.amazon.
 ### 1. Build and test locally
 
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 
 Verify the app works at [http://localhost:8777](http://localhost:8777) before pushing.

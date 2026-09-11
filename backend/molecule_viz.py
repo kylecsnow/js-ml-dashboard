@@ -47,7 +47,7 @@ def process_molecular_space_map_data(df, featurization_method='morgan'):
     """
 
     smiles = df["SMILES"].tolist()
-    group = df["Group"].tolist()
+    # group = df["Group"].tolist()
     molecules = [Chem.MolFromSmiles(smi) for smi in smiles]
 
     # Featurize molecules

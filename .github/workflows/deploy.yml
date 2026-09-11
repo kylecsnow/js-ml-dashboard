@@ -1,0 +1,54 @@
+name: Deploy
+
+on:
+  # push:
+    # branches: [main]  # this would run the Deploy pipeline any time there is a merge or commit to main
+  workflow_dispatch:   # manual "ship this SHA" — does not run on push to main
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write          # OIDC to AWS
+    environment: production    # optional GitHub Environment / approval
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - uses: aws-actions/amazon-ecr-login@v2
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ vars.ECR_IMAGE }}:${{ github.sha }}
+            ${{ vars.ECR_IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy to App Runner
+        run: |
+          aws apprunner update-service \
+            --service-arn "${{ secrets.APPRUNNER_SERVICE_ARN }}" \
+            --source-configuration '{
+              "ImageRepository": {
+                "ImageIdentifier": "'"${{ vars.ECR_IMAGE }}:${{ github.sha }}"'",
+                "ImageRepositoryType": "ECR",
+                "ImageConfiguration": { "Port": "8777" }
+              },
+              "AutoDeploymentsEnabled": false
+            }'
