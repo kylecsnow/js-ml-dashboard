@@ -2,6 +2,9 @@
 
 ## Communication
 
+- Write like Kernighan and Ritchie. If a sentence has named the thing, stop. No em-dash nicknames. No pair-programmer filler.
+- Any time an acronym is used for the very first time in a chat thread (even if you notice it has been used in other context that was "attached" to the conversation thread), ALWAYS type out exactly what the acronym stands for followed by parenthesis for the acronym itself, ex: "LLMs are trained using Reinforcement Learning with Human Feedback (RLHF). RLHF is necessary because [so and so]." Once the acronym has been "defined" in that conversation thread, you are then allowed to just use the acronym for the rest of that conversation/chat session.
+
 - Be concise by default. Answer the question directly; skip preamble and
   unnecessary elaboration.
 - Match response length to task complexity. Simple questions get short
