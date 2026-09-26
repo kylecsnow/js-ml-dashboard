@@ -22,7 +22,8 @@ from routers.dataset_generator import (
     _validate_formulation_groups,
 )
 
-_PARENTHETICAL_RE = re.compile(r"[\(\)]")
+# Space before '(' is an annotation ("TPO (photoinitiator)"), not a chemical name.
+_ANNOTATION_PAREN_RE = re.compile(r"\s\(")
 
 
 def _descriptor_dict(item: Any) -> dict[str, Any]:
@@ -52,17 +53,17 @@ def _check_names(groups: list[dict], descriptors: list[dict], field: str) -> lis
         if name in seen:
             errors.append(f"{field}: duplicate name '{name}'.")
         seen.add(name)
-        if _PARENTHETICAL_RE.search(name):
+        if _ANNOTATION_PAREN_RE.search(name):
             errors.append(
-                f"{field}: name '{name}' contains parentheses — names must be clean; "
-                "put any detail in the units field or a different variable."
+                f"{field}: name '{name}' uses parentheses as an annotation. "
+                "Parentheses are allowed in a chemical name only if there is no space before '('."
             )
     for group in groups:
         gname = group.get("name", "")
-        if _PARENTHETICAL_RE.search(gname):
+        if _ANNOTATION_PAREN_RE.search(gname):
             errors.append(
-                f"formulation_groups: group name '{gname}' contains parentheses — "
-                "group names must be clean."
+                f"formulation_groups: group name '{gname}' uses parentheses as an annotation. "
+                "Parentheses are allowed in a chemical name only if there is no space before '('."
             )
         ing_seen: set[str] = set()
         for ing in group.get("ingredients", []):
@@ -128,10 +129,10 @@ def validate_form_updates(form_state: dict, updates: FormUpdates) -> list[str]:
     errors.extend(_check_names(raw_groups, outputs, "outputs"))
     for group in raw_groups:
         for ing in group["ingredients"]:
-            if _PARENTHETICAL_RE.search(ing.get("name", "")):
+            if _ANNOTATION_PAREN_RE.search(ing.get("name", "")):
                 errors.append(
-                    f"formulation_groups: ingredient '{ing['name']}' contains parentheses — "
-                    "names must be clean."
+                    f"formulation_groups: ingredient '{ing['name']}' uses parentheses as an annotation. "
+                    "Parentheses are allowed in a chemical name only if there is no space before '('."
                 )
 
     if not raw_groups:

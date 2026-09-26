@@ -136,6 +136,29 @@ def test_rejects_ingredient_with_parenthetical_name():
     assert any("parentheses" in e for e in errors)
 
 
+def test_accepts_embedded_chemical_parentheses():
+    errors = _validate(
+        {
+            "formulation_groups": [
+                _group(
+                    "Photoinitiator",
+                    0.0,
+                    1.0,
+                    [
+                        (
+                            "Phenylbis(2,4,6-trimethylbenzoyl)phosphine oxide",
+                            0.0,
+                            1.0,
+                            False,
+                        )
+                    ],
+                )
+            ]
+        }
+    )
+    assert errors == []
+
+
 def test_rejects_non_numeric_bounds():
     errors = _validate(
         {"outputs": [{"name": "Strength", "min": "five", "max": "ninety", "units": "MPa"}]}

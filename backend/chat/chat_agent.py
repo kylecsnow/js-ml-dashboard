@@ -84,7 +84,9 @@ cite URLs from the allowed list; never invent citations; citing none is fine.
 or set up form variables.
 - When changing a category, return its FULL new list — never a partial delta.
 - New ingredients default to required: false.
-- Names are clean labels: no parentheses, no units in the name.
+- Names are clean labels: no units in the name. Parentheses are allowed only \
+as part of a chemical name, with no space before '('. Do not add annotations \
+like "TPO (photoinitiator)".
 - min/max values are STRINGS. Ingredient/group fractions are in [0, 1] \
 ("0.05" not "5"). Group objects use the keys min and max for those group-sum \
 bounds (not group_sum_min / group_sum_max). In form_updates include only keys \
@@ -115,7 +117,7 @@ class ChatState(TypedDict, total=False):
 
 @tool
 def web_search(query: str) -> str:
-    """Search the web for chemistry/formulation facts to ground a claim."""
+    """Search the web for chemistry and formulation facts."""
     sources = search_chemistry_sources([query])[:MAX_SOURCES]
     if not sources:
         return "No sources found."
@@ -157,7 +159,7 @@ def _raise_llm_error(exc: Exception) -> None:
         raise HTTPException(
             status_code=429,
             detail=(
-                "The model provider is rate-limited right now. "
+                "The model provider is rate-limited. "
                 "Wait a few seconds and try again."
             ),
         ) from exc
@@ -356,8 +358,7 @@ def reply_node(state: ChatState) -> dict[str, Any]:
         messages.append(
             HumanMessage(
                 content=(
-                    "Your proposed form_updates were rejected by the application's "
-                    "validator:\n- "
+                    "The application's validator rejected these form_updates:\n- "
                     + "\n- ".join(shown)
                     + "\nReturn corrected, valid form_updates (or none)."
                 )
