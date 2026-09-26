@@ -2,13 +2,21 @@ from langchain_core.messages import AIMessage
 import json
 
 from chat.chat_agent import (
+    MAX_VALIDATION_ATTEMPTS,
     SEARCH_PROMPT,
+    _chat_llm,
+    _capacity_error_detail,
     _is_capacity_error,
     _normalize_formulation_groups,
     _normalize_num,
     _payload_from_parse_error,
+    chat_api_key_error,
+    chat_model,
+    chat_provider,
     compact_history,
+    merge_form_update_dicts,
     strip_unchanged_updates,
+    validate_node,
 )
 from chat.form_contracts import ChatReply, FormUpdates, parse_chat_reply
 from chat.form_validation import validate_form_updates
@@ -17,6 +25,64 @@ from chat.form_validation import validate_form_updates
 def test_search_prompt_does_not_request_json():
     assert "JSON" not in SEARCH_PROMPT
     assert "web_search" in SEARCH_PROMPT
+
+
+def test_chat_provider_defaults_to_groq(monkeypatch):
+    monkeypatch.delenv("CHAT_PROVIDER", raising=False)
+    monkeypatch.delenv("CHAT_MODEL", raising=False)
+    assert chat_provider() == "groq"
+    assert chat_model() == "openai/gpt-oss-120b"
+
+
+def test_chat_model_override_keeps_selected_provider(monkeypatch):
+    monkeypatch.setenv("CHAT_PROVIDER", "groq")
+    monkeypatch.setenv("CHAT_MODEL", "llama-3.3-70b-versatile")
+    monkeypatch.setenv("GROQ_API_KEY", "test-groq-key")
+
+    class _Groq:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    monkeypatch.setattr("chat.chat_agent.ChatGroq", _Groq)
+    llm = _chat_llm(max_tokens=100)
+
+    assert chat_api_key_error() is None
+    assert llm.kwargs["model"] == "llama-3.3-70b-versatile"
+    assert llm.kwargs["groq_api_key"] == "test-groq-key"
+
+
+def test_openai_provider_uses_its_key_and_model(monkeypatch):
+    monkeypatch.setenv("CHAT_PROVIDER", "openai")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+    monkeypatch.setenv("CHAT_MODEL", "gpt-4.1")
+
+    class _OpenAI:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    monkeypatch.setattr("chat.chat_agent.ChatOpenAI", _OpenAI)
+    llm = _chat_llm(max_tokens=100)
+
+    assert chat_api_key_error() is None
+    assert llm.kwargs["model"] == "gpt-4.1"
+    assert llm.kwargs["api_key"] == "test-openai-key"
+
+
+def test_openai_provider_uses_default_model_when_unset(monkeypatch):
+    monkeypatch.setenv("CHAT_PROVIDER", "openai")
+    monkeypatch.delenv("CHAT_MODEL", raising=False)
+    assert chat_model() == "gpt-4.1-mini"
+
+
+def test_openai_provider_requires_openai_key(monkeypatch):
+    monkeypatch.setenv("CHAT_PROVIDER", "openai")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    assert chat_api_key_error() == "OPENAI_API_KEY environment variable is not set."
+
+
+def test_unknown_provider_is_rejected(monkeypatch):
+    monkeypatch.setenv("CHAT_PROVIDER", "anthropic")
+    assert "Unknown CHAT_PROVIDER" in (chat_api_key_error() or "")
 
 
 def test_compact_history_keeps_recent_messages():
@@ -315,6 +381,55 @@ def test_strip_unchanged_updates_detects_required_toggle_change():
     assert cleaned == incoming
 
 
+def test_merge_form_update_dicts_keeps_omitted_sections():
+    previous = {
+        "general_inputs": [{"name": "Temp", "min": "20", "max": "40", "units": "C"}],
+        "formulation_groups": [{"name": "Monomer", "min": "0.6", "max": "0.95"}],
+        "outputs": [{"name": "Cure Depth", "min": "50", "max": "400", "units": "um"}],
+    }
+    incoming = {
+        "formulation_groups": [{"name": "Monomer", "min": "0.5", "max": "1.0"}],
+    }
+    merged = merge_form_update_dicts(previous, incoming)
+    assert merged["general_inputs"] == previous["general_inputs"]
+    assert merged["outputs"] == previous["outputs"]
+    assert merged["formulation_groups"] == incoming["formulation_groups"]
+
+
+def test_merge_form_update_dicts_does_not_resurrect_dropped_update():
+    previous = {"num_rows": 200}
+    assert merge_form_update_dicts(previous, None) is None
+    assert merge_form_update_dicts(previous, {}) == {}
+
+
+def test_validate_node_appends_errors_to_log_on_retry():
+    reply = ChatReply(
+        message="Updated.",
+        form_changes_intended=True,
+        form_updates=FormUpdates(
+            general_inputs=[
+                {
+                    "name": "Defoamer (Polyglycol)",
+                    "min": "1",
+                    "max": "9",
+                    "units": "mg/L",
+                }
+            ]
+        ),
+    )
+    out = validate_node(
+        {
+            "reply": reply,
+            "form_state": {},
+            "attempts": 1,
+            "validation_error_log": [],
+        }
+    )
+    assert out["validation_errors"]
+    assert out["validation_error_log"]
+    assert any("parentheses" in error.lower() for error in out["validation_error_log"])
+
+
 def test_strip_unchanged_updates_keeps_only_changed_fields():
     form_state = {
         "general_inputs": [{"name": "Temp", "min": "20", "max": "80", "units": "C"}],
@@ -362,6 +477,7 @@ def _patch_llms(monkeypatch, search, reply):
 
 
 def test_chat_dataset_generator_requires_api_key(client, monkeypatch):
+    monkeypatch.setenv("CHAT_PROVIDER", "groq")
     monkeypatch.delenv("GROQ_API_KEY", raising=False)
     response = client.post(
         "/api/chat/dataset-generator",
@@ -607,6 +723,116 @@ def test_chat_dataset_generator_retries_invalid_form_updates(client, monkeypatch
     assert "validator" in feedback or "rejected" in feedback
 
 
+def test_chat_dataset_generator_keeps_omitted_sections_on_retry(client, monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "test-key")
+    invalid = ChatReply(
+        message="Set up DLP.",
+        form_changes_intended=True,
+        form_updates=FormUpdates(
+            general_inputs=[
+                {"name": "Cure Temperature", "min": "20", "max": "40", "units": "C"}
+            ],
+            outputs=[
+                {"name": "Cure Depth", "min": "50", "max": "400", "units": "um"}
+            ],
+            formulation_groups=[
+                {
+                    "name": "Monomer",
+                    "min": "0.6",
+                    "max": "0.95",
+                    "ingredients": [
+                        {
+                            "name": "HDDA",
+                            "min": "0.3",
+                            "max": "0.8",
+                            "required": True,
+                        }
+                    ],
+                },
+                {
+                    "name": "Photoinitiator",
+                    "min": "0.01",
+                    "max": "0.05",
+                    "ingredients": [
+                        {
+                            "name": "TPO (photoinitiator)",
+                            "min": "0.01",
+                            "max": "0.05",
+                            "required": True,
+                        }
+                    ],
+                },
+            ],
+        ),
+    )
+    partial_fix = ChatReply(
+        message="Corrected names.",
+        form_changes_intended=True,
+        form_updates=FormUpdates(
+            formulation_groups=[
+                {
+                    "name": "Monomer",
+                    "min": "0.6",
+                    "max": "0.95",
+                    "ingredients": [
+                        {
+                            "name": "HDDA",
+                            "min": "0.3",
+                            "max": "0.8",
+                            "required": True,
+                        }
+                    ],
+                },
+                {
+                    "name": "Photoinitiator",
+                    "min": "0.01",
+                    "max": "0.05",
+                    "ingredients": [
+                        {
+                            "name": "TPO",
+                            "min": "0.01",
+                            "max": "0.05",
+                            "required": True,
+                        }
+                    ],
+                },
+            ],
+        ),
+    )
+    search = _FakeLLM([AIMessage(content="OK")])
+    reply = _FakeLLM([invalid, partial_fix])
+    _patch_llms(monkeypatch, search, reply)
+
+    response = client.post(
+        "/api/chat/dataset-generator",
+        json={
+            "message": "Set up a UV-curable DLP resin dataset.",
+            "conversation_history": [],
+            "form_state": {
+                "general_inputs": [],
+                "formulation_groups": [],
+                "outputs": [],
+            },
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    updates = data["form_updates"]
+    assert updates["general_inputs"][0]["name"] == "Cure Temperature"
+    assert updates["outputs"][0]["name"] == "Cure Depth"
+    names = [
+        ingredient["name"]
+        for group in updates["formulation_groups"]
+        for ingredient in group["ingredients"]
+    ]
+    assert "TPO" in names
+    assert all(" (" not in name for name in names)
+    assert len(reply.calls) == 2
+    feedback = reply.calls[1][-1].content
+    assert "Previous form_updates" in feedback
+    assert "Cure Temperature" in feedback
+
+
 def test_chat_dataset_generator_drops_updates_when_validation_keeps_failing(
     client, monkeypatch
 ):
@@ -641,7 +867,7 @@ def test_chat_dataset_generator_drops_updates_when_validation_keeps_failing(
     data = response.json()
     assert "form_updates" not in data
     assert "validation" in data["message"]
-    assert len(reply.calls) == 3
+    assert len(reply.calls) == MAX_VALIDATION_ATTEMPTS
 
 
 def test_chat_dataset_generator_accepts_group_sum_min_max_aliases(client, monkeypatch):
@@ -781,3 +1007,11 @@ def test_chat_dataset_generator_does_not_retry_tpm_413(client, monkeypatch):
     assert response.status_code == 429
     assert "rate-limited" in response.json()["detail"]
     assert len(reply.calls) == 1
+
+
+def test_capacity_error_detail_reports_daily_limit_and_wait():
+    detail = _capacity_error_detail(
+        Exception("tokens per day exceeded. Please try again in 8m.")
+    )
+    assert "daily token limit" in detail
+    assert "8m" in detail

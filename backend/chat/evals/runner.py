@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -26,9 +25,11 @@ from dotenv import load_dotenv
 from fastapi import HTTPException
 
 from chat.chat_agent import (
-    CHAT_MODEL,
     REASONING_EFFORT,
     build_graph,
+    chat_api_key_error,
+    chat_model,
+    chat_provider,
     compact_history,
     strip_unchanged_updates,
 )
@@ -40,6 +41,8 @@ _EVALS_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _EVALS_DIR.parents[2]  # repo root, where .env lives
 DEFAULT_GOLDEN_SET = _EVALS_DIR / "golden_set.jsonl"
 DEFAULT_RESULTS_DIR = _EVALS_DIR / "results"
+_RATE_LIMIT_RETRIES = 3
+_RATE_LIMIT_WAIT_S = 30.0
 
 STUB_SOURCES = [
     {
@@ -189,7 +192,9 @@ def run_case(graph: Any, case: Any) -> dict[str, Any]:
         "search_queries": search_queries,
         "retrieved_sources": retrieved,
         "attempts": int(state.get("attempts") or 0),
-        "validation_errors": list(state.get("validation_errors") or []),
+        "validation_errors": list(
+            state.get("validation_error_log") or state.get("validation_errors") or []
+        ),
         "form_changes_intended": (
             None if reply is None else bool(reply.form_changes_intended)
         ),
@@ -211,6 +216,20 @@ def run_eval(
     rows: list[dict[str, Any]] = []
     for case in cases:
         result = run_case(compiled, case)
+        retries = 0
+        while (
+            result["error"]
+            and "HTTP 429" in result["error"]
+            and "daily token limit" not in result["error"]
+            and retries < _RATE_LIMIT_RETRIES
+        ):
+            retries += 1
+            print(
+                f"  {_case_get(case, 'id')}: 429, "
+                f"retry {retries}/{_RATE_LIMIT_RETRIES} in {_RATE_LIMIT_WAIT_S:.0f}s"
+            )
+            time.sleep(_RATE_LIMIT_WAIT_S)
+            result = run_case(compiled, case)
         scores = {} if result["error"] else score_case(case, result)
         passed = None
         if result["error"]:
@@ -225,7 +244,8 @@ def _write_results(rows: list[dict[str, Any]], out_path: Path, golden_set: Path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "meta": {
-            "model": CHAT_MODEL,
+            "provider": chat_provider(),
+            "model": chat_model(),
             "reasoning_effort": REASONING_EFFORT,
             "golden_set": str(golden_set),
             "search_stubbed": True,
@@ -288,8 +308,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    if not os.environ.get("GROQ_API_KEY"):
-        raise SystemExit("GROQ_API_KEY is not set.")
+    if api_key_error := chat_api_key_error():
+        raise SystemExit(api_key_error)
 
     cases = select_cases(load_cases(args.golden_set), ids=args.ids, tags=args.tags)
     if not cases:

@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Body, HTTPException
 from langsmith import traceable
-import os
 from typing import Any
 
-from chat.chat_agent import run_dataset_generator_chat
+from chat.chat_agent import chat_api_key_error, run_dataset_generator_chat
 
 router = APIRouter()
 
@@ -11,10 +10,11 @@ router = APIRouter()
 @router.post("/api/chat/dataset-generator")
 @traceable(name="dataset-generator-chat")
 async def chat_dataset_generator(body: dict = Body(...)) -> dict[str, Any]:
-    if not os.environ.get("GROQ_API_KEY"):
+    api_key_error = chat_api_key_error()
+    if api_key_error:
         raise HTTPException(
             status_code=500,
-            detail="GROQ_API_KEY environment variable is not set.",
+            detail=api_key_error,
         )
 
     user_message: str = body.get("message", "")

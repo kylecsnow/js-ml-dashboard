@@ -11,7 +11,11 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from chat.chemistry_search import _normalize_url, extract_cited_urls
+from chat.chemistry_search import (
+    _normalize_url,
+    extract_cited_urls,
+    filter_cited_sources,
+)
 from chat.evals.schema import Expect, GoldenCase
 from chat.form_contracts import FormUpdates
 from chat.form_validation import validate_form_updates
@@ -105,6 +109,17 @@ def _retrieved_urls(result: Mapping[str, Any]) -> set[str]:
     return urls
 
 
+def _resolved_cited_sources(result: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    """Prefer runner-populated cited_sources; else use the UI citation parser."""
+    cited = result.get("cited_sources")
+    if isinstance(cited, list) and cited:
+        return [item for item in cited if isinstance(item, Mapping)]
+    retrieved = result.get("retrieved_sources") or []
+    if not isinstance(retrieved, list):
+        retrieved = []
+    return filter_cited_sources(_reply_message(result), retrieved)
+
+
 def _score_form_changes_intended(
     expected: Any, result: dict[str, Any], _form: dict[str, Any]
 ) -> bool:
@@ -172,7 +187,7 @@ def _score_must_pass_validator(
 def _score_require_citations(
     expected: Any, result: dict[str, Any], _form: dict[str, Any]
 ) -> bool:
-    cited = bool(result.get("cited_sources")) or bool(
+    cited = bool(_resolved_cited_sources(result)) or bool(
         extract_cited_urls(_reply_message(result))
     )
     return cited is bool(expected)
@@ -182,6 +197,10 @@ def _score_citations_subset(
     expected: Any, result: dict[str, Any], _form: dict[str, Any]
 ) -> bool:
     cited = extract_cited_urls(_reply_message(result))
+    for source in _resolved_cited_sources(result):
+        url = source.get("url")
+        if url:
+            cited.add(_normalize_url(str(url)))
     allowed = _retrieved_urls(result)
     subset = not cited or cited <= allowed
     return subset is bool(expected)

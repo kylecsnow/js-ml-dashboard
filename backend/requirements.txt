@@ -11,6 +11,7 @@ langsmith>=0.3.0,<1.0.0
 langchain>=1.0.0,<2.0.0
 langchain-core>=1.0.0,<2.0.0
 langchain-groq>=1.0.0,<2.0.0
+langchain-openai>=1.0.0,<2.0.0
 langgraph>=1.0.0,<2.0.0
 matplotlib>=3.10.1,<4.0.0
 mordred>=1.2.0,<2.0.0
