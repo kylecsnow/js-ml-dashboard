@@ -23,10 +23,17 @@ function escapeHtml(text: string): string {
     .replace(/'/g, '&#39;');
 }
 
+function unescapeLiteralNewlines(text: string): string {
+  if (!text.includes('\\')) {
+    return text;
+  }
+  return text.replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n').replace(/\\r/g, '\n');
+}
+
 export function renderAssistantMarkdown(text: string): string {
   try {
     ensureLinksOpenInNewTabs();
-    const dirty = marked.parse(text || '', { breaks: true });
+    const dirty = marked.parse(unescapeLiteralNewlines(text || ''), { breaks: true });
     return DOMPurify.sanitize(dirty as string);
   } catch {
     return escapeHtml(text);

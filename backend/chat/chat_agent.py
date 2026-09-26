@@ -104,9 +104,10 @@ cite URLs from the allowed list; never invent citations; citing none is fine.
 or set up form variables.
 - When changing a category, return its FULL new list — never a partial delta.
 - New ingredients default to required: false.
-- Names are clean labels: no units in the name. Parentheses are allowed only \
-as part of a chemical name, with no space before '('. Do not add annotations \
-like "TPO (photoinitiator)".
+- Names are clean labels: Title Case with spaces between words \
+("Exposure Time", not ExposureTime or exposure_time). No units in the name. \
+Parentheses are allowed only as part of a chemical name, with no space \
+before '('. Do not add annotations like "TPO (photoinitiator)".
 - min/max values are STRINGS. Ingredient/group fractions are in [0, 1] \
 ("0.05" not "5"). Group objects use the keys min and max for those group-sum \
 bounds (not group_sum_min / group_sum_max). In form_updates include only keys \

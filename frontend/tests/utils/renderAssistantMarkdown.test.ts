@@ -9,6 +9,14 @@ describe('renderAssistantMarkdown', () => {
     expect(html).toContain('rel="noopener noreferrer"');
   });
 
+  it('turns leftover \\n sequences into real line breaks', () => {
+    const html = renderAssistantMarkdown('Good photoinitiator.\\n\\nBad photoinitiator.');
+    expect(html).not.toContain('\\n');
+    expect(html).toMatch(/<p>/i);
+    expect(html).toContain('Good photoinitiator.');
+    expect(html).toContain('Bad photoinitiator.');
+  });
+
   it('strips script tags, event handlers, and javascript URLs from HTML', () => {
     const html = renderAssistantMarkdown(
       '<script>alert(1)</script><p>safe</p><img src=x onerror="alert(1)"><a href="javascript:alert(1)">click</a>',

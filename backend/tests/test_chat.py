@@ -125,6 +125,18 @@ def test_chat_reply_model_validate_accepts_group_sum_aliases():
     assert group.max == "0.7"
 
 
+def test_parse_chat_reply_unescapes_literal_newlines_in_message():
+    reply = parse_chat_reply(
+        {
+            "message": "Good photoinitiator.\\n\\nBad photoinitiator.",
+            "form_changes_intended": False,
+            "form_updates": None,
+        }
+    )
+    assert reply.message == "Good photoinitiator.\n\nBad photoinitiator."
+    assert "\\n" not in reply.message
+
+
 def test_parse_chat_reply_accepts_group_sum_aliases():
     reply = parse_chat_reply(
         {
