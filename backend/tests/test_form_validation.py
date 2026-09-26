@@ -51,6 +51,7 @@ def test_rejects_group_sum_below_one():
         }
     )
     assert any("sum of all group upper bounds is less than 1.0" in e for e in errors)
+    assert any("bulk/carrier group" in e for e in errors)
 
 
 def test_rejects_forced_groups_summing_above_one():

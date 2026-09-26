@@ -157,6 +157,13 @@ def validate_form_updates(form_state: dict, updates: FormUpdates) -> list[str]:
             normalized, global_min, global_max, total_ingredients
         )
     except ValueError as exc:
-        errors.append(str(exc))
+        msg = str(exc)
+        if "sum of all group upper bounds is less than 1.0" in msg:
+            msg += (
+                " Add a bulk/carrier group (water, milk, solvent, base resin, or something relevant for the domain at hand) "
+                "whose max covers the remaining fraction so group maxes sum to "
+                "at least 1.0. Do not inflate a minority ingredient's max to fake it."
+            )
+        errors.append(msg)
 
     return errors

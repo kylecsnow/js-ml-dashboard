@@ -641,7 +641,7 @@ def test_chat_dataset_generator_drops_updates_when_validation_keeps_failing(
     data = response.json()
     assert "form_updates" not in data
     assert "validation" in data["message"]
-    assert len(reply.calls) == 2
+    assert len(reply.calls) == 3
 
 
 def test_chat_dataset_generator_accepts_group_sum_min_max_aliases(client, monkeypatch):

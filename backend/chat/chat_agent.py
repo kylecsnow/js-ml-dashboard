@@ -36,7 +36,7 @@ MAX_HISTORY_CHARS = 1_200
 MAX_SEARCH_TOKENS = 256
 MAX_REPLY_TOKENS = 2_048
 MAX_SOURCES = 3
-MAX_VALIDATION_ATTEMPTS = 2
+MAX_VALIDATION_ATTEMPTS = 3
 MAX_VALIDATION_ERRORS_NOTED = 2
 REASONING_EFFORT = "low"
 
@@ -71,6 +71,10 @@ Formulation Input.
 stay generic. Keep about 10 ingredients, soft ceiling 20, in 2-5 role groups.
 - Give every variable a realistic domain-based min/max. Never change num_rows or \
 noise unless the user directly asks.
+- Group maxes must be able to sum to 1.0. If most of the mixture is a bulk \
+phase (water, milk, solvent, base resin), include that group. Keep minority \
+ingredients at realistic maxes; do not inflate them to fake a complete \
+formulation.
 - For "start over" / domain change: remove ALL existing variables first.
 
 ### Citing sources
