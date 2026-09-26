@@ -9,6 +9,7 @@ From backend/ in the ml-dashboard conda env:
     python -m chat.evals.runner
     python -m chat.evals.runner --id info-noise --id edit-rows-only
     python -m chat.evals.runner --tag core
+    python -m chat.evals.runner --min-pass-rate 0.7
 """
 
 from __future__ import annotations
@@ -257,9 +258,22 @@ def _write_results(rows: list[dict[str, Any]], out_path: Path, golden_set: Path)
     out_path.write_text(json.dumps(payload, indent=2) + "\n")
 
 
+def _pass_rate(rows: list[dict[str, Any]]) -> tuple[int, int, float]:
+    n_total = len(rows)
+    n_pass = sum(1 for row in rows if row.get("passed") is True)
+    rate = (n_pass / n_total) if n_total else 0.0
+    return n_pass, n_total, rate
+
+
+def _below_pass_rate(rows: list[dict[str, Any]], min_pass_rate: float) -> bool:
+    if min_pass_rate <= 0:
+        return False
+    _n_pass, n_total, rate = _pass_rate(rows)
+    return n_total == 0 or rate < min_pass_rate
+
+
 def _print_summary(rows: list[dict[str, Any]]) -> None:
     scored = [row for row in rows if row["passed"] is not None]
-    n_pass = sum(1 for row in scored if row["passed"])
     print(f"{'id':<36} {'result':<8} {'latency':>8}  scores")
     print("-" * 80)
     for row in rows:
@@ -280,10 +294,11 @@ def _print_summary(rows: list[dict[str, Any]]) -> None:
         if row["error"]:
             print(f"  {row['error']}")
     print("-" * 80)
+    n_pass, n_total, rate = _pass_rate(rows)
     if scored:
-        print(f"{n_pass}/{len(scored)} cases passed")
+        print(f"{n_pass}/{n_total} cases passed ({rate:.0%})")
     else:
-        print(f"{len(rows)} cases run. chat.evals.scorers.score_case is not defined.")
+        print(f"{n_total} cases run. chat.evals.scorers.score_case is not defined.")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -306,7 +321,15 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="JSON result file.",
     )
+    parser.add_argument(
+        "--min-pass-rate",
+        type=float,
+        default=0.0,
+        help="Exit 1 if passed/total is below this fraction. Default 0.",
+    )
     args = parser.parse_args(argv)
+    if not 0.0 <= args.min_pass_rate <= 1.0:
+        raise SystemExit("--min-pass-rate must be between 0 and 1.")
 
     if api_key_error := chat_api_key_error():
         raise SystemExit(api_key_error)
@@ -321,6 +344,13 @@ def main(argv: list[str] | None = None) -> int:
     _write_results(rows, out_path, args.golden_set)
     _print_summary(rows)
     print(f"wrote {out_path}")
+    if _below_pass_rate(rows, args.min_pass_rate):
+        n_pass, n_total, rate = _pass_rate(rows)
+        print(
+            f"pass rate {n_pass}/{n_total} ({rate:.0%}) "
+            f"is below --min-pass-rate {args.min_pass_rate:.0%}"
+        )
+        return 1
     return 0
 
 

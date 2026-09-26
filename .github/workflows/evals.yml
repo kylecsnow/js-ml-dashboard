@@ -1,0 +1,68 @@
+name: Evals
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: "Comma-separated tags. Leave empty to run the full golden set."
+        required: false
+        default: ""
+      min_pass_rate:
+        description: "Fail if passed/total is below this fraction (0 to 1)."
+        required: false
+        default: "0.7"
+
+concurrency:
+  group: llm-evals
+  cancel-in-progress: false
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    env:
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+          enable-cache: true
+
+      - name: Install backend dependencies
+        run: uv sync --extra dev
+
+      - name: Run golden-set evals
+        env:
+          EVAL_TAGS: ${{ github.event.inputs.tags }}
+          EVAL_MIN_PASS_RATE: ${{ github.event.inputs.min_pass_rate || '0.7' }}
+        run: |
+          set -euo pipefail
+          args=(
+            --out backend/chat/evals/results/nightly.json
+            --min-pass-rate "$EVAL_MIN_PASS_RATE"
+          )
+          if [ -n "${EVAL_TAGS:-}" ]; then
+            IFS=',' read -ra tags <<< "$EVAL_TAGS"
+            for tag in "${tags[@]}"; do
+              tag="${tag#"${tag%%[![:space:]]*}"}"
+              tag="${tag%"${tag##*[![:space:]]}"}"
+              [ -n "$tag" ] && args+=(--tag "$tag")
+            done
+          fi
+          PYTHONPATH=backend uv run python -m chat.evals.runner "${args[@]}"
+
+      - name: Upload eval results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-set-results
+          path: backend/chat/evals/results/nightly.json
+          if-no-files-found: warn
