@@ -100,10 +100,32 @@ class FormUpdates(BaseModel):
         )
 
 
+def unescape_literal_newlines(text: str) -> str:
+    """Turn leftover ``\\n`` / ``\\r`` sequences into real line breaks.
+
+    json_mode models often emit the two-character sequence backslash-n in
+    ``message`` instead of an actual newline. The UI then shows ``\\n``.
+    """
+    if not text or "\\" not in text:
+        return text
+    return (
+        text.replace("\\r\\n", "\n")
+        .replace("\\n", "\n")
+        .replace("\\r", "\n")
+    )
+
+
 class ChatReply(BaseModel):
     message: str
     form_changes_intended: bool = False
     form_updates: FormUpdates | None = None
+
+    @field_validator("message", mode="before")
+    @classmethod
+    def _unescape_message_newlines(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            return unescape_literal_newlines(value)
+        return value
 
 
 def coerce_chat_reply_data(data: dict[str, Any]) -> dict[str, Any]:

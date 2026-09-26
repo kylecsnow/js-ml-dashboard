@@ -162,7 +162,7 @@ def test_filter_cited_sources_returns_empty_when_nothing_cited():
 
 
 def test_filter_cited_sources_handles_numbered_citations():
-    # gpt-oss on Groq cites with 【N†Title】 markers (N = index in the source
+    # Some models cite with 【N†Title】 markers (N = index in the source
     # block) instead of markdown links; map those back onto the source list.
     sources = [
         {"title": "IRGANOX", "url": "https://basf.com/irganox", "snippet": ""},
@@ -175,6 +175,41 @@ def test_filter_cited_sources_handles_numbered_citations():
         "https://basf.com/irganox",
         "https://basf.com/ps800",
     ]
+
+
+def test_filter_cited_sources_handles_title_in_bracket_citations():
+    sources = [
+        {"title": "Eval source 1", "url": "https://example.com/eval/source-1", "snippet": ""},
+        {"title": "Eval source 2", "url": "https://example.com/eval/source-2", "snippet": ""},
+        {"title": "Eval source 3", "url": "https://example.com/eval/source-3", "snippet": ""},
+    ]
+    message = (
+        "TPO absorbs near 405 nm【Eval source 1】. "
+        "Irgacure 819 offers deep cure【Eval source 2】. "
+        "ITX is a sensitizer【Eval source 3】."
+    )
+    filtered = filter_cited_sources(message, sources)
+    assert [source["url"] for source in filtered] == [
+        "https://example.com/eval/source-1",
+        "https://example.com/eval/source-2",
+        "https://example.com/eval/source-3",
+    ]
+
+
+def test_filter_cited_sources_title_brackets_ignore_unknown_labels():
+    sources = [
+        {"title": "Eval source 1", "url": "https://example.com/eval/source-1", "snippet": ""},
+    ]
+    assert filter_cited_sources("Uses TPO【random chemical】.", sources) == []
+
+
+def test_filter_cited_sources_title_brackets_map_source_n():
+    sources = [
+        {"title": "Paper A", "url": "https://example.com/a", "snippet": ""},
+        {"title": "Paper B", "url": "https://example.com/b", "snippet": ""},
+    ]
+    filtered = filter_cited_sources("See the ranges【source 2】.", sources)
+    assert [source["url"] for source in filtered] == ["https://example.com/b"]
 
 
 def test_filter_cited_sources_handles_plain_numeric_citations():

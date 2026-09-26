@@ -79,13 +79,25 @@ NOTE: Dataset filenames **must** be in the format `{dataset-name}_dataset.pkl`, 
 
 ## Environment variables
 
-The Dataset Generator AI chat requires a Groq API key. Create a `.env` file in the repo root:
+The Dataset Generator AI chat defaults to Groq, which requires a Groq API key. Create a `.env` file in the repo root:
 
 ```bash
 GROQ_API_KEY=your_key_here
 ```
 
-Get a key from the [Groq console](https://console.groq.com/). For local Docker, `docker-compose.yml` loads this file via `env_file`. In production on AWS, set `GROQ_API_KEY` as a runtime environment variable or secret.
+To use a different provider or model, keep the Groq key and add the two knobs below. There is no automatic fallback.
+
+```bash
+# groq (default) or openai
+CHAT_PROVIDER=groq
+# optional; defaults per provider:
+#   groq: openai/gpt-oss-120b
+#   openai: gpt-4.1-mini
+CHAT_MODEL=openai/gpt-oss-120b
+OPENAI_API_KEY=your_key_here
+```
+
+Switch by editing `CHAT_PROVIDER` / `CHAT_MODEL` and restarting the backend. Get a Groq key from the [Groq console](https://console.groq.com/). For local Docker, `docker-compose.yml` loads this file via `env_file`. In production, set the selected provider's API key as a runtime environment variable or secret.
 
 Optionally, to enable langsmith tracing:
 ```bash

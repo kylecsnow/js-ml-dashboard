@@ -249,15 +249,22 @@ def format_sources_for_finalization(sources: list[dict[str, str]]) -> str:
 
 
 _MARKDOWN_LINK_PATTERN = re.compile(r"\]\(\s*<?(https?://[^\s)]+?)>?\s*\)")
-# Some models (e.g. gpt-oss on Groq) cite with numbered markers that echo the
-# index of the source block they were given, e.g. 【1†Title】, instead of
-# markdown links. Map those indices back onto the source list.
+# Some models cite with numbered markers that echo the index of the source
+# block they were given, e.g. 【1†Title】, instead of markdown links. Map those
+# indices back onto the source list.
 _NUMBERED_CITATION_PATTERN = re.compile(r"【\s*(\d+)\s*†([^】]*)】")
 # Prose references like "(source 1)" that echo the numbered source block.
 _SOURCE_REF_PATTERN = re.compile(r"\(source\s+(\d+)\)", re.IGNORECASE)
-# Plain numeric footnotes are another common gpt-oss citation style. They are
-# not markdown links, so detect them and ensure the UI receives References.
+# Plain numeric footnotes are another common citation style. They are not
+# markdown links, so detect them and ensure the UI receives References.
 _PLAIN_NUMBERED_CITATION_PATTERN = re.compile(r"(?<![\w\]])\[(\d+)\](?!\()")
+# Some replies wrap the source title instead of an index: 【Eval source 1】.
+_CJK_BRACKET_PATTERN = re.compile(r"【\s*([^】]+?)\s*】")
+_BRACKET_INDEX_LABEL = re.compile(r"(?:source\s+)?(\d+)$")
+
+
+def _normalize_cite_label(text: str) -> str:
+    return re.sub(r"\s+", " ", text).strip().casefold()
 
 
 def _cited_indexes(message: str) -> set[int]:
@@ -274,6 +281,36 @@ def _cited_indexes(message: str) -> set[int]:
         int(match.group(1))
         for match in _PLAIN_NUMBERED_CITATION_PATTERN.finditer(message)
     )
+    return indexes
+
+
+def _cited_title_indexes(message: str, sources: list[dict[str, str]]) -> set[int]:
+    """Map 【Title】 / 【source N】 markers onto 1-based source indexes."""
+    if not message or not sources:
+        return set()
+    labels: list[str] = []
+    for match in _CJK_BRACKET_PATTERN.finditer(message):
+        inner = match.group(1).strip()
+        if "†" in inner:
+            continue
+        labels.append(_normalize_cite_label(inner))
+    if not labels:
+        return set()
+
+    title_index: dict[str, int] = {}
+    for index, source in enumerate(sources, start=1):
+        title = _normalize_cite_label(source.get("title") or "")
+        if title and title not in title_index:
+            title_index[title] = index
+
+    indexes: set[int] = set()
+    for label in labels:
+        if label in title_index:
+            indexes.add(title_index[label])
+            continue
+        numbered = _BRACKET_INDEX_LABEL.fullmatch(label)
+        if numbered:
+            indexes.add(int(numbered.group(1)))
     return indexes
 
 
@@ -304,6 +341,7 @@ def _filter_cited_source_pairs(
         return []
     cited_urls = extract_cited_urls(message)
     cited_indexes = _cited_indexes(message)
+    cited_indexes.update(_cited_title_indexes(message, sources))
     if not cited_urls and not cited_indexes:
         return []
 
@@ -324,8 +362,8 @@ def filter_cited_sources(
 ) -> list[dict[str, str]]:
     """Keep only the sources the assistant actually cited in its message.
 
-    Handles both citation styles: markdown links ``[title](url)`` and numbered
-    markers ``【N†...】`` (where N is the index in the source block).
+    Handles markdown links ``[title](url)``, numbered markers ``【N†...】``,
+    ``[N]``, ``(source N)``, and title-in-bracket cites ``【Title】``.
     Preserves the original ordering of ``sources``.
     """
     return [source for _, source in _filter_cited_source_pairs(message, sources)]

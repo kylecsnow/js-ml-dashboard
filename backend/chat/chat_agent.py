@@ -1,7 +1,8 @@
 """Dataset-generator chat: search, then a structured reply, then form validation.
 
-Groq cannot mix tool use with structured output, so this is a small LangGraph:
-search (optional web_search) → reply (ChatReply JSON) → validate (one retry).
+Provider-agnostic LangGraph: search (optional web_search) → reply (ChatReply
+JSON) → validate. Groq cannot mix tool use with structured output, so search
+and reply stay separate LLM calls regardless of provider.
 """
 
 from __future__ import annotations
@@ -9,12 +10,14 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from typing import Any, TypedDict
 
 from fastapi import HTTPException
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.tools import tool
 from langchain_groq import ChatGroq
+from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
 from pydantic import ValidationError
 
@@ -23,20 +26,33 @@ from .chemistry_search import (
     prepare_cited_sources_for_display,
     search_chemistry_sources,
 )
-from .form_contracts import ChatReply, parse_chat_reply, payload_from_parse_error
+from .form_contracts import (
+    ChatReply,
+    FormUpdates,
+    parse_chat_reply,
+    payload_from_parse_error,
+)
 from .form_validation import validate_form_updates
 
 _payload_from_parse_error = payload_from_parse_error
 
 logger = logging.getLogger(__name__)
 
-CHAT_MODEL = "openai/gpt-oss-120b"
+DEFAULT_PROVIDER = "groq"
+DEFAULT_MODELS = {
+    "groq": "openai/gpt-oss-120b",
+    "openai": "gpt-4.1-mini",
+}
+_PROVIDER_API_KEYS = {
+    "groq": "GROQ_API_KEY",
+    "openai": "OPENAI_API_KEY",
+}
 MAX_HISTORY_MESSAGES = 2
 MAX_HISTORY_CHARS = 1_200
 MAX_SEARCH_TOKENS = 256
 MAX_REPLY_TOKENS = 2_048
 MAX_SOURCES = 3
-MAX_VALIDATION_ATTEMPTS = 2
+MAX_VALIDATION_ATTEMPTS = 3
 MAX_VALIDATION_ERRORS_NOTED = 2
 REASONING_EFFORT = "low"
 
@@ -71,6 +87,10 @@ Formulation Input.
 stay generic. Keep about 10 ingredients, soft ceiling 20, in 2-5 role groups.
 - Give every variable a realistic domain-based min/max. Never change num_rows or \
 noise unless the user directly asks.
+- Group maxes must be able to sum to 1.0. If most of the mixture is a bulk \
+phase (water, milk, solvent, base resin), include that group. Keep minority \
+ingredients at realistic maxes; do not inflate them to fake a complete \
+formulation.
 - For "start over" / domain change: remove ALL existing variables first.
 
 ### Citing sources
@@ -84,7 +104,10 @@ cite URLs from the allowed list; never invent citations; citing none is fine.
 or set up form variables.
 - When changing a category, return its FULL new list — never a partial delta.
 - New ingredients default to required: false.
-- Names are clean labels: no parentheses, no units in the name.
+- Names are clean labels: Title Case with spaces between words \
+("Exposure Time", not ExposureTime or exposure_time). No units in the name. \
+Parentheses are allowed only as part of a chemical name, with no space \
+before '('. Do not add annotations like "TPO (photoinitiator)".
 - min/max values are STRINGS. Ingredient/group fractions are in [0, 1] \
 ("0.05" not "5"). Group objects use the keys min and max for those group-sum \
 bounds (not group_sum_min / group_sum_max). In form_updates include only keys \
@@ -109,35 +132,77 @@ class ChatState(TypedDict, total=False):
     sources: list[dict[str, str]]
     reply: ChatReply
     raw_updates: dict[str, Any] | None
+    pending_updates: dict[str, Any] | None
     validation_errors: list[str]
+    validation_error_log: list[str]
     attempts: int
 
 
 @tool
 def web_search(query: str) -> str:
-    """Search the web for chemistry/formulation facts to ground a claim."""
+    """Search the web for chemistry and formulation facts."""
     sources = search_chemistry_sources([query])[:MAX_SOURCES]
     if not sources:
         return "No sources found."
     return json.dumps(sources)
 
 
-def _groq(**kwargs: Any) -> ChatGroq:
-    return ChatGroq(
-        model=CHAT_MODEL,
-        temperature=kwargs.get("temperature", 0.2),
-        max_tokens=kwargs["max_tokens"],
-        reasoning_effort=REASONING_EFFORT,
-        groq_api_key=os.environ.get("GROQ_API_KEY"),
+def chat_provider() -> str:
+    """Return the configured chat provider. Defaults to Groq."""
+    return (os.environ.get("CHAT_PROVIDER") or DEFAULT_PROVIDER).strip().lower()
+
+
+def chat_model() -> str:
+    """Return CHAT_MODEL if set, otherwise the selected provider's default."""
+    override = (os.environ.get("CHAT_MODEL") or "").strip()
+    if override:
+        return override
+    return DEFAULT_MODELS.get(chat_provider(), "")
+
+
+def chat_api_key_error() -> str | None:
+    """Return a configuration error if the selected provider is unusable."""
+    provider = chat_provider()
+    key_name = _PROVIDER_API_KEYS.get(provider)
+    if key_name is None:
+        known = ", ".join(sorted(_PROVIDER_API_KEYS))
+        return f"Unknown CHAT_PROVIDER {provider!r}. Supported: {known}."
+    if not os.environ.get(key_name):
+        return f"{key_name} environment variable is not set."
+    return None
+
+
+def _chat_llm(**kwargs: Any) -> Any:
+    provider = chat_provider()
+    common = {
+        "model": chat_model(),
+        "temperature": kwargs.get("temperature", 0.2),
+        "max_tokens": kwargs["max_tokens"],
+    }
+    if provider == "groq":
+        return ChatGroq(
+            **common,
+            reasoning_effort=REASONING_EFFORT,
+            groq_api_key=os.environ.get("GROQ_API_KEY"),
+        )
+    if provider == "openai":
+        return ChatOpenAI(
+            **common,
+            api_key=os.environ.get("OPENAI_API_KEY"),
+        )
+    raise RuntimeError(
+        chat_api_key_error() or f"Unknown CHAT_PROVIDER {provider!r}."
     )
 
 
 def _search_llm() -> Any:
-    return _groq(temperature=0.0, max_tokens=MAX_SEARCH_TOKENS).bind_tools([web_search])
+    return _chat_llm(temperature=0.0, max_tokens=MAX_SEARCH_TOKENS).bind_tools(
+        [web_search]
+    )
 
 
 def _reply_llm() -> Any:
-    return _groq(max_tokens=MAX_REPLY_TOKENS)
+    return _chat_llm(max_tokens=MAX_REPLY_TOKENS)
 
 
 def _is_capacity_error(exc: Exception) -> bool:
@@ -152,14 +217,24 @@ def _is_capacity_error(exc: Exception) -> bool:
     )
 
 
+_RETRY_IN_PATTERN = re.compile(r"try again in ([\dhms.]+)", re.IGNORECASE)
+
+
+def _capacity_error_detail(exc: Exception) -> str:
+    text = str(exc)
+    retry_in = _RETRY_IN_PATTERN.search(text)
+    wait = f"Try again in {retry_in.group(1)}." if retry_in else "Try again shortly."
+    if "tokens per day" in text.lower():
+        return f"The model provider is rate-limited: daily token limit reached. {wait}"
+    return f"The model provider is rate-limited. {wait}"
+
+
 def _raise_llm_error(exc: Exception) -> None:
     if _is_capacity_error(exc):
+        logger.warning("Chat LLM rate-limited: %s", exc)
         raise HTTPException(
             status_code=429,
-            detail=(
-                "The model provider is rate-limited right now. "
-                "Wait a few seconds and try again."
-            ),
+            detail=_capacity_error_detail(exc),
         ) from exc
     logger.error("Chat LLM error: %s", exc)
     raise HTTPException(
@@ -298,6 +373,27 @@ def strip_unchanged_updates(
     return cleaned if cleaned else None
 
 
+def merge_form_update_dicts(
+    previous: dict[str, Any] | None,
+    incoming: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Keep previous keys that a retry omitted.
+
+    A correction that only resends the rejected section must not wipe the rest.
+    Explicit incoming values, including empty lists, overwrite. ``None`` or an
+    empty incoming dict means the model dropped the update; do not resurrect it.
+    """
+    if not incoming:
+        return incoming
+    if not previous:
+        return dict(incoming)
+    merged = {key: value for key, value in previous.items() if value is not None}
+    for key, value in incoming.items():
+        if value is not None:
+            merged[key] = value
+    return merged
+
+
 def _execute_search(query: str) -> list[dict[str, str]]:
     try:
         return search_chemistry_sources([query])[:MAX_SOURCES]
@@ -333,7 +429,13 @@ def search_node(state: ChatState) -> dict[str, Any]:
             if len(sources) >= MAX_SOURCES:
                 break
         break
-    return {"sources": sources, "attempts": 0, "validation_errors": []}
+    return {
+        "sources": sources,
+        "attempts": 0,
+        "validation_errors": [],
+        "validation_error_log": [],
+        "pending_updates": None,
+    }
 
 
 def reply_node(state: ChatState) -> dict[str, Any]:
@@ -353,16 +455,21 @@ def reply_node(state: ChatState) -> dict[str, Any]:
     errors = state.get("validation_errors") or []
     if errors:
         shown = errors[:MAX_VALIDATION_ERRORS_NOTED]
-        messages.append(
-            HumanMessage(
-                content=(
-                    "Your proposed form_updates were rejected by the application's "
-                    "validator:\n- "
-                    + "\n- ".join(shown)
-                    + "\nReturn corrected, valid form_updates (or none)."
-                )
-            )
+        retry_note = (
+            "The application's validator rejected these form_updates:\n- "
+            + "\n- ".join(shown)
+            + "\nFix only the rejected fields and return the FULL previous "
+            "form_updates with those fixes. Do not drop general_inputs, "
+            "formulation_groups, or outputs that were already proposed."
         )
+        previous = state.get("pending_updates") or state.get("raw_updates")
+        if previous:
+            retry_note += (
+                "\n\nPrevious form_updates:\n```json\n"
+                + json.dumps(previous, separators=(",", ":"))
+                + "\n```"
+            )
+        messages.append(HumanMessage(content=retry_note))
 
     try:
         raw = (
@@ -395,9 +502,23 @@ def reply_node(state: ChatState) -> dict[str, Any]:
     raw_updates = None
     if reply.form_updates is not None:
         raw_updates = reply.form_updates.model_dump(exclude_unset=True)
+    if (
+        state.get("validation_errors")
+        and reply.form_changes_intended
+        and raw_updates
+    ):
+        previous = state.get("pending_updates") or state.get("raw_updates")
+        merged = merge_form_update_dicts(previous, raw_updates)
+        if merged and merged != raw_updates:
+            try:
+                reply.form_updates = FormUpdates.model_validate(merged)
+                raw_updates = reply.form_updates.model_dump(exclude_unset=True)
+            except ValidationError:
+                logger.warning("Could not merge retry form_updates over previous attempt")
     return {
         "reply": reply,
         "raw_updates": raw_updates,
+        "pending_updates": raw_updates,
         "attempts": int(state.get("attempts") or 0) + 1,
     }
 
@@ -415,8 +536,11 @@ def validate_node(state: ChatState) -> dict[str, Any]:
     if not errors:
         return {"validation_errors": []}
 
+    log = list(state.get("validation_error_log") or [])
+    log.extend(errors)
+
     if int(state.get("attempts") or 0) < MAX_VALIDATION_ATTEMPTS:
-        return {"validation_errors": errors}
+        return {"validation_errors": errors, "validation_error_log": log}
 
     note = errors[:MAX_VALIDATION_ERRORS_NOTED]
     reply.message += (
@@ -424,7 +548,13 @@ def validate_node(state: ChatState) -> dict[str, Any]:
         "didn't pass validation: " + "; ".join(note) + ")"
     )
     reply.form_updates = None
-    return {"reply": reply, "raw_updates": None, "validation_errors": []}
+    return {
+        "reply": reply,
+        "raw_updates": None,
+        "pending_updates": None,
+        "validation_errors": [],
+        "validation_error_log": log,
+    }
 
 
 def _should_retry(state: ChatState) -> str:
