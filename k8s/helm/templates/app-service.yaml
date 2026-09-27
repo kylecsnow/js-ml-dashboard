@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.microservice.name }}
+  namespace: {{ .Values.microservice.namespace }}
+spec:
+  type: ClusterIP  # reachable inside the cluster only; Ingress will be the public door later
+  selector:
+    app.kubernetes.io/instance: {{ .Values.microservice.name }}  # must match the pod label in the Deployment
+  ports:
+    - name: http
+      port: {{ .Values.workload.port }}  # 8777: the stable port other things call on this Service
+      targetPort: http  # the named containerPort on the pod (also 8777). Do not point this at healthPort (8000).

@@ -43,7 +43,7 @@ _REPO_ROOT = _EVALS_DIR.parents[2]  # repo root, where .env lives
 DEFAULT_GOLDEN_SET = _EVALS_DIR / "golden_set.jsonl"
 DEFAULT_RESULTS_DIR = _EVALS_DIR / "results"
 _RATE_LIMIT_RETRIES = 3
-_RATE_LIMIT_WAIT_S = 30.0
+_RATE_LIMIT_WAIT_S = 60.0
 
 STUB_SOURCES = [
     {
