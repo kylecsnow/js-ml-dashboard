@@ -1,6 +1,7 @@
 # Copy to values.local.yaml (gitignored) and fill in. Do not commit the copy.
 #
-# Uncomment and set your account for EKS. Leave off for a local cluster.
+# Default image is Docker Hub (`kylecsnow/js-ml-dashboard:latest` in values.yaml).
+# Uncomment to override with ECR on EKS.
 # workload:
 #   image: <account>.dkr.ecr.us-east-1.amazonaws.com/js-ml-dashboard:latest
 #   imagePullPolicy: Always

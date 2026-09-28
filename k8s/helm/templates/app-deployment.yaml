@@ -20,10 +20,40 @@ spec:
         app.kubernetes.io/component: app  # technically not needed (we could omit this line entirely), since this app all runs from one image
         app.kubernetes.io/instance: {{ .Values.microservice.name }}
     spec:
+      # This `initContainers` section is ***Optional***, it tells the app not to start until Postgres accepts connections.
+      # database.py also retries for 30s, so this block can be deleted if you want a simpler Deployment.
+      initContainers:
+        - name: wait-for-postgres
+          image: {{ .Values.postgres.image }}
+          env:
+            - name: POSTGRES_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Values.microservice.name }}-config
+                  key: POSTGRES_HOST
+            - name: POSTGRES_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Values.microservice.name }}-config
+                  key: POSTGRES_PORT
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.microservice.name }}-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Values.microservice.name }}-config
+                  key: POSTGRES_DB
+          command:
+            - sh
+            - -c
+            - until pg_isready -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB"; do sleep 1; done
       containers:
       - name: {{ .Values.microservice.name }}
         image: {{ .Values.workload.image }}
-        imagePullPolicy: {{ .Values.workload.imagePullPolicy }}  # when set to `IfNotPresent` this will use the local :latest image from Docker. Set it to Always if you want it to be pulling the image from ECR instead.
+        imagePullPolicy: {{ .Values.workload.imagePullPolicy }}  # Always: pull from Docker Hub (or ECR). IfNotPresent: use the copy already on the node.
         livenessProbe:
           httpGet:
             path: /health  # this refers to our backend API's `health` endpoint

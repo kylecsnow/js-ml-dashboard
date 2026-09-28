@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.env.POSTGRES_HOST }}  # must match POSTGRES_HOST in the ConfigMap
+  namespace: {{ .Values.microservice.namespace }}
+spec:
+  type: ClusterIP  # app pods reach this; do not publish Postgres outside the cluster
+  selector:
+    app.kubernetes.io/instance: {{ .Values.env.POSTGRES_HOST }}
+  ports:
+    - name: postgres
+      port: {{ .Values.env.POSTGRES_PORT }}
+      targetPort: postgres
