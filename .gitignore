@@ -200,6 +200,7 @@ yarn-error.log*
 
 # local env files
 .env*.local
+k8s/helm/values.local.yaml
 
 # vercel
 .vercel

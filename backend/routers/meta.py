@@ -16,6 +16,9 @@ async def health_check() -> dict[str, str]:
     }
 
 
+### TODO: some day, if it's ever needed, maybe add a "/ready" endpoint for kubernetes to probe for readiness (if there is a need to check that with separate conditions than the /health endpoint we already have)
+
+
 ### Keeping models & datasets contained in the backend directory for the following reasons:
 # 1. Separation of Concerns: The frontend's public directory is meant for static assets that need to be directly served to the client (like images, fonts, etc.). ML models and datasets should be handled by your Python backend.
 # 2. Security: Keeping models in frontend/public means they're directly accessible to anyone who knows the URL. Moving them to the backend lets you control access through your API endpoints.

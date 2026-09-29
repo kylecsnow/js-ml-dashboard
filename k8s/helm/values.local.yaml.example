@@ -1,0 +1,13 @@
+# Copy to values.local.yaml (gitignored) and fill in. Do not commit the copy.
+#
+# Default image is Docker Hub (`kylecsnow/js-ml-dashboard:latest` in values.yaml).
+# Uncomment to override with ECR on EKS.
+# workload:
+#   image: <account>.dkr.ecr.us-east-1.amazonaws.com/js-ml-dashboard:latest
+#   imagePullPolicy: Always
+secrets:
+  POSTGRES_USER: <username_goes_here>
+  POSTGRES_PASSWORD: <password_goes_here>
+  GROQ_API_KEY: ""
+  OPENAI_API_KEY: ""
+  LANGSMITH_API_KEY: ""

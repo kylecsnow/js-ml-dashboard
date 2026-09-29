@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.microservice.name }}
+  namespace: {{ .Values.microservice.namespace }}
+spec:
+  replicas: {{ .Values.microservice.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Values.microservice.name }}  # this is needed so the Service will be able to find the pods by this name
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 50%
+      maxSurge: 1  # ensure that we never have more than 3 pod replicas running at a time (because we have 2 replicas set above)
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: js-ml-dashboard
+        app.kubernetes.io/component: app  # technically not needed (we could omit this line entirely), since this app all runs from one image
+        app.kubernetes.io/instance: {{ .Values.microservice.name }}
+    spec:
+      # This `initContainers` section is ***Optional***, it tells the app not to start until Postgres accepts connections.
+      # database.py also retries for 30s, so this block can be deleted if you want a simpler Deployment.
+      initContainers:
+        - name: wait-for-postgres
+          image: {{ .Values.postgres.image }}
+          env:
+            - name: POSTGRES_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Values.microservice.name }}-config
+                  key: POSTGRES_HOST
+            - name: POSTGRES_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Values.microservice.name }}-config
+                  key: POSTGRES_PORT
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.microservice.name }}-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Values.microservice.name }}-config
+                  key: POSTGRES_DB
+          command:
+            - sh
+            - -c
+            - until pg_isready -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB"; do sleep 1; done
+      containers:
+      - name: {{ .Values.microservice.name }}
+        image: {{ .Values.workload.image }}
+        imagePullPolicy: {{ .Values.workload.imagePullPolicy }}  # Always: pull from Docker Hub (or ECR). IfNotPresent: use the copy already on the node.
+        livenessProbe:
+          httpGet:
+            path: /health  # this refers to our backend API's `health` endpoint
+            port: {{ .Values.workload.healthPort }}
+          initialDelaySeconds: {{ .Values.workload.livenessDelay }}  # delay time upon startup before the livenessProbe starts checking
+          periodSeconds: 5  # we anticipate this won't change a lot, so for now we won't inject anything from `values.yaml`.
+        readinessProbe:
+          httpGet:
+            path: /health  # for now, this uses the same path as liveness. If need arises for traffic to split in the future, make a /ready endpoint in the FastAPI router code.
+            port: {{ .Values.workload.healthPort }}
+          periodSeconds: 5
+        envFrom:
+          - configMapRef: 
+              name: {{ .Values.microservice.name }}-config
+          - secretRef:
+              name: {{ .Values.microservice.name }}-secret
+        resources:
+          requests:
+            memory: {{ .Values.workload.resources.memory }}
+            cpu: {{ .Values.workload.resources.cpu }}
+          limits:
+            memory: {{ .Values.workload.resources.memory }}
+        ports:
+          - name: http
+            containerPort: {{ .Values.workload.port }}

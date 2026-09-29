@@ -1,0 +1,41 @@
+microservice:  # general service details
+  name: js-ml-dashboard
+  namespace: js-ml-dashboard
+  replicas: 2
+
+workload:  # container specific configurations
+  image: kylecsnow/js-ml-dashboard:latest  # this will pull the image from Docker Hub.
+  # image: <account>.dkr.ecr.us-east-1.amazonaws.com/js-ml-dashboard:latest  # use this instead if running k8s on AWS
+  imagePullPolicy: Always  # pull from Docker Hub (or ECR). Can switch this to `IfNotPresent` to skip re-downloading 7GB after the first pull.
+  port: 8777
+  healthPort: 8000
+  resources:
+    memory: "4Gi"
+    cpu: "2"
+  livenessDelay: 15
+
+env:  # non-secret environment variables (ConfigMap)
+  CHAT_PROVIDER: groq
+  CHAT_MODEL: openai/gpt-oss-120b  # must match the provider; OpenAI default in code is gpt-4.1-mini
+  LANGSMITH_TRACING: "true"
+  POSTGRES_HOST: js-ml-dashboard-db  # must match the Postgres Service / StatefulSet name
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: js_ml_dashboard
+
+postgres:
+  image: postgres:16
+  port: 5432
+  storage: 256Mi  # one table of JSON schemas; empty Postgres is ~50Mi. EKS volumes often require 1Gi — bump this if the PVC fails to bind.
+  resources:
+    memory: "256Mi"
+    cpu: "250m"
+
+# Leave these empty since this file is committed to git. When running the k8s cluster, aupply real values with a gitignored overlay:
+#   helm install js-ml-dashboard ./k8s/helm -f k8s/helm/values.yaml -f k8s/helm/values.local.yaml
+# (See `values.local.yaml.example` for an example of how that file should be formatted.)
+secrets:
+  POSTGRES_USER: ""
+  POSTGRES_PASSWORD: ""
+  GROQ_API_KEY: ""
+  OPENAI_API_KEY: ""
+  LANGSMITH_API_KEY: ""
