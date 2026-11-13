@@ -13,6 +13,14 @@
   depth", "be verbose", or similar — expand with fuller explanations,
   trade-offs, and background.
 
+## Writing Code
+
+- Follow the PEP 8 style guide for all Python code in this repo.
+- Do not define functions in `__init__.py`. That file is for package
+  exports only: imports and `__all__`. Put callables in a real module.
+- Put imports at the top of the file. Do not import inside functions.
+- Keep global variables to a minimum. Use them only when there is no other clean alternative.
+
 ## Python environment
 
 Always use the **`ml-dashboard`** conda environment when running Python in this repo (backend server, pytest, scripts, one-off commands, etc.). Do not use the system Python or other conda envs unless the user explicitly asks otherwise.

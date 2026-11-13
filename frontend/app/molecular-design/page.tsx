@@ -12,7 +12,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
 
-// TODO: someday figure out how the heck this jotai stuff works
+// SOMEDAY: figure out how the heck this jotai stuff works
 // NOTE: *never* put this inside of a useEffect!!
 
 
@@ -53,7 +53,7 @@ const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 //       console.error('SMILES parsing error:', error);
 
 
-// TODO (SOMEDAY): Try out ASKCOS (askcos.mit.edu) molecule editor...? (figure out why certain things don't work: 1) copy-pasting, 2) structure cleanup, 3) inputting SMILES.
+// SOMEDAY: Try out ASKCOS (askcos.mit.edu) molecule editor...? (figure out why certain things don't work: 1) copy-pasting, 2) structure cleanup, 3) inputting SMILES.
 
 
 
