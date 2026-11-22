@@ -108,11 +108,7 @@ def unescape_literal_newlines(text: str) -> str:
     """
     if not text or "\\" not in text:
         return text
-    return (
-        text.replace("\\r\\n", "\n")
-        .replace("\\n", "\n")
-        .replace("\\r", "\n")
-    )
+    return text.replace("\\r\\n", "\n").replace("\\n", "\n").replace("\\r", "\n")
 
 
 class ChatReply(BaseModel):

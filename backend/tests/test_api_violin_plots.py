@@ -19,12 +19,16 @@ def _mock_dataset():
 
 
 def test_violin_plots_returns_plot_json_and_total_variables(client, monkeypatch):
-    monkeypatch.setattr("routers.models.get_model_and_metadata", lambda model_name: _mock_metadata())
+    monkeypatch.setattr(
+        "routers.models.get_model_and_metadata", lambda model_name: _mock_metadata()
+    )
     monkeypatch.setattr(
         "routers.models.get_dataset_name_from_model",
         lambda model_name: "demo_dataset",
     )
-    monkeypatch.setattr("routers.models.get_dataset", lambda dataset_name: _mock_dataset())
+    monkeypatch.setattr(
+        "routers.models.get_dataset", lambda dataset_name: _mock_dataset()
+    )
 
     response = client.post(
         "/api/violin-plots/demo_model",
@@ -44,12 +48,16 @@ def test_violin_plots_returns_plot_json_and_total_variables(client, monkeypatch)
 
 
 def test_violin_plots_pagination_returns_one_trace(client, monkeypatch):
-    monkeypatch.setattr("routers.models.get_model_and_metadata", lambda model_name: _mock_metadata())
+    monkeypatch.setattr(
+        "routers.models.get_model_and_metadata", lambda model_name: _mock_metadata()
+    )
     monkeypatch.setattr(
         "routers.models.get_dataset_name_from_model",
         lambda model_name: "demo_dataset",
     )
-    monkeypatch.setattr("routers.models.get_dataset", lambda dataset_name: _mock_dataset())
+    monkeypatch.setattr(
+        "routers.models.get_dataset", lambda dataset_name: _mock_dataset()
+    )
 
     response = client.post(
         "/api/violin-plots/demo_model",

@@ -36,7 +36,9 @@ logging.basicConfig(level=logging.INFO)
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the FastAPI application.")
-    parser.add_argument("--port", type=int, default=8000, help="Port to run the FastAPI app on.")
+    parser.add_argument(
+        "--port", type=int, default=8000, help="Port to run the FastAPI app on."
+    )
     parser.add_argument(
         "--reload",
         action=argparse.BooleanOptionalAction,

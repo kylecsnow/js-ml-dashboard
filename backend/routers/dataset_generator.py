@@ -47,12 +47,8 @@ def _normalize_formulation_groups(raw_groups: list) -> list[dict]:
 
         min_count_raw = group.get("min_ingredients")
         max_count_raw = group.get("max_ingredients")
-        min_count = (
-            1 if min_count_raw in (None, "") else int(min_count_raw)
-        )
-        max_count = (
-            group_size if max_count_raw in (None, "") else int(max_count_raw)
-        )
+        min_count = 1 if min_count_raw in (None, "") else int(min_count_raw)
+        max_count = group_size if max_count_raw in (None, "") else int(max_count_raw)
 
         groups.append(
             {
@@ -123,7 +119,9 @@ def _validate_formulation_groups(
                 f"Group '{group['name'] or '(unnamed)'}' max ingredients cannot exceed the number of ingredients in the group."
             )
         for ingredient in group["ingredients"]:
-            if not (0.0 <= ingredient["min"] <= 1.0) or not (0.0 <= ingredient["max"] <= 1.0):
+            if not (0.0 <= ingredient["min"] <= 1.0) or not (
+                0.0 <= ingredient["max"] <= 1.0
+            ):
                 raise ValueError(
                     "Formulation Input bounds must all have values between 0 and 1."
                 )
@@ -138,7 +136,9 @@ def _validate_formulation_groups(
 
     # A group is always present if it forces at least one ingredient.
     def _is_forced(group: dict) -> bool:
-        return group["min_count"] > 0 or any(i["required"] for i in group["ingredients"])
+        return group["min_count"] > 0 or any(
+            i["required"] for i in group["ingredients"]
+        )
 
     if sum(g["max"] for g in groups) < 1.0 - 1e-9:
         raise ValueError(
@@ -240,8 +240,22 @@ async def get_synthetic_demo_dataset(body: dict = Body(...)) -> dict[str, Any]:
         max_ingredients_per_formulation = body.get("max_ingredients_per_formulation")
         raw_coefs = body.get("coefs")
 
-        general_inputs = {item["name"]: {"min": float(item["min"]), "max": float(item["max"]), "units": item["units"]} for item in general_inputs}
-        outputs = {item["name"]: {"min": float(item["min"]), "max": float(item["max"]), "units": item["units"]} for item in outputs}
+        general_inputs = {
+            item["name"]: {
+                "min": float(item["min"]),
+                "max": float(item["max"]),
+                "units": item["units"],
+            }
+            for item in general_inputs
+        }
+        outputs = {
+            item["name"]: {
+                "min": float(item["min"]),
+                "max": float(item["max"]),
+                "units": item["units"],
+            }
+            for item in outputs
+        }
 
         # Determine whether the request uses the new grouped structure or the
         # legacy flat formulation_inputs list (which is treated as a single
@@ -287,8 +301,8 @@ async def get_synthetic_demo_dataset(body: dict = Body(...)) -> dict[str, Any]:
             n_ingredients = len(formulation_inputs)
 
             if use_groups:
-                default_global_min, default_global_max = _default_global_ingredient_counts(
-                    normalized_groups
+                default_global_min, default_global_max = (
+                    _default_global_ingredient_counts(normalized_groups)
                 )
             else:
                 default_global_min = n_ingredients
@@ -325,7 +339,9 @@ async def get_synthetic_demo_dataset(body: dict = Body(...)) -> dict[str, Any]:
             else:
                 # Legacy single-group behaviour: reconcile global counts as before.
                 if min_ingredients_per_formulation < 1:
-                    raise ValueError("min_ingredients_per_formulation must be at least 1.")
+                    raise ValueError(
+                        "min_ingredients_per_formulation must be at least 1."
+                    )
                 if min_ingredients_per_formulation > max_ingredients_per_formulation:
                     raise ValueError(
                         f"min_ingredients_per_formulation (provided: {min_ingredients_per_formulation}) cannot be greater than max_ingredients_per_formulation (provided: {max_ingredients_per_formulation})."
@@ -335,7 +351,9 @@ async def get_synthetic_demo_dataset(body: dict = Body(...)) -> dict[str, Any]:
                         f"max_ingredients_per_formulation (provided: {max_ingredients_per_formulation}) cannot exceed n_ingredients (provided: {n_ingredients})."
                     )
 
-                n_required = sum(1 for spec in formulation_inputs.values() if spec["required"])
+                n_required = sum(
+                    1 for spec in formulation_inputs.values() if spec["required"]
+                )
                 if n_required > max_ingredients_per_formulation:
                     raise ValueError(
                         f"Number of required ingredients ({n_required}) cannot exceed "
@@ -386,17 +404,12 @@ async def get_synthetic_demo_dataset(body: dict = Body(...)) -> dict[str, Any]:
                     "SMILES": [""] * len(formulation_inputs),
                 }
             )
-            response_payload["components_csv_string"] = (
-                components_df.to_csv(index=None)
-            )
+            response_payload["components_csv_string"] = components_df.to_csv(index=None)
 
         return response_payload
 
     except ValueError as e:
-        raise HTTPException(
-            status_code=400,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=400, detail=str(e))
 
     except Exception as e:
         logger.error(str(e))

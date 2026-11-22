@@ -241,7 +241,9 @@ def run_eval(
     return rows
 
 
-def _write_results(rows: list[dict[str, Any]], out_path: Path, golden_set: Path) -> None:
+def _write_results(
+    rows: list[dict[str, Any]], out_path: Path, golden_set: Path
+) -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "meta": {
@@ -313,8 +315,12 @@ def main(argv: list[str] | None = None) -> int:
         default=DEFAULT_GOLDEN_SET,
         help="JSONL golden set.",
     )
-    parser.add_argument("--id", action="append", dest="ids", help="Run only this case id.")
-    parser.add_argument("--tag", action="append", dest="tags", help="Run cases with this tag.")
+    parser.add_argument(
+        "--id", action="append", dest="ids", help="Run only this case id."
+    )
+    parser.add_argument(
+        "--tag", action="append", dest="tags", help="Run cases with this tag."
+    )
     parser.add_argument(
         "--out",
         type=Path,

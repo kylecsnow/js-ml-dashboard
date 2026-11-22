@@ -127,10 +127,22 @@ def test_create_schema_round_trips_coefficient_values(client):
     config = {
         **MINIMAL_CONFIG,
         "generalInputs": [
-            {"id": "input-a", "name": "Temperature", "min": "0", "max": "1", "units": "C"},
+            {
+                "id": "input-a",
+                "name": "Temperature",
+                "min": "0",
+                "max": "1",
+                "units": "C",
+            },
         ],
         "outputs": [
-            {"id": "output-a", "name": "Viscosity", "min": "0", "max": "1", "units": ""},
+            {
+                "id": "output-a",
+                "name": "Viscosity",
+                "min": "0",
+                "max": "1",
+                "units": "",
+            },
         ],
         "coefficientValues": {
             "output-a": {"input-a": "0.42"},

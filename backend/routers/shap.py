@@ -9,7 +9,12 @@ import shap
 from fastapi import APIRouter, Body, HTTPException
 from sklearn.ensemble import BaseEnsemble
 
-from utils import fig2img, get_dataset, get_dataset_name_from_model, get_model_and_metadata
+from utils import (
+    fig2img,
+    get_dataset,
+    get_dataset_name_from_model,
+    get_model_and_metadata,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +27,9 @@ MAX_SHAP_SUMMARY_SAMPLES = 400
 
 
 @router.post("/api/shap-summary-plots/{model_name}")
-async def get_shap_summary_plot(model_name: str, body: dict = Body(...)) -> dict[str, Any]:
+async def get_shap_summary_plot(
+    model_name: str, body: dict = Body(...)
+) -> dict[str, Any]:
     try:
         selected_output = body.get("selected_output", [])
         print("selected output is...: ", selected_output)
@@ -63,9 +70,9 @@ async def get_shap_summary_plot(model_name: str, body: dict = Body(...)) -> dict
         ### TODO: write some code for handling torch Neural Networks (KernelExplainer)
         # elif:
         # else:
-            # try:
-                # explainer = shap.KernelExplainer(predict_fn, background)
-            # except:
+        # try:
+        # explainer = shap.KernelExplainer(predict_fn, background)
+        # except:
 
         ### TODO: write some code for LinearExplainer... or will KernelExplainer work for linear models...?
         # elif:
@@ -112,7 +119,9 @@ async def get_sample_options(model_name: str) -> dict[str, list[str]]:
         dataset = get_dataset(dataset_name)
 
         dataset_sample_index_options = dataset.index.tolist()
-        dataset_sample_index_options = [str(item) for item in dataset_sample_index_options]
+        dataset_sample_index_options = [
+            str(item) for item in dataset_sample_index_options
+        ]
 
         return {"sample_options": dataset_sample_index_options}
 
@@ -122,7 +131,9 @@ async def get_sample_options(model_name: str) -> dict[str, list[str]]:
 
 
 @router.post("/api/shap-waterfall-plots/{model_name}")
-async def get_shap_waterfall_plot(model_name: str, body: dict = Body(...)) -> dict[str, Any]:
+async def get_shap_waterfall_plot(
+    model_name: str, body: dict = Body(...)
+) -> dict[str, Any]:
     try:
         selected_output = body.get("selected_output", [])
         selected_sample = body.get("selected_sample", [])
@@ -170,7 +181,6 @@ async def get_shap_waterfall_plot(model_name: str, body: dict = Body(...)) -> di
         ### SOMEDAY: write some code for handling "everything else"... if model is un-recognized, display an Error.
         # else:
 
-
         else:
             raise HTTPException(
                 status_code=400,
@@ -179,7 +189,6 @@ async def get_shap_waterfall_plot(model_name: str, body: dict = Body(...)) -> di
 
         X_one = dataset[inputs].iloc[[selected_sample]]
         shap_values = explainer(X_one)
-
 
         fig = shap.waterfall_plot(
             shap_values[0],

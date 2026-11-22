@@ -10,10 +10,7 @@ router = APIRouter()
 ### TODO: validate that this is even doing what you want it to do.....
 @router.get("/health", status_code=status.HTTP_200_OK)
 async def health_check() -> dict[str, str]:
-    return {
-        "status": "healthy",
-        "service": "js-ml-dashboard"
-    }
+    return {"status": "healthy", "service": "js-ml-dashboard"}
 
 
 ### TODO: some day, if it's ever needed, maybe add a "/ready" endpoint for kubernetes to probe for readiness (if there is a need to check that with separate conditions than the /health endpoint we already have)

@@ -248,9 +248,11 @@ def _score_require_existing_output_names(
 def _score_min_ingredients_in_groups(
     expected: Any, _result: dict[str, Any], form: dict[str, Any]
 ) -> bool:
-    groups_by_name = {name.casefold(): group for name, group in (
-        (group.get("name", ""), group) for group in _groups(form)
-    ) if isinstance(name, str)}
+    groups_by_name = {
+        name.casefold(): group
+        for name, group in ((group.get("name", ""), group) for group in _groups(form))
+        if isinstance(name, str)
+    }
     for group_name, minimum in dict(expected).items():
         group = groups_by_name.get(str(group_name).casefold())
         if group is None:
@@ -318,7 +320,9 @@ _SCORERS: dict[str, Scorer] = {
 }
 
 
-def score_case(case: GoldenCase | Mapping[str, Any], result: dict[str, Any]) -> dict[str, float]:
+def score_case(
+    case: GoldenCase | Mapping[str, Any], result: dict[str, Any]
+) -> dict[str, float]:
     form = _merged_form(result)
     scores: dict[str, float] = {}
     for name, expected in _expect_map(case, result).items():

@@ -30,8 +30,20 @@ def test_group_sum_bounds_and_counts_respected_wide_format():
         "D": {"min": 0.05, "max": 0.5, "units": "", "required": False},
     }
     groups = [
-        {"min": 0.2, "max": 0.4, "min_count": 1, "max_count": 2, "ingredients": ["A", "B"]},
-        {"min": 0.6, "max": 0.8, "min_count": 1, "max_count": 2, "ingredients": ["C", "D"]},
+        {
+            "min": 0.2,
+            "max": 0.4,
+            "min_count": 1,
+            "max_count": 2,
+            "ingredients": ["A", "B"],
+        },
+        {
+            "min": 0.6,
+            "max": 0.8,
+            "min_count": 1,
+            "max_count": 2,
+            "ingredients": ["C", "D"],
+        },
     ]
 
     df, _ = _build_grouped(
@@ -69,8 +81,20 @@ def test_optional_group_can_be_absent_but_required_group_always_present():
         "Y": {"min": 0.05, "max": 0.3, "units": "", "required": False},
     }
     groups = [
-        {"min": 0.5, "max": 1.0, "min_count": 1, "max_count": 1, "ingredients": ["Base"]},
-        {"min": 0.1, "max": 0.4, "min_count": 0, "max_count": 2, "ingredients": ["X", "Y"]},
+        {
+            "min": 0.5,
+            "max": 1.0,
+            "min_count": 1,
+            "max_count": 1,
+            "ingredients": ["Base"],
+        },
+        {
+            "min": 0.1,
+            "max": 0.4,
+            "min_count": 0,
+            "max_count": 2,
+            "ingredients": ["X", "Y"],
+        },
     ]
 
     df, _ = _build_grouped(
@@ -110,8 +134,20 @@ def test_grouped_api_populates_group_column(client):
                 "min_ingredients": 1,
                 "max_ingredients": 2,
                 "ingredients": [
-                    {"name": "UDMA", "min": 0.1, "max": 0.8, "units": "", "required": False},
-                    {"name": "IBOA", "min": 0.1, "max": 0.8, "units": "", "required": False},
+                    {
+                        "name": "UDMA",
+                        "min": 0.1,
+                        "max": 0.8,
+                        "units": "",
+                        "required": False,
+                    },
+                    {
+                        "name": "IBOA",
+                        "min": 0.1,
+                        "max": 0.8,
+                        "units": "",
+                        "required": False,
+                    },
                 ],
             },
             {
@@ -121,7 +157,13 @@ def test_grouped_api_populates_group_column(client):
                 "min_ingredients": 1,
                 "max_ingredients": 1,
                 "ingredients": [
-                    {"name": "Irganox819", "min": 0.05, "max": 0.5, "units": "", "required": False},
+                    {
+                        "name": "Irganox819",
+                        "min": 0.05,
+                        "max": 0.5,
+                        "units": "",
+                        "required": False,
+                    },
                 ],
             },
         ],
@@ -154,7 +196,13 @@ def test_grouped_api_rejects_infeasible_group_upper_bounds(client):
                 "min": 0.1,
                 "max": 0.3,
                 "ingredients": [
-                    {"name": "A", "min": 0.05, "max": 0.3, "units": "", "required": False},
+                    {
+                        "name": "A",
+                        "min": 0.05,
+                        "max": 0.3,
+                        "units": "",
+                        "required": False,
+                    },
                 ],
             },
             {
@@ -162,7 +210,13 @@ def test_grouped_api_rejects_infeasible_group_upper_bounds(client):
                 "min": 0.1,
                 "max": 0.3,
                 "ingredients": [
-                    {"name": "B", "min": 0.05, "max": 0.3, "units": "", "required": False},
+                    {
+                        "name": "B",
+                        "min": 0.05,
+                        "max": 0.3,
+                        "units": "",
+                        "required": False,
+                    },
                 ],
             },
         ],
@@ -188,8 +242,20 @@ def test_grouped_api_rejects_group_max_count_exceeding_group_size(client):
                 "min_ingredients": 1,
                 "max_ingredients": 5,  # only 2 ingredients in the group
                 "ingredients": [
-                    {"name": "A", "min": 0.1, "max": 0.9, "units": "", "required": False},
-                    {"name": "B", "min": 0.1, "max": 0.9, "units": "", "required": False},
+                    {
+                        "name": "A",
+                        "min": 0.1,
+                        "max": 0.9,
+                        "units": "",
+                        "required": False,
+                    },
+                    {
+                        "name": "B",
+                        "min": 0.1,
+                        "max": 0.9,
+                        "units": "",
+                        "required": False,
+                    },
                 ],
             },
         ],
@@ -235,8 +301,20 @@ def test_grouped_api_omitted_global_counts_use_group_defaults(client):
                 "min_ingredients": 1,
                 "max_ingredients": 2,
                 "ingredients": [
-                    {"name": "UDMA", "min": 0.1, "max": 0.8, "units": "", "required": False},
-                    {"name": "IBOA", "min": 0.1, "max": 0.8, "units": "", "required": False},
+                    {
+                        "name": "UDMA",
+                        "min": 0.1,
+                        "max": 0.8,
+                        "units": "",
+                        "required": False,
+                    },
+                    {
+                        "name": "IBOA",
+                        "min": 0.1,
+                        "max": 0.8,
+                        "units": "",
+                        "required": False,
+                    },
                 ],
             },
             {
@@ -246,7 +324,13 @@ def test_grouped_api_omitted_global_counts_use_group_defaults(client):
                 "min_ingredients": 1,
                 "max_ingredients": 1,
                 "ingredients": [
-                    {"name": "Irganox819", "min": 0.05, "max": 0.5, "units": "", "required": False},
+                    {
+                        "name": "Irganox819",
+                        "min": 0.05,
+                        "max": 0.5,
+                        "units": "",
+                        "required": False,
+                    },
                 ],
             },
         ],

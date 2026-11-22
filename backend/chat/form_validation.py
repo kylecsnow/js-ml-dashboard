@@ -72,7 +72,9 @@ def _check_names(groups: list[dict], descriptors: list[dict], field: str) -> lis
                 errors.append("formulation_groups: an ingredient has an empty name.")
                 continue
             if iname in ing_seen:
-                errors.append(f"formulation_groups: duplicate ingredient name '{iname}'.")
+                errors.append(
+                    f"formulation_groups: duplicate ingredient name '{iname}'."
+                )
             ing_seen.add(iname)
     return errors
 
@@ -93,9 +95,13 @@ def validate_form_updates(form_state: dict, updates: FormUpdates) -> list[str]:
     if updates.outputs is not None:
         state["outputs"] = updates.outputs
     if updates.min_ingredients_per_formulation is not None:
-        state["min_ingredients_per_formulation"] = updates.min_ingredients_per_formulation
+        state["min_ingredients_per_formulation"] = (
+            updates.min_ingredients_per_formulation
+        )
     if updates.max_ingredients_per_formulation is not None:
-        state["max_ingredients_per_formulation"] = updates.max_ingredients_per_formulation
+        state["max_ingredients_per_formulation"] = (
+            updates.max_ingredients_per_formulation
+        )
 
     general_inputs = [
         _descriptor_dict(item) for item in (state.get("general_inputs") or [])

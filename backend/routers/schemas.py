@@ -82,7 +82,9 @@ async def rename_schema(
 
 
 @router.delete("/api/schemas/{schema_id}")
-async def delete_schema(schema_id: int, db: Session = Depends(get_db)) -> dict[str, str]:
+async def delete_schema(
+    schema_id: int, db: Session = Depends(get_db)
+) -> dict[str, str]:
     schema = db.query(SavedSchema).filter(SavedSchema.id == schema_id).first()
     if not schema:
         raise HTTPException(status_code=404, detail="Schema not found.")

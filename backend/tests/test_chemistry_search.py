@@ -179,9 +179,21 @@ def test_filter_cited_sources_handles_numbered_citations():
 
 def test_filter_cited_sources_handles_title_in_bracket_citations():
     sources = [
-        {"title": "Eval source 1", "url": "https://example.com/eval/source-1", "snippet": ""},
-        {"title": "Eval source 2", "url": "https://example.com/eval/source-2", "snippet": ""},
-        {"title": "Eval source 3", "url": "https://example.com/eval/source-3", "snippet": ""},
+        {
+            "title": "Eval source 1",
+            "url": "https://example.com/eval/source-1",
+            "snippet": "",
+        },
+        {
+            "title": "Eval source 2",
+            "url": "https://example.com/eval/source-2",
+            "snippet": "",
+        },
+        {
+            "title": "Eval source 3",
+            "url": "https://example.com/eval/source-3",
+            "snippet": "",
+        },
     ]
     message = (
         "TPO absorbs near 405 nm【Eval source 1】. "
@@ -198,7 +210,11 @@ def test_filter_cited_sources_handles_title_in_bracket_citations():
 
 def test_filter_cited_sources_title_brackets_ignore_unknown_labels():
     sources = [
-        {"title": "Eval source 1", "url": "https://example.com/eval/source-1", "snippet": ""},
+        {
+            "title": "Eval source 1",
+            "url": "https://example.com/eval/source-1",
+            "snippet": "",
+        },
     ]
     assert filter_cited_sources("Uses TPO【random chemical】.", sources) == []
 

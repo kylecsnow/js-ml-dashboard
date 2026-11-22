@@ -27,23 +27,22 @@ async def get_model_overview(model_name: str) -> dict[str, Any]:
         serializable_estimators = {}
         for output, data in estimators_by_output.items():
 
-            parity_plot_fig = create_parity_plot(data, title=f"Parity Plot - {output}", width=600, height=600)
+            parity_plot_fig = create_parity_plot(
+                data, title=f"Parity Plot - {output}", width=600, height=600
+            )
             parity_plot_json = json.loads(parity_plot_fig.to_json())
             residual_plot_fig = create_residual_plot(data, width=600, height=600)
             residual_plot_json = json.loads(residual_plot_fig.to_json())
 
             serializable_estimators[output] = {
                 "inputs_numerical": data["inputs_numerical"],
-
                 # Get the type name as a string
                 # "estimator_type": type(data["estimator"]).__name__,
                 # If you want the full module path, use this instead:
                 "estimator_type": f"{type(data['estimator']).__module__}.{type(data['estimator']).__name__}",
-
                 "parity_plot_data": parity_plot_json,
                 "residual_plot_data": residual_plot_json,
             }
-
 
         model_overview_data = {
             "dataset_name": dataset_name,
@@ -83,7 +82,11 @@ async def get_violin_plots(model_name: str, body: dict = Body(...)) -> dict[str,
         all_estimator_inputs = set()
         for output in outputs:
             all_estimator_inputs = all_estimator_inputs.union(
-                set(model_and_metadata["estimators_by_output"][output]["inputs_numerical"])
+                set(
+                    model_and_metadata["estimators_by_output"][output][
+                        "inputs_numerical"
+                    ]
+                )
             )
         inputs = list(all_estimator_inputs)
         # inputs_reals = inputs
@@ -118,7 +121,9 @@ async def get_violin_plots(model_name: str, body: dict = Body(...)) -> dict[str,
         plot_json = json.loads(fig.to_json())
         return {
             "plot_data": plot_json,
-            "total_variables": len(all_variables)  # Add total count for frontend pagination
+            "total_variables": len(
+                all_variables
+            ),  # Add total count for frontend pagination
         }
 
     except Exception as e:
@@ -127,7 +132,9 @@ async def get_violin_plots(model_name: str, body: dict = Body(...)) -> dict[str,
 
 
 @router.get("/api/correlation-heatmap/{model_name}/{correlation_type}")
-async def get_correlation_heatmap(model_name: str, correlation_type: str) -> dict[str, Any]:
+async def get_correlation_heatmap(
+    model_name: str, correlation_type: str
+) -> dict[str, Any]:
 
     try:
         model_and_metadata = get_model_and_metadata(model_name)
@@ -154,7 +161,11 @@ async def get_correlation_heatmap(model_name: str, correlation_type: str) -> dic
         all_estimator_inputs = set()
         for output in outputs:
             all_estimator_inputs = all_estimator_inputs.union(
-                set(model_and_metadata["estimators_by_output"][output]["inputs_numerical"])
+                set(
+                    model_and_metadata["estimators_by_output"][output][
+                        "inputs_numerical"
+                    ]
+                )
             )
         inputs = list(all_estimator_inputs)
         # inputs_reals = inputs
@@ -206,7 +217,11 @@ async def get_variable_options(model_name: str) -> dict[str, list[str]]:
         all_estimator_inputs = set()
         for output in outputs:
             all_estimator_inputs = all_estimator_inputs.union(
-                set(model_and_metadata["estimators_by_output"][output]["inputs_numerical"])
+                set(
+                    model_and_metadata["estimators_by_output"][output][
+                        "inputs_numerical"
+                    ]
+                )
             )
         all_estimator_inputs = list(all_estimator_inputs)
         variable_options = all_estimator_inputs + outputs
@@ -276,7 +291,11 @@ async def get_output_variable_options(model_name: str) -> dict[str, list[str]]:
         all_estimator_inputs = set()
         for output in outputs:
             all_estimator_inputs = all_estimator_inputs.union(
-                set(model_and_metadata["estimators_by_output"][output]["inputs_numerical"])
+                set(
+                    model_and_metadata["estimators_by_output"][output][
+                        "inputs_numerical"
+                    ]
+                )
             )
         return {"output_variable_options": outputs}
 

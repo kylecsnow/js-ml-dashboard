@@ -27,9 +27,15 @@ def _mock_dataset():
 def test_correlation_heatmap_returns_plot_for_supported_types(
     client, monkeypatch, correlation_type
 ):
-    monkeypatch.setattr("routers.models.get_model_and_metadata", lambda model_name: _mock_metadata())
-    monkeypatch.setattr("routers.models.get_dataset_name_from_model", lambda model_name: "demo")
-    monkeypatch.setattr("routers.models.get_dataset", lambda dataset_name: _mock_dataset())
+    monkeypatch.setattr(
+        "routers.models.get_model_and_metadata", lambda model_name: _mock_metadata()
+    )
+    monkeypatch.setattr(
+        "routers.models.get_dataset_name_from_model", lambda model_name: "demo"
+    )
+    monkeypatch.setattr(
+        "routers.models.get_dataset", lambda dataset_name: _mock_dataset()
+    )
 
     response = client.get(f"/api/correlation-heatmap/demo_model/{correlation_type}")
     assert response.status_code == 200
@@ -40,8 +46,12 @@ def test_correlation_heatmap_returns_plot_for_supported_types(
 
 
 def test_correlation_heatmap_returns_500_on_dataset_error(client, monkeypatch):
-    monkeypatch.setattr("routers.models.get_model_and_metadata", lambda model_name: _mock_metadata())
-    monkeypatch.setattr("routers.models.get_dataset_name_from_model", lambda model_name: "demo")
+    monkeypatch.setattr(
+        "routers.models.get_model_and_metadata", lambda model_name: _mock_metadata()
+    )
+    monkeypatch.setattr(
+        "routers.models.get_dataset_name_from_model", lambda model_name: "demo"
+    )
 
     def _raise(*args, **kwargs):
         raise RuntimeError("dataset load failed")

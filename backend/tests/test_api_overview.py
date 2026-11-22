@@ -17,7 +17,10 @@ def _mock_overview_payload():
 
 
 def test_model_overview_returns_expected_shape(client, monkeypatch):
-    monkeypatch.setattr("routers.models.get_model_and_metadata", lambda model_name: _mock_overview_payload())
+    monkeypatch.setattr(
+        "routers.models.get_model_and_metadata",
+        lambda model_name: _mock_overview_payload(),
+    )
     monkeypatch.setattr(
         "routers.models.get_dataset_name_from_model",
         lambda model_name: "demo_dataset",
@@ -51,7 +54,10 @@ def test_model_overview_returns_expected_shape(client, monkeypatch):
 
 
 def test_model_overview_returns_500_on_plot_failure(client, monkeypatch):
-    monkeypatch.setattr("routers.models.get_model_and_metadata", lambda model_name: _mock_overview_payload())
+    monkeypatch.setattr(
+        "routers.models.get_model_and_metadata",
+        lambda model_name: _mock_overview_payload(),
+    )
     monkeypatch.setattr(
         "routers.models.get_dataset_name_from_model",
         lambda model_name: "demo_dataset",

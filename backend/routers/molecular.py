@@ -20,7 +20,7 @@ router = APIRouter()
 @router.post("/api/molecular-design")
 async def get_molecular_design_results() -> dict[str, Any]:
 
-    print('calling backend function...')
+    print("calling backend function...")
 
     try:
         ### TODO: hardcode molecules for now --> generalize this later
@@ -28,7 +28,12 @@ async def get_molecular_design_results() -> dict[str, Any]:
         # molgen_results = pd.read_excel("./datasets/vapor_pressure_train.xlsx")
         print("trying to get mol_images_df...")
         mol_images_df = pd.read_excel("./datasets/vapor_pressure_train.xlsx")
-        mol_images_df = mol_images_df.rename(columns={"Smiles": "SMILES", "vapor_pressure(mmHg)": "vapor_pressure (mmHg)"})
+        mol_images_df = mol_images_df.rename(
+            columns={
+                "Smiles": "SMILES",
+                "vapor_pressure(mmHg)": "vapor_pressure (mmHg)",
+            }
+        )
         mol_images_df = mol_images_df[mol_images_df["vapor_pressure (mmHg)"] <= 1_000]
         mol_images_df["Group"] = "Candidates"
         # print(mol_images_df)
@@ -76,7 +81,6 @@ async def get_plotly_molecular_space_map(body: dict = Body(...)) -> dict[str, An
 
     print(default_color_prop)
 
-
     # If the frontend sends color_property as an array, extract the first value.
     # actual_color_property = color_property[0] if isinstance(color_property, list) and color_property else None
 
@@ -84,11 +88,12 @@ async def get_plotly_molecular_space_map(body: dict = Body(...)) -> dict[str, An
     molgen_results_df = pd.DataFrame.from_dict(molgen_results_dict)
     print(molgen_results_df.head())
 
-
     try:
-        print('making molecular space map...')
-        molecular_space_map = create_plotly_molecular_space_map(molgen_results_df, color_property=default_color_prop)
-        print('success!')
+        print("making molecular space map...")
+        molecular_space_map = create_plotly_molecular_space_map(
+            molgen_results_df, color_property=default_color_prop
+        )
+        print("success!")
 
         plot_json = json.loads(molecular_space_map.to_json())
 
@@ -96,4 +101,6 @@ async def get_plotly_molecular_space_map(body: dict = Body(...)) -> dict[str, An
 
     except Exception as e:
         logger.error(str(e))
-        raise HTTPException(500, detail=f"Error creating Plotly molecular space map: {str(e)}")
+        raise HTTPException(
+            500, detail=f"Error creating Plotly molecular space map: {str(e)}"
+        )

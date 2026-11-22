@@ -117,7 +117,9 @@ def test_gibbs_rejects_required_ingredient_with_zero_lower_bound():
 
 
 def test_gibbs_rejects_infeasible_min_present_count():
-    with pytest.raises(ValueError, match="Cannot satisfy min_ingredients_per_formulation"):
+    with pytest.raises(
+        ValueError, match="Cannot satisfy min_ingredients_per_formulation"
+    ):
         gibbs_sample_formulation_space(
             n_ingredients=3,
             constraints=[(0.4, 0.5), (0.4, 0.5), (0.4, 0.5)],

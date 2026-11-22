@@ -130,12 +130,12 @@ def test_dataset_generator_enforces_ingredient_count_bounds_wide_format():
 
     for _, row in data_df.iterrows():
         present_count = sum(row[name] > 0.0 for name in ingredient_names)
-        assert present_count >= 3, (
-            f"Row has {present_count} present ingredients (min allowed: 3)"
-        )
-        assert present_count <= 5, (
-            f"Row has {present_count} present ingredients (max allowed: 5)"
-        )
+        assert (
+            present_count >= 3
+        ), f"Row has {present_count} present ingredients (min allowed: 3)"
+        assert (
+            present_count <= 5
+        ), f"Row has {present_count} present ingredients (max allowed: 5)"
 
 
 def test_dataset_generator_enforces_required_ingredients_wide_format():
@@ -144,14 +144,44 @@ def test_dataset_generator_enforces_required_ingredients_wide_format():
         "general": {},
         "formulation": {
             "Ice Cream Base": {"min": 0.5, "max": 0.9, "units": "", "required": True},
-            "Mono Diglycerides": {"min": 0.005, "max": 0.03, "units": "", "required": False},
-            "Polysorbate 80": {"min": 0.001, "max": 0.015, "units": "", "required": False},
+            "Mono Diglycerides": {
+                "min": 0.005,
+                "max": 0.03,
+                "units": "",
+                "required": False,
+            },
+            "Polysorbate 80": {
+                "min": 0.001,
+                "max": 0.015,
+                "units": "",
+                "required": False,
+            },
             "PGPR": {"min": 0.001, "max": 0.02, "units": "", "required": False},
             "DATEM": {"min": 0.001, "max": 0.015, "units": "", "required": False},
-            "Polyglycerol Esters": {"min": 0.001, "max": 0.02, "units": "", "required": False},
-            "Acetylated Monoglycerides": {"min": 0.001, "max": 0.015, "units": "", "required": False},
-            "Stearoyl Lactylate": {"min": 0.001, "max": 0.02, "units": "", "required": False},
-            "Sorbitan Monostearate": {"min": 0.001, "max": 0.015, "units": "", "required": False},
+            "Polyglycerol Esters": {
+                "min": 0.001,
+                "max": 0.02,
+                "units": "",
+                "required": False,
+            },
+            "Acetylated Monoglycerides": {
+                "min": 0.001,
+                "max": 0.015,
+                "units": "",
+                "required": False,
+            },
+            "Stearoyl Lactylate": {
+                "min": 0.001,
+                "max": 0.02,
+                "units": "",
+                "required": False,
+            },
+            "Sorbitan Monostearate": {
+                "min": 0.001,
+                "max": 0.015,
+                "units": "",
+                "required": False,
+            },
             "Soy Lecithin": {"min": 0.001, "max": 0.02, "units": "", "required": False},
         },
     }

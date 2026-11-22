@@ -190,9 +190,7 @@ def _chat_llm(**kwargs: Any) -> Any:
             **common,
             api_key=os.environ.get("OPENAI_API_KEY"),
         )
-    raise RuntimeError(
-        chat_api_key_error() or f"Unknown CHAT_PROVIDER {provider!r}."
-    )
+    raise RuntimeError(chat_api_key_error() or f"Unknown CHAT_PROVIDER {provider!r}.")
 
 
 def _search_llm() -> Any:
@@ -486,7 +484,9 @@ def reply_node(state: ChatState) -> dict[str, Any]:
         try:
             reply = parse_chat_reply(payload_from_parse_error(exc))
         except Exception as recover_exc:
-            logger.warning("Could not recover ChatReply from parse error: %s", recover_exc)
+            logger.warning(
+                "Could not recover ChatReply from parse error: %s", recover_exc
+            )
             if isinstance(exc, ValidationError) and exc.errors():
                 err0 = exc.errors()[0]
                 raise HTTPException(
@@ -502,11 +502,7 @@ def reply_node(state: ChatState) -> dict[str, Any]:
     raw_updates = None
     if reply.form_updates is not None:
         raw_updates = reply.form_updates.model_dump(exclude_unset=True)
-    if (
-        state.get("validation_errors")
-        and reply.form_changes_intended
-        and raw_updates
-    ):
+    if state.get("validation_errors") and reply.form_changes_intended and raw_updates:
         previous = state.get("pending_updates") or state.get("raw_updates")
         merged = merge_form_update_dicts(previous, raw_updates)
         if merged and merged != raw_updates:
@@ -514,7 +510,9 @@ def reply_node(state: ChatState) -> dict[str, Any]:
                 reply.form_updates = FormUpdates.model_validate(merged)
                 raw_updates = reply.form_updates.model_dump(exclude_unset=True)
             except ValidationError:
-                logger.warning("Could not merge retry form_updates over previous attempt")
+                logger.warning(
+                    "Could not merge retry form_updates over previous attempt"
+                )
     return {
         "reply": reply,
         "raw_updates": raw_updates,

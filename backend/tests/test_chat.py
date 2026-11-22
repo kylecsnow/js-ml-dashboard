@@ -744,9 +744,7 @@ def test_chat_dataset_generator_keeps_omitted_sections_on_retry(client, monkeypa
             general_inputs=[
                 {"name": "Cure Temperature", "min": "20", "max": "40", "units": "C"}
             ],
-            outputs=[
-                {"name": "Cure Depth", "min": "50", "max": "400", "units": "um"}
-            ],
+            outputs=[{"name": "Cure Depth", "min": "50", "max": "400", "units": "um"}],
             formulation_groups=[
                 {
                     "name": "Monomer",

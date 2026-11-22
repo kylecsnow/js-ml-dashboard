@@ -23,8 +23,12 @@ def _validate(updates: dict, form_state: dict | None = None):
 def test_valid_full_update_passes():
     errors = _validate(
         {
-            "general_inputs": [{"name": "Cure Temperature", "min": "20", "max": "200", "units": "degC"}],
-            "outputs": [{"name": "Tensile Strength", "min": "5", "max": "90", "units": "MPa"}],
+            "general_inputs": [
+                {"name": "Cure Temperature", "min": "20", "max": "200", "units": "degC"}
+            ],
+            "outputs": [
+                {"name": "Tensile Strength", "min": "5", "max": "90", "units": "MPa"}
+            ],
             "formulation_groups": [
                 _group("Base Resin", 0.5, 1.0, [("UDMA", 0.5, 0.9, True)]),
                 _group("Additives", 0.001, 0.05, [("Irganox 819", 0.001, 0.02, False)]),
@@ -63,7 +67,9 @@ def test_rejects_forced_groups_summing_above_one():
             ]
         }
     )
-    assert any("sum of lower bounds for always-present groups exceeds 1.0" in e for e in errors)
+    assert any(
+        "sum of lower bounds for always-present groups exceeds 1.0" in e for e in errors
+    )
 
 
 def test_rejects_required_ingredient_with_zero_min():
@@ -85,19 +91,27 @@ def test_rejects_max_count_exceeding_group_size():
         {
             "formulation_groups": [
                 _group(
-                    "Base", 0.5, 0.9, [("Resin A", 0.5, 0.9, False)],
-                    min_count=1, max_count=3,
+                    "Base",
+                    0.5,
+                    0.9,
+                    [("Resin A", 0.5, 0.9, False)],
+                    min_count=1,
+                    max_count=3,
                 )
             ]
         }
     )
-    assert any("max ingredients cannot exceed the number of ingredients" in e for e in errors)
+    assert any(
+        "max ingredients cannot exceed the number of ingredients" in e for e in errors
+    )
 
 
 def test_rejects_duplicate_group_names_across_categories():
     errors = _validate(
         {
-            "general_inputs": [{"name": "Temperature", "min": "20", "max": "80", "units": "degC"}],
+            "general_inputs": [
+                {"name": "Temperature", "min": "20", "max": "80", "units": "degC"}
+            ],
             "outputs": [
                 {"name": "Temperature", "min": "20", "max": "80", "units": "degC"},
                 {"name": "Viscosity", "min": "100", "max": "1000", "units": "cP"},
@@ -121,7 +135,16 @@ def test_rejects_duplicate_descriptors_within_category():
 
 def test_rejects_descriptors_with_parenthetical_names():
     errors = _validate(
-        {"general_inputs": [{"name": "Defoamer (Polyglycol)", "min": "1", "max": "9", "units": "mg/L"}]}
+        {
+            "general_inputs": [
+                {
+                    "name": "Defoamer (Polyglycol)",
+                    "min": "1",
+                    "max": "9",
+                    "units": "mg/L",
+                }
+            ]
+        }
     )
     assert any("parentheses" in e for e in errors)
 
@@ -162,7 +185,11 @@ def test_accepts_embedded_chemical_parentheses():
 
 def test_rejects_non_numeric_bounds():
     errors = _validate(
-        {"outputs": [{"name": "Strength", "min": "five", "max": "ninety", "units": "MPa"}]}
+        {
+            "outputs": [
+                {"name": "Strength", "min": "five", "max": "ninety", "units": "MPa"}
+            ]
+        }
     )
     assert any("non-numeric min or max" in e for e in errors)
 
@@ -175,7 +202,9 @@ def test_rejects_empty_ingredient_name():
                     "name": "Base",
                     "min": "0.5",
                     "max": "1.0",
-                    "ingredients": [{"name": "", "min": "0.5", "max": "0.9", "required": False}],
+                    "ingredients": [
+                        {"name": "", "min": "0.5", "max": "0.9", "required": False}
+                    ],
                 }
             ]
         }
@@ -185,7 +214,11 @@ def test_rejects_empty_ingredient_name():
 
 def test_rejects_empty_group():
     errors = _validate(
-        {"formulation_groups": [{"name": "Base", "min": "0.5", "max": "0.9", "ingredients": []}]}
+        {
+            "formulation_groups": [
+                {"name": "Base", "min": "0.5", "max": "0.9", "ingredients": []}
+            ]
+        }
     )
     assert any("must contain at least one ingredient" in e for e in errors)
 
@@ -225,7 +258,9 @@ def test_only_validates_changed_category():
     # catch whatever it receives — so a broken group still fails.
     errors = _validate(
         {
-            "general_inputs": [{"name": "Temp", "min": "20", "max": "80", "units": "degC"}],
+            "general_inputs": [
+                {"name": "Temp", "min": "20", "max": "80", "units": "degC"}
+            ],
             "formulation_groups": [
                 _group("Base", 0.9, 0.2, [("Resin", 0.1, 0.2, False)])
             ],
