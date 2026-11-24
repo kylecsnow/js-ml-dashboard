@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 
+status=0
+
 echo 'Running `black .`'
-black .
+if ! black .; then
+    >&2 echo "failed black"
+    status=1
+fi
 
 echo '
 
@@ -10,11 +15,9 @@ echo '
 '
 
 echo 'Running `ruff check .`'
-ruff check .
-ruff_exit_code=$?
-if [[ "$ruff_exit_code" != "0" ]]; then
+if ! ruff check .; then
     >&2 echo "failed ruff check"
-    exit "$ruff_exit_code"
+    status=1
 fi
 
 echo '
@@ -24,11 +27,9 @@ echo '
 '
 
 echo 'Running `mypy --strict .`'
-mypy --strict .
-mypy_exit_code=$?
-if [[ "$mypy_exit_code" != "0" ]]; then
+if ! mypy --strict .; then
     >&2 echo "failed mypy"
-    exit "$mypy_exit_code"
+    status=1
 fi
 
 echo '
@@ -37,16 +38,19 @@ echo '
 
 '
 
-# echo 'Running `pytest`'
-# pytest
-# pytest_exit_code=$?
-# if [[ "$pytest_exit_code" != "0" ]]; then
-#     >&2 echo "failed pytest"
-#     exit "$pytest_exit_code"
-# fi
+echo 'Running `pytest --cov=./backend --cov-report=term-missing`'
+if ! pytest --cov=./backend --cov-report=term-missing; then
+    >&2 echo "failed pytest"
+    status=1
+fi
 
-# echo '
+echo '
 
-# ===============================================
+===============================================
 
-# '
+'
+
+if [[ "$status" != "0" ]]; then
+    >&2 echo "one or more checks failed"
+    exit "$status"
+fi
